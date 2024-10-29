@@ -43,7 +43,7 @@ try:
     # Next thing to do is mock the motors
     local_channels: List[int] = [x for x in range(8)]
     num_motors: int = len(local_channels)
-    motor_caller = MotorInterface(local_channels, num_motors, 0, 100, .1, 5)
+    motor_caller = MotorInterface(local_channels, num_motors, 0, 100, .1, .5, 5)
 
     # high: List[int] = [20 for i in range(num_motors)]
     # low: List[int] = [30 for i in range(num_motors)]

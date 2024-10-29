@@ -20,11 +20,12 @@ class MotorCommand():
     def __init__(self, 
         local_channels: List[int], 
         num_motors: int, 
-        step_size: int=5, 
-        minor_time: float=.1) -> None:
+        step_size: int=5
+        ) -> None:
         """_summary_
 
-        _extended_summary_
+        A simple Motor object to control the pin states of multiple motors. 
+        This commander does not handle timing and instead relies on an external function to handle timing in between both major and minor target changes.
 
         Parameters
         ----------
@@ -34,8 +35,6 @@ class MotorCommand():
             Number of motors equal to len of 'local_channels'
         step_size : int, optional
             amount to move motors by out of 100, by default 5
-        minor_time : float, optional
-            time between steps for same target, by default .1
         """
 
         # info Number of motors being managed
@@ -46,9 +45,6 @@ class MotorCommand():
 
         # info How much to move the motors at each minor step
         self.step_size: int = step_size
-
-        # info Set how much time to wait on arming
-        self.minor_step: float = minor_time
 
         # info Needed to save pin states to let outside program manage interupts when driving motors
         # info As this lets us step between power levels using duty cycle 0-100
@@ -103,7 +99,7 @@ class MotorCommand():
 
         Notes
         -----
-            Should be used with an outside function to handle interupts
+            Should be used with an outside function to handle interupts and timing changes
         """
 
         directions: List[int] = self.__targetDistance(targets)
@@ -111,9 +107,7 @@ class MotorCommand():
             if (directions[index] == 0):
                 continue
             self.pinStates[index] += directions[index] * self.step_size
-            print(self.pinStates[index])
-        # ? Sets every pin even if it is already opperating at that speed
-        # ? Don't think this is an area that needs to be improved but is an easy target
+            # print(self.pinStates[index])
         self.__set_motors(self.pinStates)
 
     def __targetDistance(self, targets: List[int]) -> List[int]:
@@ -126,7 +120,7 @@ class MotorCommand():
         """
 
         values: List[int] = [target - pinState for target, pinState in zip(targets, self.pinStates)]
-        conversions: List[int] = [int(value / abs(value)) if value != 0 else 0 for value in values] # int cast should only be nessisary for linter
+        conversions: List[int] = [int(value / abs(value)) if value != 0 else 0 for value in values] # int cast should only be necessary for linter
         return (conversions)
 
     def __set_motors(self, speeds: List[int]) -> None:
