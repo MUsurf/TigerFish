@@ -1,6 +1,6 @@
 # TapeWorm
 
-This repository contains the code for the new autonomose underwater robot tentitivly named TapeWorm. The express purpose of this code is to be better than the code for last competition while upgrading major dependancies, such as Python versions and ROS versions.
+This repository contains the code for the new autonomous underwater robot tentatively named TapeWorm. The express purpose of this code is to be better than the code for last competition while upgrading major dependencies, such as Python versions and ROS versions.
 
 ## Development
 
