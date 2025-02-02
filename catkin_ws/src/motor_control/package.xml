@@ -48,12 +48,12 @@
   <!--   <test_depend>gtest</test_depend> -->
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
-  <buildtool_depend>ament_cmake</buildtool_depend>
-  <depend>ament_index_cpp</depend>
+  <!-- <buildtool_depend>ament_cmake</buildtool_depend> -->
+  <!-- <depend>ament_index_cpp</depend> -->
   <!-- <depend>geometry_msgs</depend> -->
   <!-- <depend>rclcpp</depend> -->
   <!-- <depend>rclcpp_action</depend> -->
-  <depend>std_msgs</depend>
+  <!-- <depend>std_msgs</depend> -->
   <!-- <depend>std_srvs</depend> -->
 
   <!-- <build_depend>roscpp</build_depend>

@@ -13,12 +13,12 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
-find_package(ament_cmake REQUIRED)
-find_package(ament_index_cpp REQUIRED)
+# find_package(ament_cmake REQUIRED)
+# find_package(ament_index_cpp REQUIRED)
 # find_package(geometry_msgs REQUIRED)
 # find_package(rclcpp REQUIRED)
 # find_package(rclcpp_action REQUIRED)
-find_package(std_msgs REQUIRED)
+# find_package(std_msgs REQUIRED)
 # find_package(std_srvs REQUIRED)
 
 
@@ -172,7 +172,7 @@ install(PROGRAMS
   src/motor_runner.py
 )
 
-ament_package()
+# ament_package()
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
