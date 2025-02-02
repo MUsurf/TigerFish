@@ -27,13 +27,23 @@ from motor_interface import MotorInterface
 # remove 
 
 # Begin imports
-import rospy
+import sys
+import rosros as rospy
 
 from std_msgs.msg import Int32MultiArray
 # End imports
 
 # Rospy nodes
+
+#ROS 1: 
 rospy.init_node("motor_listener")
+
+#ROS 2: 
+#rclpy.init(args=sys.argv)
+#node = rclpy.create_node('motor_listener')
+
+
+
 rate = rospy.Rate(100)
 
 

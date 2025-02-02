@@ -1,3 +1,0 @@
-<launch>
-    <node name="pid_node" pkg="pid" type="pid_controller.py"/>
-</launch>
