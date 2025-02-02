@@ -1,3 +1,9 @@
+from setuptools import setup, find_packages
+
+# Package name, usually defined in a separate way in a ROS package
+package_name = 'motor_control'  # Replace with the actual package name
+
+
 
 setup(
     name=package_name,
