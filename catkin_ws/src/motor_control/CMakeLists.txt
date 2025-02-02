@@ -23,7 +23,7 @@ endif()
 # find_package(rclcpp REQUIRED)
 # find_package(rclcpp_action REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(rosros REQUIRED)
+# find_package(rosros REQUIRED)
 # find_package(rclcpp)
 # find_package(std_srvs REQUIRED)
 
