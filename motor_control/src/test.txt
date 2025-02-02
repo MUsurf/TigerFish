@@ -64,10 +64,7 @@ class MotorCommand():
         '''Set the speed of a single motor'''
 
         pwm_value: int = self.__microSec_to_duty(1000 + (speed * 10))
-        try:
-            self.motors[motor_idex].duty_cycle = pwm_value
-        except:
-            pass
+        self.motors[motor_idex].duty_cycle = pwm_value
 
     def pinStep(self, targets: List[int]) -> None:
         """Move pin towards target supplied
@@ -99,19 +96,39 @@ class MotorCommand():
 
         Notes
         -----
-            Reworked
+            This is a rough way to do this and can be reworked
 
         """
-
-        values: List[int] = [target - pinState for target, pinState in zip(targets, self.pinStates)]
-        conversions: List[int] = [int(value / abs(value)) if value != 0 else 0 for value in values] # int cast should only be nessisary for linter
-        return (conversions)
+        directions: List[int] = []
+        for i in range(len(targets)):
+            value: int = (targets[i] - self.pinStates[i])
+            if (value == 0):
+                directions.append(0)
+            elif (value > 0):
+                directions.append(1)
+            elif (value < 0):
+                directions.append(-1)
+            else:
+                raise ValueError
+        return (directions)
 
     def __set_motors(self, speeds: List[int]) -> None:
         """Sets pins to values given by speed position"""
 
         for index in range(self.motorNum):
             self.set_motor_speed(index, speeds[index])
+
+    # ~ This is a ros function that has not been proven to work
+    def callback(self, message_rec):
+        """Function to subscribe to driver with ros"""
+
+        print("Data received is: " + str(message_rec.data))
+        for index in range(len(message_rec)):
+            x = self.__microSec_to_duty(
+                message_rec[index])
+
+            self.motors[index].duty_cycle = x
+            print(f"type of var callback {type(x)}")
 
 # Begin typing imports
 from typing import List
@@ -143,8 +160,6 @@ class MotorInterface():
         # info This is the instance of motorcommand that will be used
         self.motor_commander = MotorCommand(
             channels, self.numMotors, step_size, self.minor_time)
-        # info This is the latest command recieved from ros if ros fails to deliver a new value before next execution then the same values are used
-        self.last_directions: List[int] = []
 
     def arm_seq(self) -> None:
         """Current method of arming all motors may change with calibration
@@ -177,6 +192,7 @@ class MotorInterface():
 
     def __percent_to_duty(self, percent: int) -> int:
         range: int = abs(self.max_val - self.offset)
+        # If something goes wrong when changing motors to be able to reverse change following line to have a abs value
         duty: int = int(((percent / 100) * range) + self.offset)
         return duty
 
@@ -193,107 +209,26 @@ class MotorInterface():
 
         Notes
         -----
-            directions will be in the form of a list of floats
-                ['x': -1-1, 'y':-1-1, 'z':-1-1, 'pitch':-1-1, 'yaw':-1-1, 'roll':-1-1]
-
             This function is not implemented yet and only contains the translation from percent drive of commands to duty cycle
         """
-        # * if you wish to go to the negative end of this axis the mangintude must also be supplied as a negative
-        # info For multiple instructions to be followed at once the results post array must be added together
-        # info This assumes that all motors are number 1-4 5-8 left to right and horizontal then vertical
-        # ~ This could be used to balance out an under preforming motor
-        motor_to_directions = [
-            [1, 1, -1, -1, 0, 0, 0, 0], # 'x-axis'
-            [1, -1, 1, -1, 0, 0, 0, 0], # 'y-axis'
-            [0, 0, 0, 0, 1, 1, 1, 1], # 'z-axis' 
-            [0, 0, 0, 0, 1, 1, -1, -1], # 'pitch' 
-            [1, -1, -1, 1, 0, 0, 0, 0], # 'yaw' 
-            [0, 0, 0, 0, 1, -1, 1, -1], # 'roll'
-            # Add depth control
-        ]
 
-        drive_in_duty = [0 for _ in range(self.numMotors)]
-
-        for index in range(len(directions)):
-            for second_index in  range(len(motor_to_directions[0])):
-                drive_in_duty[second_index] += directions[index] * motor_to_directions[index][second_index]
-
-        drive_to_duty = [self.__percent_to_duty(duty) for duty in drive_in_duty]
-
-        # for p_direction in directions:
-        #     drive_in_duty.append(self.__percent_to_duty(p_direction))
-        return (drive_to_duty)
+        drive_in_duty: list[int] = []
+        for p_direction in directions:
+            drive_in_duty.append(self.__percent_to_duty(p_direction))
+        return (drive_in_duty)
     
 
     def callback(self, message_rec):
-        """Function to subscribe to driver with ros
-        
-        This is set up in a way to allow ros and the motor controls to function on a async basis. This will make sure nothing locks up
-        and that pid gets very low latency feedback (not really but kinda).
-        """
+        """Function to subscribe to driver with ros"""
 
         print("Data received is: " + str(message_rec.data))
-        self.last_directions = message_rec.data
-        self.calling_function(self.last_directions)
+        self.calling_function(message_rec.data)
+        # for index in range(len(message_rec)):
+        #     x = self.__microSec_to_duty(
+        #         message_rec[index])
+
+        #     self.motors[index].duty_cycle = x
+        #     print(f"type of var callback {type(x)}")
 
 
-#!/usr/bin/env python3
-
-'''
-ROS 
----
-
-node:
------
-    - motor_listener
-
-Publishes:
-----------
-
-Subscribes:
-----------
-    - motor_command
-
-'''
-
-
-# Begin typing imports
-from typing import List
-# End typing imports
-
-# remove
-# remove 
-
-# Begin imports
-import rospy
-
-from std_msgs.msg import Int32MultiArray
-# End imports
-
-# Rospy nodes
-rospy.init_node("motor_listener")
-rate = rospy.Rate(100)
-
-
-# Motor init codes
-try:
-    # Set up for 8 motors should be typical set up
-    # Next thing to do is mock the motors
-    local_channels: List[int] = [x for x in range(8)]
-    num_motors: int = len(local_channels)
-    motor_caller = MotorInterface(local_channels, num_motors, 0, 100, .1, 5)
-
-    # high: List[int] = [20 for i in range(num_motors)]
-    # low: List[int] = [30 for i in range(num_motors)]
-
-    print("arming")
-    motor_caller.arm_seq()
-    print("done arming")
-    while not rospy.is_shutdown():
-        rospy.Subscriber("motor_command", Int32MultiArray, motor_caller.callback)
-        # rospy.Subscriber("volt_low", Bool, loop.cut_motors)
-        rospy.spin()
-    motor_caller.clo_seq()
-
-except KeyboardInterrupt:
-    motor_caller.clo_seq()
+# Delete after here
