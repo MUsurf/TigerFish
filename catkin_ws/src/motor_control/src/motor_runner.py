@@ -27,7 +27,7 @@ Subscribes:
 
 
 # BEGIN IMPORT
-import rosros as rospy
+from rosros import rospify as rospy
 from std_msgs.msg import Int32MultiArray
 # END IMPORT
 

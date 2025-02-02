@@ -28,7 +28,7 @@ from motor_interface import MotorInterface
 
 # Begin imports
 import sys
-import rosros as rospy
+from rosros import rospify as rospy
 
 from std_msgs.msg import Int32MultiArray
 # End imports
