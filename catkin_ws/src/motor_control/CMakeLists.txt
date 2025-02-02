@@ -16,13 +16,11 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(Qt5 REQUIRED COMPONENTS Widgets)
-find_package(rclcpp REQUIRED)
+=find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
-include_directories(include ${Qt5Widgets_INCLUDE_DIRS})
 
 
 
@@ -175,7 +173,6 @@ include_directories(
 install(PROGRAMS
   src/master.py
   src/motor_runner.py
-  DESTINATION ${lib/${PROJECT_NAME}}
 )
 
 ament_package()
