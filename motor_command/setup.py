@@ -1,6 +1,7 @@
 from setuptools import find_packages, setup
+from glob import glob
 
-package_name = 'motor_runner'
+package_name = 'motor_command'
 
 setup(
     name=package_name,
@@ -10,6 +11,9 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('lib/' + package_name, [package_name+'/motor_commander.py']),
+        ('lib/' + package_name, [package_name+'/motor_interface.py']),
+        ('share/' + package_name + '/launch', glob('launch/*.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -20,6 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'motor_runner = motor_command.motor_runner:main',
+            'motor_listener = motor_command.motor_listener:main'
         ],
     },
 )

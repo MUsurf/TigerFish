@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="motor_command" exec="motor_listener">
+    <node pkg="motor_command" exec="motor_runner">
+</launch>
