@@ -21,9 +21,6 @@ build
 # Ignore documentation files to be built locally
 Generated
 
-#Ignore thing
-# package_example/
-
 
 # Ignore the IGNORE tag
 *IGNORE*
