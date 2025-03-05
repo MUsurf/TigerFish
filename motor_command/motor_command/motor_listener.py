@@ -32,43 +32,6 @@ from rclpy.node import Node
 from std_msgs.msg import Int32MultiArray
 # End imports
 
-# Rospy nodes
-# rospy.init_node("motor_listener")
-# rclpy.init(args=sys.argv)
-# node = rclpy.create_node('motor_listener')
-
-# node.get_logger().info('Created node')
-
-# # rate = rospy.Rate(100)
-# rclpy.Rate(100, node.get_clock())
-
-
-# # Motor init codes
-# try:
-#     # Set up for 8 motors should be typical set up
-#     # Next thing to do is mock the motors
-#     local_channels: List[int] = [x for x in range(8)]
-#     num_motors: int = len(local_channels)
-#     motor_caller = MotorInterface(local_channels, num_motors, 0, 100, .1, .5, 5)
-
-#     # high: List[int] = [20 for i in range(num_motors)]
-#     # low: List[int] = [30 for i in range(num_motors)]
-
-#     print("arming")
-#     motor_caller.arm_seq()
-#     print("done arming")
-#     while rclpy.ok():#not rospy.is_shutdown():
-#         rospy.Subscriber("motor_command", Int32MultiArray, motor_caller.callback)
-#         # rospy.Subscriber("volt_low", Bool, loop.cut_motors)
-#         rclpy.spin(node)
-#     motor_caller.clo_seq()
-
-# except KeyboardInterrupt:
-#     motor_caller.clo_seq()
-
-
-
-
 
 
 class MotorListener(Node):
@@ -84,15 +47,15 @@ class MotorListener(Node):
         )
         self.get_logger().info('Created Subscriber')
         
-        # self.timer = self.create_timer(0.01, self.timer_callback)  # 100Hz
-        
         # Motor init codes
         self.local_channels: List[int] = [x for x in range(8)]
         self.num_motors: int = len(self.local_channels)
         self.motor_caller = MotorInterface(self.local_channels, self.num_motors, 0, 100, .1, .5, 5)
         
         self.get_logger().info("Arming motors")
-        self.motor_caller.arm_seq()
+
+        self.handle1 = self.motor_caller.arm_seq()
+        self.motor_caller.second_setup()
         self.get_logger().info("Done arming")
 
     def motor_callback(self, msg: Int32MultiArray):
@@ -101,13 +64,20 @@ class MotorListener(Node):
 
     def shutdown(self):
         self.get_logger().info("Shutting down motor listener")
+        # May not bring motors down to zero
+        self.motor_caller.stop_event.set()
+        # Join thread back to main
+        if self.handle1.is_alive():
+            self.handle1.join(timeout=2)
+        # Bring motors down to zero
         self.motor_caller.clo_seq()
+        
 
 
 def main(args=None):
     rclpy.init(args=args)
+    print("Starting listener")
     node = MotorListener()
-    
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

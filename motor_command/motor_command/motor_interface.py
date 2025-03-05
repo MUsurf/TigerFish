@@ -5,7 +5,18 @@ from typing import List
 # Begin imports
 from motor_command.motor_commander import MotorCommand
 import time
+import threading
 # End imports
+
+# Decleration of wrapper for threading a function
+def threaded(fn):
+    def wrapper(*args, **kwargs):
+        thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
+        thread.start()
+        return thread
+    return wrapper
+
+
 
 class MotorInterface():
     """Handles direct control of motors
@@ -34,12 +45,18 @@ class MotorInterface():
         # info This is the latest command recieved from ros if ros fails to deliver a new value before next execution then the same values are used
         self.last_directions: List[int] = []
 
+        # info New motor targets
+        self.new_directions: bool = False
+        # info Event to signal kill
+        self.stop_event = threading.Event()
+
+
     def second_setup(self):
         self.range: int = abs(self.max_val - self.offset)
-        self.new_directions : bool = False
-        self.arm_seq()
+        # self.arm_seq()
 
-    def arm_seq(self) -> None:
+    @threaded
+    def arm_seq(self) -> threading.Thread:
         """Current method of arming all motors may change with calibration
 
         Notes
@@ -65,9 +82,10 @@ class MotorInterface():
         """Cleans up motors and is responsible for bringing them all back to zero"""
 
         targets: List[int] = [0 for _ in range(self.numMotors)]
-        for _ in range(self.max_steps_needed + 1):
+        for _ in range(self.max_steps_needed):
             self.motor_commander.pinStep(targets)
             time.sleep(self.minor_time)
+
 
     def __percent_to_duty(self, percent: int) -> int:
         """converts percent to duty in ms pulses
@@ -95,15 +113,17 @@ class MotorInterface():
         -----
             Only needs to be called once
         """
-        while (True):
+        while not self.stop_event.is_set():
             while (self.new_directions):
                 duty_directions: List[int] = self.direction_to_motor(self.last_directions)
                 for _ in range(self.steps_used):
                     self.motor_commander.pinStep(duty_directions)
                     time.sleep(self.minor_time)
+                self.new_directions = False
                 time.sleep(self.major_time)
             # if taking to many resources change this to major time but minor time is used as to be more responsive
             time.sleep(self.minor_time)
+        print("Thread exiting")
 
     def direction_to_motor(self, directions) -> List[int]:
         """This function will have some of the direction to motor commands

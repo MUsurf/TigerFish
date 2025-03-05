@@ -5,14 +5,14 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='motor_command',
-            executable='motor_listener',
-            # name='motor_listener',
+            executable='motor_runner',
+            # name='motor_runner',
             # output='screen',
         ),
         Node(
             package='motor_command',
-            executable='motor_runner',
-            # name='motor_runner',
+            executable='motor_listener',
+            # name='motor_listener',
             # output='screen',
         ),
     ])
