@@ -25,10 +25,13 @@ class MotorInterface():
     """
 
     def __init__(self, channels: List[int], numMotors: int, offset: int, max_val: int, minor_time: float, major_time: float, step_size: int, steps_used=10) -> None:
+    def __init__(self, channels: List[int], numMotors: int, offset: int, max_val: int, minor_time: float, major_time: float, step_size: int, steps_used=10) -> None:
         # info Number of motors
         self.numMotors: int = numMotors
         # info This is the amount of time between steps
         self.minor_time: float = minor_time
+        # info This is the amount of time between new targets being used
+        self.major_time: float = major_time
         # info This is the amount of time between new targets being used
         self.major_time: float = major_time
         # info This is how to set the min value
@@ -41,6 +44,7 @@ class MotorInterface():
         self.steps_used: int = steps_used
         # info This is the instance of motorcommand that will be used
         self.motor_commander = MotorCommand(
+            channels, self.numMotors, step_size)
             channels, self.numMotors, step_size)
         # info This is the latest command recieved from ros if ros fails to deliver a new value before next execution then the same values are used
         self.last_directions: List[int] = []
@@ -62,6 +66,7 @@ class MotorInterface():
         Notes
         -----
             This is the correct way to set up the motors to run
+            This is the correct way to set up the motors to run
         """
 
         target_speeds: List[List[int]] = [
@@ -78,6 +83,8 @@ class MotorInterface():
 
         self.calling_function()
 
+        self.calling_function()
+
     def clo_seq(self) -> None:
         """Cleans up motors and is responsible for bringing them all back to zero"""
 
@@ -88,6 +95,20 @@ class MotorInterface():
 
 
     def __percent_to_duty(self, percent: int) -> int:
+        """converts percent to duty in ms pulses
+
+        Percent is used for it's convience in the rest of the code
+
+        Parameters
+        ----------
+        percent : int
+            percent 0-100 for running the motors
+
+        Returns
+        -------
+        int
+            duty in ms pulses
+        """
         """converts percent to duty in ms pulses
 
         Percent is used for it's convience in the rest of the code
@@ -137,6 +158,8 @@ class MotorInterface():
         """
         # * if you wish to go to the negative end of this axis the magnitude must also be supplied as a negative
         # info For multiple instructions to be followed at once the results post array must be added together while being grouped
+        # * if you wish to go to the negative end of this axis the magnitude must also be supplied as a negative
+        # info For multiple instructions to be followed at once the results post array must be added together while being grouped
         # info This assumes that all motors are number 1-4 5-8 left to right and horizontal then vertical
         # ~ This could be used to balance out an under preforming motor
         motor_to_directions = [
@@ -151,6 +174,7 @@ class MotorInterface():
 
         drive_in_duty = [0 for _ in range(self.numMotors)]
 
+        # ! Not working need to diagnose later <values being passed are not of type directions but are instead just motor controlls>
         # ! Not working need to diagnose later <values being passed are not of type directions but are instead just motor controlls>
         # for index in range(len(directions)):
         #     for second_index in  range(len(motor_to_directions[0])):
@@ -174,6 +198,17 @@ class MotorInterface():
 
         print("Data received is: " + str(message_rec.data))
         self.last_directions = message_rec.data
+        self.new_directions = True
+        # This is still set up in a way that is blocking need to incorporate a major time step to do this
+        """ Break down of cases
+        1) Motors finish getting to targets before next instruction is published 
+            They should not start running the steping program until new instructions are given
+        2) Motors finish as new targets arive 
+            Motors should run with this new information as soon as possible
+        3) Motors are not finished steping to targets
+            Motors should finish steping to targets and then start the stepping to the newest target 
+        """
+        # self.calling_function(self.last_directions)
         self.new_directions = True
         # This is still set up in a way that is blocking need to incorporate a major time step to do this
         """ Break down of cases
