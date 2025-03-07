@@ -21,5 +21,6 @@ build
 # Ignore documentation files to be built locally
 Generated
 
-# Keep Files that are just a combination of other files to avoid imports
-# **/main*
+
+# Ignore the IGNORE tag
+*IGNORE*
