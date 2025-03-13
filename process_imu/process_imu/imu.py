@@ -90,25 +90,26 @@ def imu_node():
     '''
 
     # Setup Node
-    rclpy.init_node("imu_node", anonymous=True)
+    node = rclpy.create_node("imu_node")
     # Setup Subscriber
-    rclpy.Subscriber("IMUdata", Imu, imu_callback)
+    node.create_subscription(Imu, "IMUdata", imu_callback, 10)
 
     # Create a publisher
     global imu_string_publisher
-    imu_string_publisher = rclpy.Publisher("ProcessedIMU", String, queue_size=10)
+    imu_string_publisher = node.create_publisher(String, "ProcessedIMU", 10)
 
 
     # Keep the node running
-    rclpy.spin()
+    rclpy.spin(node)
 
 
 ############ Main #############
 if __name__ == '__main__':
     try:
         # Run the node
+        rclpy.init()
         imu_node()
-    except rclpy.ROSInterruptException:
+    except rclpy.exceptions.ROSInterruptException:
         # Handle a ros interruption
         pass
     # Add special case handlers here
