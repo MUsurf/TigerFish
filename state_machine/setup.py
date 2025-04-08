@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'depth_node = state_machine.hello:main'
+            'start_state_machine = state_machine.state_machine:main'
         ],
     },
 )
