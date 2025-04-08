@@ -62,11 +62,11 @@ BNO055I2CNode::BNO055I2CNode()
 
     imu->init();
 
-    pub_data = this->create_publisher<sensor_msgs::msg::Imu>("data", 10);
-    pub_raw = this->create_publisher<sensor_msgs::msg::Imu>("raw", 10);
-    pub_mag = this->create_publisher<sensor_msgs::msg::MagneticField>("mag", 10);
-    pub_temp = this->create_publisher<sensor_msgs::msg::Temperature>("temp", 10);
-    pub_status = this->create_publisher<diagnostic_msgs::msg::DiagnosticStatus>("status", 10);
+    pub_data = this->create_publisher<sensor_msgs::msg::Imu>("imu_data", 10);
+    pub_raw = this->create_publisher<sensor_msgs::msg::Imu>("imu_raw", 10);
+    pub_mag = this->create_publisher<sensor_msgs::msg::MagneticField>("imu_mag", 10);
+    pub_temp = this->create_publisher<sensor_msgs::msg::Temperature>("imu_temp", 10);
+    pub_status = this->create_publisher<diagnostic_msgs::msg::DiagnosticStatus>("imu_status", 10);
 
     srv_reset = this->create_service<std_srvs::srv::Trigger>("reset", std::bind(&BNO055I2CNode::onSrvReset, this, std::placeholders::_1, std::placeholders::_2));
 

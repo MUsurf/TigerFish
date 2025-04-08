@@ -92,11 +92,11 @@ def imu_node():
     # Setup Node
     node = rclpy.create_node("imu_node")
     # Setup Subscriber
-    node.create_subscription(Imu, "IMUdata", imu_callback, 10)
+    node.create_subscription(Imu, "imu_data", imu_callback, 10)
 
     # Create a publisher
     global imu_string_publisher
-    imu_string_publisher = node.create_publisher(String, "ProcessedIMU", 10)
+    imu_string_publisher = node.create_publisher(String, "processed_imu", 10)
 
 
     # Keep the node running

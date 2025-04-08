@@ -25,7 +25,6 @@ class MotorInterface():
     """
 
     def __init__(self, channels: List[int], numMotors: int, offset: int, max_val: int, minor_time: float, major_time: float, step_size: int, steps_used=10) -> None:
-    def __init__(self, channels: List[int], numMotors: int, offset: int, max_val: int, minor_time: float, major_time: float, step_size: int, steps_used=10) -> None:
         # info Number of motors
         self.numMotors: int = numMotors
         # info This is the amount of time between steps
@@ -44,7 +43,6 @@ class MotorInterface():
         self.steps_used: int = steps_used
         # info This is the instance of motorcommand that will be used
         self.motor_commander = MotorCommand(
-            channels, self.numMotors, step_size)
             channels, self.numMotors, step_size)
         # info This is the latest command recieved from ros if ros fails to deliver a new value before next execution then the same values are used
         self.last_directions: List[int] = []
