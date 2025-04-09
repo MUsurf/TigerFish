@@ -65,17 +65,25 @@ class StateMachine:
             self.transitions[state] = []
         self.transitions[state].append(transition)
 
+
     def process_event(self, event_data=None):
-        """
-        Process an event: check for any valid transitions from the current state.
-        """
+        # Process an event: check for any valid transitions from the current state.
+        # Returns a boolean indicating if a transition occurred.
         transitions = self.transitions.get(self.current_state, [])
         for transition in transitions:
             if transition.is_triggered(event_data):
+                # If valid trigger, exit the current state and enter the target state.
                 self.current_state.on_exit(event_data)
                 self.current_state = transition.target_state
-                self.current_state.on_entry(event_data)
-                break  # Only trigger one transition per event cycle
+                return True
+            
+        return False
+    
+    def start_event(self, event_data=None):
+        """
+        Start the state machine with the initial state's entry logic.
+        """
+        self.current_state.on_entry(event_data)
 
     def run(self, event_data=None):
         """

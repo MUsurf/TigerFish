@@ -1,6 +1,7 @@
-import rclpy
-from rclpy.node import Node
+# import rclpy
+# from rclpy.node import Node
 from state_machine_interface import State, Transition, StateMachine
+import time
 
 class IdleState(State):
     def on_entry(self, event_data=None):
@@ -22,9 +23,9 @@ class ActiveState(State):
     def execute(self, event_data=None):
         print("Active state executing...")
 
-class StateMachineNode(Node):
+class StateMachineNode():
     def __init__(self):
-        super().__init__('state_machine_node')
+        # super().__init__('state_machine_node')
         # Create states
         idle_state = IdleState()
         active_state = ActiveState()
@@ -32,15 +33,26 @@ class StateMachineNode(Node):
         # Create state machine
         self.sm = StateMachine(idle_state)
         # Add a simple transition that always fires (for demonstration)
-        self.sm.add_transition(idle_state, Transition(active_state))
+        self.sm.add_transition(idle_state, Transition(active_state, lambda event: True))
+        self.sm.add_transition(active_state, Transition(idle_state, lambda event: True))
         
         # Set up a timer to trigger state machine execution periodically.
-        self.timer = self.create_timer(2.0, self.timer_callback)
+        # self.timer = self.create_timer(2.0, self.timer_callback)
 
     def timer_callback(self):
         # Process an event and run the current state.
-        self.sm.process_event()
-        self.sm.run()
+        if self.sm.process_event():
+            print("Transitioning to new state.")
+
+            # System logic to decide if a transition should occur
+            # For this example, we always transition to the next state.
+
+            self.sm.start_event()  # Start the new state
+            self.sm.run() # Run the new state
+        else:
+            print("No transition occurred.")
+            # If no transition occurred, keep iterating on current task.
+            self.sm.run() # Run the current state
 
 def main(args=None):
     rclpy.init(args=args)
@@ -49,5 +61,13 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()
 
+def local_main():
+    # This is a local main function to run the state machine without ROS.
+    node = StateMachineNode()
+    node.timer_callback()  # Call the timer callback to start the state machine
+    while(True):
+        node.timer_callback()  # Simulate the timer callback
+        time.sleep(2)
+
 if __name__ == '__main__':
-    main()
+    local_main()
