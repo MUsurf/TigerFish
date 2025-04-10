@@ -21,18 +21,20 @@ class GateState(State):
         #        stop rotation
         #        break
         #
-        # while not gate_aligned:
+        # while true: (note: maybe this should be a time constraint? E.G. while not 5 minutes have past)
         #   move to align gate
         #   if gate_aligned:
         #       stop moving
         #       break
         #
-        # choose_gate()
+        # chose_gate = choose_gate()
         #
         # capture_image()
         #
-        # while not through_gate:
-        #   move towards gate
+        # process_and_store_image()
+        #
+        # while true: (note: maybe this should be a time constraint? E.G. while not 5 minutes have past)
+        #   move towards chose_gate
         #   if through_gate:
         #       stop moving
         #       break
