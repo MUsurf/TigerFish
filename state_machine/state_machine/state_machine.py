@@ -5,6 +5,7 @@ import time
 
 class GateState(State):
     def on_entry(self, event_data=None):
+        # what should we do on entry??
         print("Entering Gate State")
 
     def on_exit(self, event_data=None):
@@ -12,6 +13,31 @@ class GateState(State):
 
     def execute(self, event_data=None):
         print("Gate state executing...")
+        # begin rotation
+        # 
+        # while not see_gate:
+        #    rotate
+        #    if see_gate:
+        #        stop rotation
+        #        break
+        #
+        # while not gate_aligned:
+        #   move to align gate
+        #   if gate_aligned:
+        #       stop moving
+        #       break
+        #
+        # choose_gate()
+        #
+        # capture_image()
+        #
+        # while not through_gate:
+        #   move towards gate
+        #   if through_gate:
+        #       stop moving
+        #       break
+        #
+        # done
 
 class SlalomState(State):
     def on_entry(self, event_data=None):
