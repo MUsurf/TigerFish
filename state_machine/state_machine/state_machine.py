@@ -9,10 +9,13 @@ class GateState(State):
         print("Entering Gate State")
 
     def on_exit(self, event_data=None):
+        # what should we do on exit??
         print("Exiting Gate State")
 
     def execute(self, event_data=None):
         print("Gate state executing...")
+        # static have_captured_image
+        # 
         # begin rotation
         # 
         # while not see_gate:
@@ -26,12 +29,15 @@ class GateState(State):
         #   if gate_aligned:
         #       stop moving
         #       break
+        # if not have_captured_image:
         #
-        # chose_gate = choose_gate()
+        #   chose_gate = choose_gate()
         #
-        # capture_image()
+        #   capture_image()
         #
-        # process_and_store_image()
+        #   process_and_store_image()
+        #
+        # have_captured_image = true
         #
         # while true: (note: maybe this should be a time constraint? E.G. while not 5 minutes have past)
         #   move towards chose_gate
@@ -43,13 +49,32 @@ class GateState(State):
 
 class SlalomState(State):
     def on_entry(self, event_data=None):
+        # what should we do on entry?? prob align with first
         print("Entering Slalom State")
 
     def on_exit(self, event_data=None):
+        # what should we do on exit??
         print("Exiting Slalom State")
 
     def execute(self, event_data=None):
         print("Slalom state executing...")
+        # while see_slalom:
+        #   while true: (note: maybe this should be a time constraint? E.G. while not 5 minutes have past)
+        #       move to align slalom
+        #       if slalom_aligned:
+        #           stop moving
+        #           break
+        #
+        #   Note: maybe alignment should be handled during movement? maybe not? idk
+        #
+        #   while true: (note: maybe this should be a time constraint? E.G. while not 5 minutes have past)
+        #       move towards chose_gate
+        #       if through_gate:
+        #           stop moving
+        #           break
+        #
+        # done
+
 
 class TorpedoState(State):
     def on_entry(self, event_data=None):
