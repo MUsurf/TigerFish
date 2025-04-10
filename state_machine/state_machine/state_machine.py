@@ -3,38 +3,50 @@
 from state_machine_interface import State, Transition, StateMachine
 import time
 
-class IdleState(State):
+class GateState(State):
     def on_entry(self, event_data=None):
-        print("Entering Idle State")
+        print("Entering Gate State")
 
     def on_exit(self, event_data=None):
-        print("Exiting Idle State")
+        print("Exiting Gate State")
 
     def execute(self, event_data=None):
-        print("Idle state executing...")
+        print("Gate state executing...")
 
-class ActiveState(State):
+class SlalomState(State):
     def on_entry(self, event_data=None):
-        print("Entering Active State")
+        print("Entering Slalom State")
 
     def on_exit(self, event_data=None):
-        print("Exiting Active State")
+        print("Exiting Slalom State")
 
     def execute(self, event_data=None):
-        print("Active state executing...")
+        print("Slalom state executing...")
+
+class TorpedoState(State):
+    def on_entry(self, event_data=None):
+        print("Entering Torpedo State")
+
+    def on_exit(self, event_data=None):
+        print("Exiting Torpedo State")
+
+    def execute(self, event_data=None):
+        print("Torpedo state executing...")
 
 class StateMachineNode():
     def __init__(self):
         # super().__init__('state_machine_node')
         # Create states
-        idle_state = IdleState()
-        active_state = ActiveState()
+        gate_state = GateState()
+        slalom_state = SlalomState()
+        torpedo_state = TorpedoState()
         
         # Create state machine
-        self.sm = StateMachine(idle_state)
+        self.sm = StateMachine(gate_state)
         # Add a simple transition that always fires (for demonstration)
-        self.sm.add_transition(idle_state, Transition(active_state, lambda event: True))
-        self.sm.add_transition(active_state, Transition(idle_state, lambda event: True))
+        self.sm.add_transition(gate_state, Transition(slalom_state, lambda event: True))
+        self.sm.add_transition(slalom_state, Transition(torpedo_state, lambda event: True))
+        self.sm.add_transition(torpedo_state, Transition(gate_state, lambda event: True))
         
         # Set up a timer to trigger state machine execution periodically.
         # self.timer = self.create_timer(2.0, self.timer_callback)
