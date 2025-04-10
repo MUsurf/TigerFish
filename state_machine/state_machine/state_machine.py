@@ -85,6 +85,24 @@ class TorpedoState(State):
 
     def execute(self, event_data=None):
         print("Torpedo state executing...")
+        # while true: (note: maybe this should be a time constraint? E.G. while not 5 minutes have past)
+        #   while true:
+        #       move to align fish
+        #       if fish_aligned:
+        #           stop moving
+        #           break
+        #   
+        #   fire_torpedo()
+        #   
+        #   if all_torpedos_launched:
+        #       break
+        #   
+        #   fish_hit = fish_hit_check()
+        #
+        #   if fish_hit:
+        #       change_target()
+        #
+        # done
 
 class StateMachineNode():
     def __init__(self):
