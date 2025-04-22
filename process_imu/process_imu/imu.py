@@ -82,7 +82,10 @@ def imu_callback(data):
     imudata = imuData(data)
 
     # Publish a string of the __repr__ function output
-    imu_string_publisher.publish(str(imudata))
+    # imu_string_publisher.publish(str(imudata)) <-- This is the old way of doing it
+    msg = String() 
+    msg.data = str(imudata)
+    imu_string_publisher.publish(msg)
 
 def imu_node():
     ''' 
@@ -103,6 +106,17 @@ def imu_node():
     rclpy.spin(node)
 
 
+def main():
+    try:
+        # Run the node
+        rclpy.init()
+        imu_node()
+    except rclpy.exceptions.ROSInterruptException:
+        # Handle a ros interruption
+        pass
+    # Add special case handlers here
+
+'''
 ############ Main #############
 if __name__ == '__main__':
     try:
@@ -113,3 +127,5 @@ if __name__ == '__main__':
         # Handle a ros interruption
         pass
     # Add special case handlers here
+
+'''

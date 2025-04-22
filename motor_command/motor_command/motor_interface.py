@@ -104,20 +104,6 @@ class MotorInterface():
         int
             duty in ms pulses
         """
-        """converts percent to duty in ms pulses
-
-        Percent is used for it's convience in the rest of the code
-
-        Parameters
-        ----------
-        percent : int
-            percent 0-100 for running the motors
-
-        Returns
-        -------
-        int
-            duty in ms pulses
-        """
         range: int = abs(self.max_val - self.offset)
         duty: int = int(((percent / 100) * range) + self.offset)
         return duty
