@@ -16,9 +16,9 @@ class StateMachine:
         self.surf_board : SurfBoard = SurfBoard()
         self.supervisor : Supervisor = Supervisor()
         
-    def execute(self):
+    def execute(self) -> None:
         output : Outputs = self.tasks[self.current_task].execute(self.surf_board)
-        output, bad_output = self.supervisor.check(output)
+        output, bad_output = self.supervisor.check(output, self.surf_board)
         
         # Error handling
         if(bad_output):
@@ -34,8 +34,4 @@ class StateMachine:
             
         self.publisher.publish(output)
         
-        
-        
-        
-    
-        
+         

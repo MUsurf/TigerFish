@@ -9,7 +9,7 @@ class SurfBoard: # input
     pitch : float 
     yaw : float 
     cameraAngleTop : float
-    cameraAngleBot : float
+    cameraAngleBottom : float
     time : float
     SubPower: float
 
