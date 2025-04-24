@@ -1,0 +1,3 @@
+class StateMachine:
+    #Stuff
+    pass
