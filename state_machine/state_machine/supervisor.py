@@ -1,3 +1,7 @@
 class Supervisor:
-    #Stuff
-    pass
+    
+    def __init__(self):
+        pass
+
+    def check(self):
+        pass
