@@ -19,7 +19,7 @@ class Supervisor:
     
     def is_valid(self, output : Outputs) -> bool:
 
-        # todo - IMPLEMENT THIS PLEASE (maybe do camera later?) (maybe do collision check with accelerometer)
+        # todo - (maybe do camera later?) (maybe do collision check with accelerometer)
 
         timeBeforeCollision = 5 # the amount of seconds we look ahead before calling a kill on going up/down
 
