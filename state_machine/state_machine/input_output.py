@@ -3,7 +3,7 @@ class SurfBoard: # input
     #gotta finish i think
     # so this is what the surfboard needs to take in
     x : float 
-    y : float
+    y : float # up
     z : float 
     roll : float 
     pitch : float 
@@ -12,6 +12,7 @@ class SurfBoard: # input
     cameraAngleBottom : float
     time : float
     SubPower: float
+    yVelocity : float # up velocity
 
 class Outputs: 
     Last5SecondsDepth : list
