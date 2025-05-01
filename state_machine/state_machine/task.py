@@ -7,35 +7,11 @@ class Task(ABC):
         self.isComplete : bool = False
         self.isActive : bool = False
         self.attempted : bool = False
-        #idks
         self.error : int = 0
         self.output : None = None 
         
     @abstractmethod
-    def execute(self): #-> output // What is "i" bro
-        #         pass
-        
-        
-        # if (self.isComplete == True):
-        #     return #We did, we don't need to be here
-        
-        # elif (self.isActive == True):
-            
-
-
-        #     pass
-        
-        # elif (self.attempted == True):
-        #     #We already tried but aren't complete --> failure
-        #     if (self.error != 0):
-        #         #Handle error? Or is this supervisor's job
-        #         pass
-        
-        # else:
-        #     #start doing it, this must be first call?
-        #     pass
-        
-        
+    def execute(self):
         pass
 
 class EnterGate(Task):
@@ -43,12 +19,10 @@ class EnterGate(Task):
         super().__init__(type)
     
     def execute(self):
-        
-        # static have_captured_image
-        # 
 
-        if PID.Rotating == false:
+        if self.isActive == False:
 
+            self.isActive = True
             PID.beginRotationYaw()
             return
         
