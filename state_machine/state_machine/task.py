@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from fakeClasses import PID, Camera
 
 class Task(ABC):
     def __init__(self, type : str):
@@ -23,16 +24,12 @@ class EnterGate(Task):
         if self.isActive == False:
 
             self.isActive = True
-            PID.beginRotationYaw()
+            PID.start(0, 0, 0, 0, 0, 5)
             return
         
-        if Camera.see_gate and not Camera.Alligned:
-            
-            if(Camera.hasSeenGate):
+        if Camera.seeGate and not Camera.isAlligned:
 
-                PID.stopRotationYaw()
-
-            PID.allignYaw(Camera.needed())
+            PID.start(0, 0, 0, 0, 0, Camera.neededYaw())
             return
 
 
