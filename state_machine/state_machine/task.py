@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from fakeClasses import PID, Camera
+import enum
 
 class Task(ABC):
     def __init__(self, type : str):
@@ -10,24 +11,36 @@ class Task(ABC):
         self.attempted : bool = False
         self.error : int = 0
         self.output : None = None 
+        # maybe add the enum here instead?
         
     @abstractmethod
     def execute(self):
         pass
 
 class EnterGate(Task):
+    
+    class State(enum.Enum): # enums for the internal task states
+        seekingGate = 1
+        movingTowardsGate = 2
+
     def __init__(self, type):
         super().__init__(type)
+        self.currentState : enum.Enum = self.State.seekingGate # Dr. Seuss
+
     
     def execute(self):
 
         if self.isActive == False:
 
             self.isActive = True
+            return
+        
+        if self.currentState == self.State.seekingGate and not Camera.seeGate():
+            
             PID.start(0, 0, 0, 0, 0, 5)
             return
         
-        if Camera.seeGate and not Camera.isAlligned:
+        if Camera.seeGate() and not Camera.isAlligned():
 
             PID.start(0, 0, 0, 0, 0, Camera.neededYaw())
             return
