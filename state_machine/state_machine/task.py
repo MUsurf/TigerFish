@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from fakeClasses import PID, Camera
+from adapterClasses import PID, Camera
 import enum
 
 class Task(ABC):
@@ -45,19 +45,20 @@ class EnterGate(Task):
             
             # this is for yaw, as it is x, y, z, roll, pitch, yaw
             # this is so we can find the gate as we arent facing it at the start
-            PID.start(0, 0, 0, 0, 0, 5) # velocity
+            PID.setVelocity(0, 0, 0, 0, 0, 5) # velocity
             return
         
-        if self.currentState == self.State.seekingGate and not Camera.allignedYaw():
+        if self.currentState == self.State.seekingGate and not Camera.gateAlignedYaw():
 
             # this is a call to the PID to allign the robot to the gate
-            PID.start(0, 0, 0, 0, 0, Camera.neededYaw()) # position or velocity
+            PID.setVelocity(0, 0, 0, 0, 0, Camera.neededYaw()) # position or velocity
             return
         
-        if self.currentState == self.State.seekingGate and not Camera.allignedPosition():
+        if self.currentState == self.State.seekingGate and not Camera.gateAlignedPosition():
+            # Remember we want to align with a set half of the gate
             
             # this is a call to the PID to allign the robot to the gate
-            PID.start(0, Camera.neededY(), 0, 0, 0, 0) # position or velocity
+            PID.setVelocity(0, Camera.neededY(), 0, 0, 0, 0) # position or velocity
             return
 
         if self.currentState == self.State.seekingGate:
@@ -66,12 +67,12 @@ class EnterGate(Task):
             PID.stop() # short hand for PID.start(0, 0, 0, 0, 0, 0)
             return
 
-        if self.currentState == self.State.movingTowardsGate and not Camera.withinWantedDistance():
+        if self.currentState == self.State.movingTowardsGate and not Camera.gateAlignedDistance():
             
-            PID.start(5, 0, 0, 0, 0, 0) # move towards gate also is velocity
+            PID.setVelocity(5, 0, 0, 0, 0, 0) # move towards gate also is velocity
             return
 
-        if self.currentState == self.State.movingTowardsGate and (not Camera.allignedYaw() or not Camera.allignedPosition()):
+        if self.currentState == self.State.movingTowardsGate and (not Camera.gateAlignedYaw() or not Camera.gateAlignedPosition()):
             
             self.currentState = self.State.seekingGate
             return
@@ -93,7 +94,7 @@ class EnterGate(Task):
         if self.currentState == self.State.barrelRolling and self.barrelRollCount < 3:
             
             # ! implement something that increases the velocity of the roll when the later check fails
-            PID.start(0, 0, 0, 5, 0, 0) # velocity
+            PID.setVelocity(0, 0, 0, 5, 0, 0) # velocity
 
             if self.currentAngleGoal < PID.subRollAngle() < self.currentAngleGoal + self.angleAllowance:
                 
@@ -113,7 +114,7 @@ class EnterGate(Task):
         
         if self.currentState == self.State.movingThroughGate and Camera.seeGate():
 
-            PID.start(5, 0, 0, 0, 0, 0) # velocity
+            PID.setVelocity(5, 0, 0, 0, 0, 0) # velocity
             return
         
 
