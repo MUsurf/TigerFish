@@ -104,3 +104,26 @@ class Camera:
             bool: True if aligned, False otherwise.
         """
         return False
+    
+    @classmethod
+    def neededYaw(cls) -> float:
+        """
+        Gets the needed yaw to align with the gate.
+        THIS MAY BE POSITION OR VELOCITY DEPENDING ON IMPLEMENTATION.
+        
+        Returns:
+            float: The needed yaw angle.
+        """
+        return 0.0
+    
+    @classmethod
+    def neededY(cls) -> float:
+        """
+        Gets the needed y position to align with the gate.
+        THIS MAY BE POSITION OR VELOCITY DEPENDING ON IMPLEMENTATION.
+        
+        Returns:
+            float: The needed y position.
+        """
+        return 0.0
+    
