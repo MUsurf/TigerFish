@@ -54,38 +54,13 @@ class MotorCommand():
         # info This is done so number of motors can be changed on the fly
         self.motors: List[PCA9685.PWMChannel] = [
             pca.channels[channel] for channel in local_channels]
-
-    def __microSec_to_duty(self, microSec: int) -> int:
-        """Convert Microsecond pulses to duty cycle
-
-        Convert Microsecond length pulses that have been aligned with the operating requirments of the interface to duty cycle of the current PWM frequency
-
-        Parameters
-        ----------
-            microSec : int
-                Must be int from 0-100 'microSec'
-
-        Returns
-        -------
-            int
-                int from 65536-0
-
-        Notes
-        -----
-        'microsec' range comes from pca chips desired control frequency
         
-        """
-
-        samp_time: float = (1/pca.frequency) * 1000 * \
-            1000  # Convert to Micro Sec
-        duty_cycle = int((65536 * microSec)/(samp_time))
-        return duty_cycle
-
     def set_motor_speed(self, motor_idex: int, speed: int) -> None:
         '''Set the speed of a single motor'''
-
-        pwm_value: int = self.__microSec_to_duty(1000 + (speed * 10))
-        self.motors[motor_idex].duty_cycle = pwm_value
+        
+        duty_cycle = int(65536 * (speed / 100))
+        
+        self.motors[motor_idex].duty_cycle = duty_cycle
 
     def pinStep(self, targets: List[int]) -> None:
         """Move pin towards target supplied
