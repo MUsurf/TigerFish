@@ -1,0 +1,7 @@
+Triangulation function
+    2 funcitons
+        1 for x and 1 for y
+        uses 1/sin(180-angle1-angle2)=(distance from cam1 to object)/sin(angle1)
+        
+
+
