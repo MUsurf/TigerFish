@@ -10,7 +10,7 @@ def find3DVector(xAngle, zAngle):
     vector = [0, 1, 0]
     #find the vector after rotating x degrees down from the y axis
     vector[0] = math.cos(math.radians(90-xAngle))
-    vector[1] = math.sin(math.radians(90-xAngle))
+    vector[1] = vector[1]*math.sin(math.radians(90-xAngle))
     
     #find the vector after rotating z degrees around the y axis
     vector[0] = vector[0]*math.cos(math.radians(zAngle))
@@ -26,11 +26,11 @@ class Triangulation:
         cam2xangle = 90-abs(cam2X)
         cam1zangle = 90-abs(cam1Z)
         cam2zangle = 90-abs(cam2Z)
+    
 
         #calculates the angle on the top of the triangle
         topAngleX = 180-cam1xangle-cam2xangle
         topAngleY = 180-cam1zangle-cam2zangle
-        
         
         
         #calculates the x-distance from each camera to the object using the law of sines
@@ -67,15 +67,9 @@ class Triangulation:
         print("distance Cam1:", Cam1Distance)
         print("distance Cam2:", Cam2Distance)
 
+        #finds the 3D vector from each camera to the object
         cam1Vector = [v * Cam1Distance for v in find3DVector(cam1X, cam1Z)]
         cam2Vector = [v * Cam2Distance for v in find3DVector(cam2X, cam2Z)]
 
-        return (cam1Vector, cam2Vector)
-        
-a = (Triangulation.triangulate(20, 10, -30, 0))
-
-print("The following are the 2 vectors from each camera to the object:")
-print(a)
-
-a = (Triangulation.triangulate(45, -45, -45, 45))
-print(a)
+        #Only returns the vector from camera 1
+        return (cam1Vector)
