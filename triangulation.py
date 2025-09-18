@@ -1,16 +1,35 @@
 import math
 
+#Welcome to triangulation.py!!
+#important things to note:
+#assume cameras are 1 unit apart
+#assume cameras are facing towards the positive y direction
+
+
+def find3DVector(xAngle, zAngle):
+    vector = [0, 1, 0]
+    #find the vector after rotating x degrees down from the y axis
+    vector[0] = math.cos(math.radians(90-xAngle))
+    vector[1] = math.sin(math.radians(90-xAngle))
+    
+    #find the vector after rotating z degrees around the y axis
+    vector[0] = vector[0]*math.cos(math.radians(zAngle))
+    vector[1] = vector[1]*math.cos(math.radians(zAngle))
+    vector[2] = math.sin(math.radians(zAngle))
+    return vector
+
+
 class Triangulation: 
-    def triangulate(cam1X, cam2X, cam1Y, cam2Y):
+    def triangulate(cam1X, cam2X, cam1Z, cam2Z):
         # finds the bottom angles of the triangle
         cam1xangle = 90-abs(cam1X)
         cam2xangle = 90-abs(cam2X)
-        cam1yangle = 90-abs(cam1Y)
-        cam2yangle = 90-abs(cam2Y)
+        cam1zangle = 90-abs(cam1Z)
+        cam2zangle = 90-abs(cam2Z)
 
         #calculates the angle on the top of the triangle
         topAngleX = 180-cam1xangle-cam2xangle
-        topAngleY = 180-cam1yangle-cam2yangle
+        topAngleY = 180-cam1zangle-cam2zangle
         
         
         
@@ -24,36 +43,39 @@ class Triangulation:
             
         
         #calculates the y-distance from each camera to the object
-        print(cam1yangle)
-        print(cam2yangle)
-        print (math.sin(math.radians(cam1yangle))+ math.sin(math.radians(cam2yangle)))
-        if cam1yangle+cam2yangle >= 180:
+        #print(cam1yangle)
+        #print(cam2yangle)
+        if cam1zangle+cam2zangle >= 180:
             Cam1ydistance = 0
             Cam2ydistance = 0
         else:
-            Cam1ydistance = (1/(math.sin(math.radians(topAngleY))))*(math.sin(math.radians(cam1yangle)))
-            Cam2ydistance = (1/(math.sin(math.radians(topAngleY))))*(math.sin(math.radians(cam2yangle)))
-        print(Cam1ydistance)
-        print(Cam2ydistance)
-        #finds the length of the distance from the object to the origin
-        Cam1Distance = math.sqrt((Cam1xdistance**2)+(Cam1ydistance**2))
-        Cam2Distance = math.sqrt((Cam2xdistance**2)+(Cam2ydistance**2))
-        print(Cam1Distance)
-        print(Cam2Distance)
+            Cam1zdistance = (1/(math.sin(math.radians(topAngleY))))*(math.sin(math.radians(cam1zangle)))
+            Cam2zdistance = (1/(math.sin(math.radians(topAngleY))))*(math.sin(math.radians(cam2zangle)))
         
-        # converts to x y z coordinates
-        Cam1Xcoord = Cam1xdistance*math.cos(math.radians(cam1Y))
-        Cam1Ycoord = Cam1xdistance*math.sin(math.radians(cam1Y))
-        Cam1Zcoord = Cam1ydistance
+        #testing prints
+        print("Cam1xdistance:", Cam1xdistance)
+        print("Cam2xdistance:", Cam2xdistance)
 
-        Cam2Xcoord = Cam2xdistance*math.cos(math.radians(cam2Y))
-        Cam2Ycoord = Cam2xdistance*math.sin(math.radians(cam2Y))
-        Cam2Zcoord = Cam2ydistance
+        print("Cam1zdistance:", Cam1zdistance)
+        print("Cam2zdistance:", Cam2zdistance)
+
+        #finds the length of the distance from the object to the origin
+        #to do this, I use the pythagorean theorem
+        #I don't know if this works, but I'm trying it
+        Cam1Distance = math.sqrt((Cam1xdistance**2)+(Cam1zdistance**2))
+        Cam2Distance = math.sqrt((Cam2xdistance**2)+(Cam2zdistance**2))
+        print("distance Cam1:", Cam1Distance)
+        print("distance Cam2:", Cam2Distance)
+
+        cam1Vector = [v * Cam1Distance for v in find3DVector(cam1X, cam1Z)]
+        cam2Vector = [v * Cam2Distance for v in find3DVector(cam2X, cam2Z)]
+
+        return (cam1Vector, cam2Vector)
         
-        # averages the two camera coordinates to get a more accurate reading
-        Xcoord = (Cam1Xcoord+Cam2Xcoord)/2
-        Ycoord = (Cam1Ycoord+Cam2Ycoord)/2
-        Zcoord = (Cam1Zcoord+Cam2Zcoord)/2
-        return (Xcoord, Ycoord, Zcoord)
-print(Triangulation.triangulate(20, 10, -30, 0))
-print(math.sqrt(2.546245**2))
+a = (Triangulation.triangulate(20, 10, -30, 0))
+
+print("The following are the 2 vectors from each camera to the object:")
+print(a)
+
+a = (Triangulation.triangulate(45, -45, -45, 45))
+print(a)
