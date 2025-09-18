@@ -1,0 +1,13 @@
+
+# Ignore .md files.
+**/*.md
+
+
+# Ignore git files and folders.
+./.gitignore
+./.git/
+
+# Ignore Docker files
+./docker-compose.yaml
+./Dockerfile
+./.dockerignore

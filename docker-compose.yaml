@@ -1,0 +1,19 @@
+services:
+  pi:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    privileged: true
+    profiles:
+      - pi
+    # Allow access to hardware on the pi.
+    devices:
+        - "/dev:/dev"
+
+  no-pi:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    profiles:
+      - no-pi
+
