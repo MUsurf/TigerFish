@@ -1,0 +1,21 @@
+services:
+
+# A service for developing when you have a Raspberry Pi.
+  pi:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    profiles:
+      - pi
+    # Allow access to hardware on the pi.
+    devices:
+        - "/dev:/dev"
+
+# A service for developing when you don't have a Raspberry Pi.
+  no-pi:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    profiles:
+      - no-pi
+
