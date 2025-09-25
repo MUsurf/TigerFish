@@ -1,4 +1,3 @@
-
 # Begin typing imports
 from typing import List
 # End typing imports
@@ -12,7 +11,7 @@ import adafruit_pca9685 as PCA9685
 # BEGIN SETUP
 i2c = busio.I2C(SCL, SDA)
 pca = PCA9685.PCA9685(i2c, address=0x40)
-pca.frequency = 280  # Hz
+pca.frequency = 48  # Hz, works with BLHeli_32 PWM mode
 # END SETUP
 
 
@@ -56,75 +55,70 @@ class MotorCommand():
             pca.channels[channel] for channel in local_channels]
 
     def __microSec_to_duty(self, microSec: int) -> int:
-        """Convert Microsecond pulses to duty cycle
+        """Convert Microsecond pulses to duty cycle for PCA9685
 
-        Convert Microsecond length pulses that have been aligned with the operating requirments of the interface to duty cycle of the current PWM frequency
+        Convert Microsecond pulses for Bl-Heli32 to duty cycle with current pca frequency of 48. 
 
         Parameters
         ----------
             microSec : int
-                Must be int from 0-100 'microSec'
+                Must be int from 1000-2000µ
 
         Returns
         -------
             int
-                int from 65536-0
+                int from 0-65536µ
 
         Notes
         -----
-        'microsec' range comes from pca chips desired control frequency
+        'microsec' range comes from ESC's desired control frequency
+        The return range comes from the limits of the PCA9685's 16 bit api
         
         """
 
-        samp_time: float = (1/pca.frequency) * 1000 * \
-            1000  # Convert to Micro Sec
-        duty_cycle = int((65536 * microSec)/(samp_time))
+        """Convert Microsecond pulses to duty cycle for PCA9685"""
+        samp_time: float = (1 / pca.frequency) * 1_000_000  # microseconds per cycle
+        duty_cycle = int((65536 * microSec) / samp_time)
         return duty_cycle
 
-    def set_motor_speed(self, motor_idex: int, speed: int) -> None:
-        '''Set the speed of a single motor'''
+    def set_motor_speed(self, motor_idex: int, speed: float) -> None:
+        '''Set the speed of a single motor (0-100) compatible with BLHeli_32'''
 
-        pwm_value: int = self.__microSec_to_duty(1000 + (speed * 10))
+        # Map 0-100% speed to 1000-2000 us pulse for BLHeli_32
+        pulse_us = int(1000 + int(speed * 10))  # 0% -> 1000µs, 100% -> 2000µs
+        pwm_value = self.__microSec_to_duty(pulse_us)
         self.motors[motor_idex].duty_cycle = pwm_value
 
     def pinStep(self, targets: List[int]) -> None:
-        """Move pin towards target supplied
-
-        Generates intermediate values and then steps pin from current state toward target.
-
-        Parameters
-        ----------
-            targets : List[int]
-                list of targets for motors (order matters).
-
-        Notes
-        -----
-            Should be used with an outside function to handle interupts and timing changes
-        """
+        """Move pin towards target supplied"""
 
         directions: List[int] = self.__targetDistance(targets)
         for index in range(len(directions)):
-            if (directions[index] == 0):
+            if directions[index] == 0:
                 continue
-            self.pinStates[index] += directions[index] * self.step_size
-            # print(self.pinStates[index])
+
+            # Update pinState toward target, avoiding overshoot
+            delta = directions[index] * self.step_size
+            if abs(delta) >= abs(targets[index] - self.pinStates[index]):
+                self.pinStates[index] = targets[index]
+            else:
+                self.pinStates[index] += delta
+
         self.__set_motors(self.pinStates)
 
-    def __targetDistance(self, targets: List[int]) -> List[int]:
-        """Figures out wich direction to step pins
-
-        Notes
-        -----
-            Reworked
-
-        """
-
-        values: List[int] = [target - pinState for target, pinState in zip(targets, self.pinStates)]
-        conversions: List[int] = [int(value / abs(value)) if value != 0 else 0 for value in values] # int cast should only be necessary for linter
-        return (conversions)
 
     def __set_motors(self, speeds: List[int]) -> None:
         """Sets pins to values given by speed position"""
 
         for index in range(self.motorNum):
-            self.set_motor_speed(index, speeds[index])
+            # Clamp speed to 0-100 before sending
+            clamped_speed = max(0, min(100, speeds[index]))
+            self.set_motor_speed(index, clamped_speed)
+
+    def __targetDistance(self, targets: List[int]) -> List[int]:
+        """Figures out wich direction to step pins"""
+
+        values: List[int] = [target - pinState for target, pinState in zip(targets, self.pinStates)]
+        conversions: List[int] = [int(value / abs(value)) if value != 0 else 0 for value in values]
+        return conversions
+

@@ -29,7 +29,7 @@ from motor_command.motor_interface import MotorInterface
 # Begin imports
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int32MultiArray
+from std_msgs.msg import Float32MultiArray
 # End imports
 
 
@@ -40,7 +40,7 @@ class MotorListener(Node):
         self.get_logger().info('Created node')
         
         self.subscription = self.create_subscription(
-            Int32MultiArray,
+            Float32MultiArray,
             'motor_command',
             self.motor_callback,
             10  # QoS profile depth
@@ -50,15 +50,17 @@ class MotorListener(Node):
         # Motor init codes
         self.local_channels: List[int] = [x for x in range(8)]
         self.num_motors: int = len(self.local_channels)
-        self.motor_caller = MotorInterface(self.local_channels, self.num_motors, 0, 100, .1, .5, 5)
+        self.motor_caller = MotorInterface(self.local_channels, self.num_motors, 0, 100, .1, .1, 5)
+        self.motor_caller.logging_node = self
         
         self.get_logger().info("Arming motors")
-
+        # Thread reference
         self.handle1 = self.motor_caller.arm_seq()
         self.motor_caller.second_setup()
         self.get_logger().info("Done arming")
+        
 
-    def motor_callback(self, msg: Int32MultiArray):
+    def motor_callback(self, msg: Float32MultiArray):
         self.get_logger().info(f'Received motor command: {msg.data}')
         self.motor_caller.callback(msg)
 
@@ -68,7 +70,7 @@ class MotorListener(Node):
         self.motor_caller.stop_event.set()
         # Join thread back to main
         if self.handle1.is_alive():
-            self.handle1.join(timeout=2)
+            self.handle1.join(timeout=10)
         # Bring motors down to zero
         self.motor_caller.clo_seq()
         
@@ -83,6 +85,7 @@ def main(args=None):
     except KeyboardInterrupt:
         node.shutdown()
     finally:
+        node.shutdown()
         node.destroy_node()
         rclpy.shutdown()
 

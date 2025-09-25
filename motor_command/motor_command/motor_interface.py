@@ -31,8 +31,6 @@ class MotorInterface():
         self.minor_time: float = minor_time
         # info This is the amount of time between new targets being used
         self.major_time: float = major_time
-        # info This is the amount of time between new targets being used
-        self.major_time: float = major_time
         # info This is how to set the min value
         self.offset: int = offset
         # info This is needed as this interface will take percent and scale to output used
@@ -43,7 +41,9 @@ class MotorInterface():
         self.steps_used: int = steps_used
         # info This is the instance of motorcommand that will be used
         self.motor_commander = MotorCommand(
-            channels, self.numMotors, step_size)
+            channels, 
+            self.numMotors, 
+            step_size)
         # info This is the latest command recieved from ros if ros fails to deliver a new value before next execution then the same values are used
         self.last_directions: List[int] = []
 
@@ -51,6 +51,9 @@ class MotorInterface():
         self.new_directions: bool = False
         # info Event to signal kill
         self.stop_event = threading.Event()
+        
+        self.logging_node = None
+        
 
 
     def second_setup(self):
@@ -68,15 +71,17 @@ class MotorInterface():
 
         target_speeds: List[List[int]] = [
             [0 for _ in range(self.numMotors)],
-            [20 for _ in range(self.numMotors)],
-            [30 for _ in range(self.numMotors)],
-            [10 for _ in range(self.numMotors)]
+            #[20 for _ in range(self.numMotors)],
+            #[30 for _ in range(self.numMotors)],
+            #[10 for _ in range(self.numMotors)]
         ]
 
         for targets in target_speeds:
             for _ in range(self.max_steps_needed):
                 self.motor_commander.pinStep(targets)
                 time.sleep(self.minor_time)
+        
+        print("Motors armed")
 
         self.calling_function()
 
@@ -86,7 +91,7 @@ class MotorInterface():
         targets: List[int] = [0 for _ in range(self.numMotors)]
         for _ in range(self.max_steps_needed):
             self.motor_commander.pinStep(targets)
-            time.sleep(self.minor_time)
+            time.sleep(self.minor_time*10)
 
 
     def __percent_to_duty(self, percent: int) -> int:
@@ -109,23 +114,21 @@ class MotorInterface():
         return duty
 
     def calling_function(self) -> None:
-        """Used to step motors to each target given
-        
-        Notes
-        -----
-            Only needs to be called once
-        """
+        """Continuously updates motors toward the latest directions in real time."""
         while not self.stop_event.is_set():
-            while (self.new_directions):
-                duty_directions: List[int] = self.direction_to_motor(self.last_directions)
-                for _ in range(self.steps_used):
-                    self.motor_commander.pinStep(duty_directions)
-                    time.sleep(self.minor_time)
-                self.new_directions = False
-                time.sleep(self.major_time)
-            # if taking to many resources change this to major time but minor time is used as to be more responsive
+            if not self.last_directions:
+                time.sleep(self.minor_time)
+                continue
+
+            duty_directions = self.direction_to_motor(self.last_directions)
+
+            # Single incremental step toward latest target
+            self.motor_commander.pinStep(duty_directions)
+
+            if self.logging_node is not None:
+                self.logging_node.get_logger().info(f'Pin states: {self.motor_commander.pinStates}')
+
             time.sleep(self.minor_time)
-        print("Thread exiting")
 
     def direction_to_motor(self, directions) -> List[int]:
         """This function will have some of the direction to motor commands
