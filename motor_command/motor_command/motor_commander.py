@@ -54,10 +54,10 @@ class MotorCommand():
         self.motors: List[PCA9685.PWMChannel] = [
             pca.channels[channel] for channel in local_channels]
 
-    def __microSec_to_duty(self, microSec: int) -> int:
-        """Convert Microsecond pulses to duty cycle for PCA9685
+    def _percent_drive_to_duty(self, percent_drive: float) -> int:
+        """Convert percent drive to duty cycle for PCA9685
 
-        Convert Microsecond pulses for Bl-Heli32 to duty cycle with current pca frequency of 48. 
+        Convert percent drive for Bl-Heli32 to duty cycle with current pca frequency of 48.
 
         Parameters
         ----------
@@ -75,18 +75,19 @@ class MotorCommand():
         The return range comes from the limits of the PCA9685's 16 bit api
         
         """
+        """Convert percent drive to microsecond"""
+        # Map 0-100% speed to 1000-2000 us pulse for BLHeli_32
+        micro_sec = int(1000 + int(percent_drive * 10)) # 0% -> 1000µs, 100% -> 2000µs
 
         """Convert Microsecond pulses to duty cycle for PCA9685"""
         samp_time: float = (1 / pca.frequency) * 1_000_000  # microseconds per cycle
-        duty_cycle = int((65536 * microSec) / samp_time)
+        duty_cycle = int((65536 * micro_sec) / samp_time)
         return duty_cycle
 
     def set_motor_speed(self, motor_idex: int, speed: float) -> None:
         '''Set the speed of a single motor (0-100) compatible with BLHeli_32'''
 
-        # Map 0-100% speed to 1000-2000 us pulse for BLHeli_32
-        pulse_us = int(1000 + int(speed * 10))  # 0% -> 1000µs, 100% -> 2000µs
-        pwm_value = self.__microSec_to_duty(pulse_us)
+        pwm_value = self._percent_drive_to_duty(speed)
         self.motors[motor_idex].duty_cycle = pwm_value
 
     def pinStep(self, targets: List[int]) -> None:
@@ -116,7 +117,7 @@ class MotorCommand():
             self.set_motor_speed(index, clamped_speed)
 
     def __targetDistance(self, targets: List[int]) -> List[int]:
-        """Figures out wich direction to step pins"""
+        """Figures out which direction to step pins"""
 
         values: List[int] = [target - pinState for target, pinState in zip(targets, self.pinStates)]
         conversions: List[int] = [int(value / abs(value)) if value != 0 else 0 for value in values]

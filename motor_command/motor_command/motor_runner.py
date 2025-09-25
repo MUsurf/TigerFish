@@ -37,7 +37,6 @@ from typing import List
 import board
 import busio
 import adafruit_bno055
-import math
 
 OFF = [0 for _ in range(8)]
 
@@ -123,7 +122,7 @@ class Sequence():
         else:
             return self.data
         
-    def stop():
+    def stop(self):
         self.start_time = None
         
     def activated(self) : return self.start_time is not None
@@ -131,7 +130,7 @@ class Sequence():
 
 
 
-class MotorCommander(Node):
+class MotorRunner(Node):
     def __init__(self):
         super().__init__('motor_commander')
         self.publisher = self.create_publisher(Float32MultiArray, 'motor_command', 10)
@@ -146,13 +145,13 @@ class MotorCommander(Node):
         
         self.get_logger().info('MotorCommander Node Created')
         
-        self.mode = 'SEQUENCES'
+        self.mode = 'IMU'
     
     def timer_callback(self):
         match self.mode:
             case 'IMU':
                 data = self.do_imu()
-                self.publish(data)
+                self.publish_data(data)
             case 'SEQUENCES':
                 current_sequence = self.sequences[self.current_sequence]
                 if not current_sequence.activated():
@@ -183,7 +182,7 @@ class MotorCommander(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = MotorCommander()
+    node = MotorRunner()
     
     try:
         rclpy.spin(node)

@@ -10,7 +10,7 @@ import threading
 
 # Decleration of wrapper for threading a function
 def threaded(fn):
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs) -> threading.Thread:
         thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
         thread.start()
         return thread
@@ -61,7 +61,7 @@ class MotorInterface():
         # self.arm_seq()
 
     @threaded
-    def arm_seq(self) -> threading.Thread:
+    def arm_seq(self):
         """Current method of arming all motors may change with calibration
 
         Notes
@@ -95,23 +95,8 @@ class MotorInterface():
 
 
     def __percent_to_duty(self, percent: int) -> int:
-        """converts percent to duty in ms pulses
-
-        Percent is used for it's convience in the rest of the code
-
-        Parameters
-        ----------
-        percent : int
-            percent 0-100 for running the motors
-
-        Returns
-        -------
-        int
-            duty in ms pulses
-        """
-        range: int = abs(self.max_val - self.offset)
-        duty: int = int(((percent / 100) * range) + self.offset)
-        return duty
+        """WARN This function is deprecated as it's functionality has been moved to motor commander"""
+        return 0 
 
     def calling_function(self) -> None:
         """Continuously updates motors toward the latest directions in real time."""
@@ -163,11 +148,12 @@ class MotorInterface():
         # ~ Temp fix for above
         drive_in_duty = directions
 
-        drive_to_duty = [self.__percent_to_duty(duty) for duty in drive_in_duty]
+        # drive_to_duty = [self.__percent_to_duty(duty) for duty in drive_in_duty]
+        
 
         # for p_direction in directions:
         #     drive_in_duty.append(self.__percent_to_duty(p_direction))
-        return (drive_to_duty)
+        return (drive_in_duty)
     
 
     def callback(self, message_rec):

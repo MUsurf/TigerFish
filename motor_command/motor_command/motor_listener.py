@@ -27,9 +27,9 @@ from motor_command.motor_interface import MotorInterface
 # remove 
 
 # Begin imports
-import rclpy
-from rclpy.node import Node
-from std_msgs.msg import Float32MultiArray
+import rclpy # pyright: ignore[reportMissingImports]
+from rclpy.node import Node # pyright: ignore[reportMissingImports]
+from std_msgs.msg import Float32MultiArray # pyright: ignore[reportMissingImports]
 # End imports
 
 
