@@ -4,17 +4,6 @@
 
 class MotorListenerNode : public rclcpp::MotorListenerNode
 {
-public:
-    //constructor
-    MotorListenerNode() : Node("motor_listener")
-    {
-        
-
-    }
-}
-
-// #!/usr/bin/env python3
-
 // '''
 // ROS 
 // ---
@@ -31,6 +20,18 @@ public:
 //     - motor_command
 
 // '''
+
+public:
+    //constructor
+    MotorListenerNode() : Node("motor_listener")
+    {
+        
+
+    }
+}
+
+// #!/usr/bin/env python3
+
 
 
 // # Begin typing imports

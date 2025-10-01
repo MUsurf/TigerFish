@@ -20,8 +20,17 @@ class MotorInterface()
         std::unique_ptr<MotorCommand>      motor_commander;
         int                                num_motors;
         int                                offset;
+        int                                range;
         int                                step_size;
         int                                steps_used;
+        
+        [[deprecated("This function is deprecated as it's functionality has been moved to motor commander")]]
+        int __percent_to_duty(int percent)
+        {
+            std::cout << " [WARN : percent_to_duty ] This function is deprecated as it's functionality has been moved to motor commander" << std::endl;
+            return 0;
+
+        }
 
 
     public:
@@ -51,202 +60,209 @@ class MotorInterface()
             // info this is the instance of motorcommand that will be used
             this->motor_commander = std::make_unique<MotorCommand>(channels, this->num_motors, step_size)
 
+            // INFO this is the latest command recieved from ros if ros fails to deliver a new value before next execution then the same values are used
+            this->last_directions = std::vector<int>();
+
+            // INFO new motor targets
+            // this->new_directions = false; // Removed unused variable
+
+            // info Event to signal kill - this creates an atomic boolean shared pointer
+            this->stop_event = std::make_shared<std::atomic<bool>>(false);
+            
+            // INFO logging node initialization
+            this->logging_node = None;
+        }
+
+        // initialize range 
+        void second_setup()
+        {
+            this->range = abs(this->max_val - this->offset)
+        }
+
+        std::thread arm_seq()
+        {
+            // INFO Current method of arming all motors may change with calibration
+
+            std::vector<std::vector<int>> target_speeds = {
+                std::vector<int>(this->num_motors, 0)
+                //std::vector<int>(this->num_motors, 20),
+                //std::vector<int>(this->num_motors, 30),
+                //std::vector<int>(this->num_motors, 10)
+            };
+
+            // loop through each target speed setting and pin step 
+            for (const auto& targets : target_speeds)
+            {
+                for (int i = 0; i < this->max_steps_needed; ++i)
+                {
+                    this->motor_commander->pinStep(targets);
+                    std::this_thread::sleep_for(std::chrono::duration<float>(this->minor_time));
+                }
+            }
+
+            // that that the motors are armed
+            RCLCPP_INFO(this->logging_node->get_logger(), "Motors armed");
+
+            return std::thread(&MotorInterface::calling_function, this);
+        }
+
+        void clo_seq()
+        {
+            // Cleans up motors and is responsible for bringing them all back to zero
+
+            //initialize a vector of integers to hold the motor targets
+            std::vector<int> targets(this->num_motors, 0);
+
+            // loop through each pin and cause them to sleep
+            for (int i = 0; i < this->max_steps_needed; ++i)
+            {
+                this->motor_commander->pinStep(targets);
+                std::this_thread::sleep_for(std::chrono::duration<float>(this->minor_time * 10));
+            }
+        }
+
+        void calling_function()
+        {
+            // Continuously updates motors toward the latest directions in real time.
+            // do this until another thread requests that it stops
+            while (!this->stop_event->load())
+            {
+                // sleep while there are not any directions 
+                if (this->last_directions.empty())
+                {
+                    std::this_thread::sleep_for(std::chrono::duration<float>(this->minor_time));
+                    continue;
+                }
+                
+                //convert previous instruction to direction for the motor
+                std::vector<int> duty_directions = this->direction_to_motor(this->last_directions);
+
+                // Single incremental step toward latest target
+                this->motor_commander->pinStep(duty_directions);
+
+                // log pin states
+                if (this->logging_node != nullptr)
+                {
+                    RCLCPP_INFO(this->logging_node->get_logger(), "Pin states: {}", this->motor_commander->pinStates);
+                }
+
+                // cause the thread to sleep for a minor step
+                std::this_thread::sleep_for(std::chrono::duration<float>(this->minor_time));
+            }
 
         }
 
+        std::vector<int> direction_to_motor(float[] directions)
+        {
+            // This function will have some of the direction to motor commands
 
-        //     def __init__(self, channels: List[int], numMotors: int, offset: int, max_val: int, minor_time: float, major_time: float, step_size: int, steps_used=10) -> None:
-//         # info This is the instance of motorcommand that will be used
-//         self.motor_commander = MotorCommand(
-//             channels, self.numMotors, step_size)
-//         # info This is the latest command recieved from ros if ros fails to deliver a new value before next execution then the same values are used
-//         self.last_directions: List[int] = []
+            // Notes
+            // -----
+            //     directions will be in the form of a list of floats
+            //         ['x': -1-1, 'y':-1-1, 'z':-1-1, 'pitch':-1-1, 'yaw':-1-1, 'roll':-1-1]
+            //     This function is not implemented yet and only contains the translation from percent drive of commands to duty cycle
+            // * if you wish to go to the negative end of this axis the magnitude must also be supplied as a negative
+            // info For multiple instructions to be followed at once the results post array must be added together while being grouped
+            // info This assumes that all motors are number 1-4 5-8 left to right and horizontal then vertical
+            // ~ This could be used to balance out an under preforming motor
+            std::vector<std::vector<int>> motor_to_directions = {
+                {1, 1, -1, -1, 0, 0, 0, 0}, // 'x-axis'
+                {1, -1, 1, -1, 0, 0, 0, 0}, // 'y-axis'
+                {0, 0, 0, 0, 1, 1, 1, 1}, // 'z-axis' 
+                {0, 0, 0, 0, 1, 1, -1, -1}, // 'pitch' 
+                {1, -1, -1, 1, 0, 0, 0, 0}, // 'yaw' 
+                {0, 0, 0, 0, 1, -1, 1, -1} // 'roll'
+                // Add depth control
+            };
 
-//         # info New motor targets
-//         self.new_directions: bool = False
-//         # info Event to signal kill
-//         self.stop_event = threading.Event()
+            // initialize the drive in duty vector to all zeros for the number of motors
+            std::vector<int> drive_in_duty(this->num_motors, 0);
 
-}
+            //         # ! Not working need to diagnose later <values being passed are not of type directions but are instead just motor controlls>
+            // for index in range(len(directions)):for second_index in  range(len(motor_to_directions[0])):
+            //#         drive_in_duty[second_index] += directions[index] * motor_to_directions[index][second_index]
+            //# ~ Temp fix for above
+            drive_in_duty = directions;
+
+
+            //drive_to_duty = [self.__percent_to_duty(duty) for duty in drive_in_duty]
+
+            // for p_direction in directions:
+            //  drive_in_duty.append(self.__percent_to_duty(p_direction))
+            return (drive_in_duty)
+
+
+        }
+
+        //TODO - this is untested AI code that needs to be tested, but looks useful??
+        void kill_motors()
+        {
+            // This function will stop the motors and clean up the threads
+
+            // signal the thread to stop
+            this->stop_event->store(true);
+
+            // wait for the thread to finish
+            if (this->handle1.joinable())
+            {
+                this->handle1.join();
+            }
+
+            // run the closing sequence
+            this->clo_seq();
+
+            RCLCPP_INFO(this->logging_node->get_logger(), "Motors disarmed and interface closed");
+        }
+
+        void callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg)
+        {
+
+            // This is set up in a way to allow ros and the motor controls to function on a async basis. This will make sure nothing locks up
+            // and that pid gets very low latency feedback (not really but kinda).
+
+            // Function to subscribe to driver with ros
+            // This is set up in a way to allow ros and the motor controls to function on a async basis. This will make sure nothing locks up
+            // and that pid gets very low latency feedback (not really but kinda).
+
+            std::ostringstream oss;
+            for (size_t i = 0; i < msg->data.size(); ++i) {
+                oss << msg->data[i];
+                if (i != msg->data.size() - 1) oss << ", ";
+            }
+            RCLCPP_INFO(this->logging_node->get_logger(), "Data received is: [%s]", oss.str().c_str());
+
+            this->last_directions = msg->data;
+            // this->new_directions = true; // Removed unused variable
+
+            // This is still set up in a way that is blocking need to incorporate a major time step to do this
+            //         # This is still set up in a way that is blocking need to incorporate a major time step to do this
+//          """ Break down of cases
+//          1) Motors finish getting to targets before next instruction is published 
+//             They should not start running the steping program until new instructions are given
+//          2) Motors finish as new targets arive 
+//             Motors should run with this new information as soon as possible
+//          3) Motors are not finished steping to targets
+//             Motors should finish steping to targets and then start the stepping to the newest target 
+//          """
+            // Start the calling_function in a new thread if not already running
+            if (!this->handle1.joinable()) {
+                this->handle1 = std::thread(&MotorInterface::calling_function, this);
+            }
+        }
+
+
+
+
+
+
+
 
 
 // # Decleration of wrapper for threading a function
 // def threaded(fn):
-//     def wrapper(*args, **kwargs):
+//     def wrapper(*args, **kwargs) -> threading.Thread:
 //         thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
 //         thread.start()
 //         return thread
 //     return wrapper
 
-
-
-// class MotorInterface():
-//     """Handles direct control of motors
-    
-//         Should be given an array of ints 
-//     """
-
-//     def __init__(self, channels: List[int], numMotors: int, offset: int, max_val: int, minor_time: float, major_time: float, step_size: int, steps_used=10) -> None:
-//         # info Number of motors
-//         self.numMotors: int = numMotors
-//         # info This is the amount of time between steps
-//         self.minor_time: float = minor_time
-//         # info This is the amount of time between new targets being used
-//         self.major_time: float = major_time
-//         # info This is the amount of time between new targets being used
-//         self.major_time: float = major_time
-//         # info This is how to set the min value
-//         self.offset: int = offset
-//         # info This is needed as this interface will take percent and scale to output used
-//         self.max_val: int = max_val
-//         # info max steps to go from one extreme to the other
-//         self.max_steps_needed: int = int(self.max_val / step_size)
-//         # info This is the amount of steps used assuming motors don't need to reach value
-//         self.steps_used: int = steps_used
-//         # info This is the instance of motorcommand that will be used
-//         self.motor_commander = MotorCommand(
-//             channels, self.numMotors, step_size)
-//         # info This is the latest command recieved from ros if ros fails to deliver a new value before next execution then the same values are used
-//         self.last_directions: List[int] = []
-
-//         # info New motor targets
-//         self.new_directions: bool = False
-//         # info Event to signal kill
-//         self.stop_event = threading.Event()
-
-
-//     def second_setup(self):
-//         self.range: int = abs(self.max_val - self.offset)
-//         # self.arm_seq()
-
-//     @threaded
-//     def arm_seq(self) -> threading.Thread:
-//         """Current method of arming all motors may change with calibration
-
-//         Notes
-//         -----
-//             This is the correct way to set up the motors to run
-//         """
-
-//         target_speeds: List[List[int]] = [
-//             [0 for _ in range(self.numMotors)],
-//             [20 for _ in range(self.numMotors)],
-//             [30 for _ in range(self.numMotors)],
-//             [10 for _ in range(self.numMotors)]
-//         ]
-
-//         for targets in target_speeds:
-//             for _ in range(self.max_steps_needed):
-//                 self.motor_commander.pinStep(targets)
-//                 time.sleep(self.minor_time)
-
-//         self.calling_function()
-
-//     def clo_seq(self) -> None:
-//         """Cleans up motors and is responsible for bringing them all back to zero"""
-
-//         targets: List[int] = [0 for _ in range(self.numMotors)]
-//         for _ in range(self.max_steps_needed):
-//             self.motor_commander.pinStep(targets)
-//             time.sleep(self.minor_time)
-
-
-//     def __percent_to_duty(self, percent: int) -> int:
-//         """converts percent to duty in ms pulses
-
-//         Percent is used for it's convience in the rest of the code
-
-//         Parameters
-//         ----------
-//         percent : int
-//             percent 0-100 for running the motors
-
-//         Returns
-//         -------
-//         int
-//             duty in ms pulses
-//         """
-//         range: int = abs(self.max_val - self.offset)
-//         duty: int = int(((percent / 100) * range) + self.offset)
-//         return duty
-
-//     def calling_function(self) -> None:
-//         """Used to step motors to each target given
-        
-//         Notes
-//         -----
-//             Only needs to be called once
-//         """
-//         while not self.stop_event.is_set():
-//             while (self.new_directions):
-//                 duty_directions: List[int] = self.direction_to_motor(self.last_directions)
-//                 for _ in range(self.steps_used):
-//                     self.motor_commander.pinStep(duty_directions)
-//                     time.sleep(self.minor_time)
-//                 self.new_directions = False
-//                 time.sleep(self.major_time)
-//             # if taking to many resources change this to major time but minor time is used as to be more responsive
-//             time.sleep(self.minor_time)
-//         print("Thread exiting")
-
-//     def direction_to_motor(self, directions) -> List[int]:
-//         """This function will have some of the direction to motor commands
-
-//         Notes
-//         -----
-//             directions will be in the form of a list of floats
-//                 ['x': -1-1, 'y':-1-1, 'z':-1-1, 'pitch':-1-1, 'yaw':-1-1, 'roll':-1-1]
-
-//             This function is not implemented yet and only contains the translation from percent drive of commands to duty cycle
-//         """
-//         # * if you wish to go to the negative end of this axis the magnitude must also be supplied as a negative
-//         # info For multiple instructions to be followed at once the results post array must be added together while being grouped
-//         # info This assumes that all motors are number 1-4 5-8 left to right and horizontal then vertical
-//         # ~ This could be used to balance out an under preforming motor
-//         motor_to_directions = [
-//             [1, 1, -1, -1, 0, 0, 0, 0], # 'x-axis'
-//             [1, -1, 1, -1, 0, 0, 0, 0], # 'y-axis'
-//             [0, 0, 0, 0, 1, 1, 1, 1], # 'z-axis' 
-//             [0, 0, 0, 0, 1, 1, -1, -1], # 'pitch' 
-//             [1, -1, -1, 1, 0, 0, 0, 0], # 'yaw' 
-//             [0, 0, 0, 0, 1, -1, 1, -1], # 'roll'
-//             # Add depth control
-//         ]
-
-//         drive_in_duty = [0 for _ in range(self.numMotors)]
-
-//         # ! Not working need to diagnose later <values being passed are not of type directions but are instead just motor controlls>
-//         # for index in range(len(directions)):
-//         #     for second_index in  range(len(motor_to_directions[0])):
-//         #         drive_in_duty[second_index] += directions[index] * motor_to_directions[index][second_index]
-//         # ~ Temp fix for above
-//         drive_in_duty = directions
-
-//         drive_to_duty = [self.__percent_to_duty(duty) for duty in drive_in_duty]
-
-//         # for p_direction in directions:
-//         #     drive_in_duty.append(self.__percent_to_duty(p_direction))
-//         return (drive_to_duty)
-    
-
-//     def callback(self, message_rec):
-//         """Function to subscribe to driver with ros
-        
-//         This is set up in a way to allow ros and the motor controls to function on a async basis. This will make sure nothing locks up
-//         and that pid gets very low latency feedback (not really but kinda).
-//         """
-
-//         print("Data received is: " + str(message_rec.data))
-//         self.last_directions = message_rec.data
-//         # self.calling_function(self.last_directions)
-//         self.new_directions = True
-//         # This is still set up in a way that is blocking need to incorporate a major time step to do this
-//         """ Break down of cases
-//         1) Motors finish getting to targets before next instruction is published 
-//             They should not start running the steping program until new instructions are given
-//         2) Motors finish as new targets arive 
-//             Motors should run with this new information as soon as possible
-//         3) Motors are not finished steping to targets
-//             Motors should finish steping to targets and then start the stepping to the newest target 
-//         """
-//         # self.calling_function(self.last_directions)
