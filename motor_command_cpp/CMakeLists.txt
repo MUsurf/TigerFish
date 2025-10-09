@@ -14,7 +14,9 @@ find_package(std_msgs REQUIRED)
 # Setup Libraries 
 #####################################################
 add_library(${PROJECT_NAME}_lib
+  src/motor_command.cpp
   src/motor_interface.cpp
+  src/pca_driver.cpp
 )
 
 target_include_directories(${PROJECT_NAME}_lib PUBLIC
@@ -24,7 +26,7 @@ target_include_directories(${PROJECT_NAME}_lib PUBLIC
   ${std_msgs_INCLUDE_DIRS} # Include directories of std_msgs
 )
 
-target_link_libraries(${PROJECT_NAME}_lib
+target_link_libraries(${PROJECT_NAME}_lib PUBLIC
   rclcpp::rclcpp
   ${std_msgs_LIBRARIES}
 )
@@ -34,15 +36,12 @@ target_link_libraries(${PROJECT_NAME}_lib
 #####################################################
 
 add_executable(motor_runner src/motor_runner.cpp)
-ament_target_dependencies(motor_runner rclcpp)
 target_link_libraries(motor_runner ${PROJECT_NAME}_lib)
 target_include_directories(motor_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_executable(motor_listener src/motor_listener.cpp)
-ament_target_dependencies(motor_listener rclcpp std_msgs)
 target_link_libraries(motor_listener ${PROJECT_NAME}_lib)
 target_include_directories(motor_listener PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 
 install(DIRECTORY include/
   DESTINATION include

@@ -3,31 +3,93 @@
 
 #include <vector>
 #include <string>
+#include "pca_driver.hpp" 
+#include <sstream> // For std::stringstream
+#include <cstdint> // For uint8_t
 
-//TODO - rewrite this class based on actual. this is just a stub file
-// A placeholder class definition that matches the interface used by MotorInterface
+
 class MotorCommand
 {
-public:
-    // 1. Must match the constructor called in MotorInterface::MotorInterface
-    //    MotorCommand( channels, this->num_motors, step_size )
-    MotorCommand(const std::vector<int>& channels, int numMotors, int step_size) 
-    {
-        // NOTE: No actual logic here. This is a stub.
-    }
-    
-    // 2. Must match the pinStep function called in MotorInterface::arm_seq and ::calling_function
-    //    this->motor_commander->pinStep(targets);
-    void pinStep(const std::vector<int>& targets)
-    {
-        // NOTE: This function does nothing right now, but prevents compile errors.
-    }
+    private: 
+        //////////////////////// Variables //////////////////////////
+        
+        size_t              motorNum; // Number of motors being managed
+        std::vector<int>    motor_direction; // list can only contain -1, 0, 1
+        int                 step_size; // How much to move the motors at each minor step
 
-    // 3. Must match the pinStates variable used in MotorInterface::calling_function
-    //    RCLCPP_INFO(..., this->motor_commander->pinStates.c_str());
-    std::string pinStates = "STUB: MotorCommand not implemented.";
-    
-    // Add other members/functions here as you implement them.
+
+        // PCA9685 Driver instance
+        PWMDriver           pca; 
+
+
+        // Channels being used
+        std::vector<int>    channels_; 
+        // Needed to save pin states to let outside program manage interrupts when driving motors
+        // As this lets us step between power levels using duty cycle 0-100
+        std::vector<int>    pinStates_vec; 
+
+
+        ////////////////////// End Variables ////////////////////////
+
+
+        void set_motors(const std::vector<int>& speeds);
+
+        // calculates direction (-1, 0, 1) to step pins toward targets
+        std::vector<int> targetDistance(const std::vector<int>& targets);
+
+        // sets the speed of a single motor channel
+        void set_motor_speed(int motor_index, float speed);
+
+        // convert percent drive (0-100) to duty cycle for PCA9685
+        int percent_drive_to_duty(float percent_drive);
+
+    public:
+
+        //         Parameters
+        //         ----------
+        //         local_channels : List[int]
+        //             List of channels to be using from i2c splitter
+        //         num_motors : int
+        //             Number of motors equal to len of 'local_channels'
+        //         step_size : int, optional
+        //             amount to move motors by out of 100, by default 5
+        //         """
+        MotorCommand(const std::vector<int>& channels, int numMotors, int step_size );
+
+        // implements a incremental movement rather than immediately going to a target speed
+        void pinStep(const std::vector<int>& targets);
+
+        std::string pinStates = "STUB: MotorCommand not implemented";
+
+        bool set_pwm(int channel, int on_value);
+
+        void update_pinStates_string();
+        
 };
 
 #endif // MOTOR_COMMAND_HPP
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+ 
