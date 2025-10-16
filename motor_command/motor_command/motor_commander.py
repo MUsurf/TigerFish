@@ -11,7 +11,7 @@ import adafruit_pca9685 as PCA9685
 # BEGIN SETUP
 i2c = busio.I2C(SCL, SDA)
 pca = PCA9685.PCA9685(i2c, address=0x40)
-pca.frequency = 48  # Hz, works with BLHeli_32 PWM mode
+pca.frequency = 400  # Hz, works with BLHeli_32 PWM mode
 # END SETUP
 
 
@@ -19,7 +19,7 @@ class MotorCommand():
     def __init__(self, 
         local_channels: List[int], 
         num_motors: int, 
-        step_size: int=5
+        step_size: int = 2.5
         ) -> None:
         """_summary_
 
@@ -53,6 +53,7 @@ class MotorCommand():
         # info This is done so number of motors can be changed on the fly
         self.motors: List[PCA9685.PWMChannel] = [
             pca.channels[channel] for channel in local_channels]
+        
 
     def _percent_drive_to_duty(self, percent_drive: float) -> int:
         """Convert percent drive to duty cycle for PCA9685
@@ -61,8 +62,8 @@ class MotorCommand():
 
         Parameters
         ----------
-            microSec : int
-                Must be int from 1000-2000µ
+            percent_drive : int
+                Must be -100%-100%
 
         Returns
         -------
@@ -71,29 +72,40 @@ class MotorCommand():
 
         Notes
         -----
+        We convert percent drive to map biderectional percents to a 1000μ - 2000μ with 1500μ being the center value.
+
         'microsec' range comes from ESC's desired control frequency
         The return range comes from the limits of the PCA9685's 16 bit api
         
         """
         """Convert percent drive to microsecond"""
         # Map 0-100% speed to 1000-2000 us pulse for BLHeli_32
-        micro_sec = int(1000 + int(percent_drive * 10)) # 0% -> 1000µs, 100% -> 2000µs
+        micro_sec = int(1000 + int((percent_drive + 100) * 5))
 
         """Convert Microsecond pulses to duty cycle for PCA9685"""
         samp_time: float = (1 / pca.frequency) * 1_000_000  # microseconds per cycle
         duty_cycle = int((65536 * micro_sec) / samp_time)
         return duty_cycle
+    
+    # def _percent_drive_to_duty(self, percent_drive: float) -> int:
+    #     min_us, max_us = 1000, 2000  # safe defaults, but make configurable
+    #     if(percent_drive <= 0) : min_us = 1000
+    #     micro_sec = int(min_us + (percent_drive / 100) * (max_us - min_us))
+    #     samp_time = (1 / pca.frequency) * 1_000_000
+    #     return int((65536 * micro_sec) / samp_time)
 
-    def set_motor_speed(self, motor_idex: int, speed: float) -> None:
+    def set_motor_speed(self, motor_idex: int, speed: float) -> float:
         '''Set the speed of a single motor (0-100) compatible with BLHeli_32'''
 
         pwm_value = self._percent_drive_to_duty(speed)
         self.motors[motor_idex].duty_cycle = pwm_value
+        return pwm_value
+        
 
-    def pinStep(self, targets: List[int]) -> None:
+    def pinStep(self, targets: List[int]):
         """Move pin towards target supplied"""
 
-        directions: List[int] = self.__targetDistance(targets)
+        directions: List[int] = self._targetDistance(targets)
         for index in range(len(directions)):
             if directions[index] == 0:
                 continue
@@ -105,18 +117,19 @@ class MotorCommand():
             else:
                 self.pinStates[index] += delta
 
-        self.__set_motors(self.pinStates)
+        return self._set_motors(self.pinStates)
 
 
-    def __set_motors(self, speeds: List[int]) -> None:
+    def _set_motors(self, speeds: List[int]) -> List[int]:
         """Sets pins to values given by speed position"""
-
+        pwm_values = []
         for index in range(self.motorNum):
             # Clamp speed to 0-100 before sending
             clamped_speed = max(0, min(100, speeds[index]))
-            self.set_motor_speed(index, clamped_speed)
+            pwm_values.append(self.set_motor_speed(index, clamped_speed))
+        return pwm_values
 
-    def __targetDistance(self, targets: List[int]) -> List[int]:
+    def _targetDistance(self, targets: List[int]) -> List[int]:
         """Figures out which direction to step pins"""
 
         values: List[int] = [target - pinState for target, pinState in zip(targets, self.pinStates)]

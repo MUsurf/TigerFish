@@ -50,7 +50,7 @@ class MotorListener(Node):
         # Motor init codes
         self.local_channels: List[int] = [x for x in range(8)]
         self.num_motors: int = len(self.local_channels)
-        self.motor_caller = MotorInterface(self.local_channels, self.num_motors, 0, 100, .1, .1, 5)
+        self.motor_caller = MotorInterface(self.local_channels, self.num_motors, 0, 100, .1, 20)
         self.motor_caller.logging_node = self
         
         self.get_logger().info("Arming motors")
@@ -61,7 +61,7 @@ class MotorListener(Node):
         
 
     def motor_callback(self, msg: Float32MultiArray):
-        self.get_logger().info(f'Received motor command: {msg.data}')
+        #self.get_logger().info(f'Received motor command: {msg.data}')
         self.motor_caller.callback(msg)
 
     def shutdown(self):

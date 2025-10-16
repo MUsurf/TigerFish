@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
   apt-get clean
 
 # Install packages not availble through system
-RUN python3 -m pip install --no-cache adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 --break-system-packages && \
+RUN python3 -m pip install --no-cache adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 --break-system-packages && \
   python3 -m pip uninstall -y RPi.GPIO --break-system-packages
 
 WORKDIR /home/ros2_ws
@@ -42,4 +42,4 @@ RUN source /opt/ros/$ROS_DISTRO/setup.bash && \
 # run.sh is where we run commands in the container on startup.
 COPY --chmod=u+x ./run.sh /home/ros2_ws/run.sh
 
-CMD ["/home/ros2_ws/run.sh"]
+CMD ["bash", "-c", "screen -dmS my_session /home/ros2_ws/run.sh && tail -f /dev/null"]

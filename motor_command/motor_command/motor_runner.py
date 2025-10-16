@@ -138,14 +138,29 @@ class MotorRunner(Node):
         
         self.num_motors = 8
     
-        self.imu = IMUPower(35, 60)
+        self.imu = IMUPower(35, 90)
         
-        self.sequences = [Sequence([20 for i in range(8)], 1.0, 5.0, 500.0)]
+        self.sequences = [
+            Sequence([10 for i in range(8)], 2.0, 1.0, 1.0),
+            Sequence([-10 for i in range(8)], 2.0, 1.0, 1.0),
+            # Sequence([8 for i in range(8)], 2.0, 1.0, 1.0),
+            # Sequence([7 for i in range(8)], 2.0, 1.0, 1.0),
+            # Sequence([6 for i in range(8)], 2.0, 1.0, 1.0),
+            # Sequence([5 for i in range(8)], 2.0, 1.0, 1.0),
+            # Sequence([4 for i in range(8)], 2.0, 1.0, 1.0),
+            # Sequence([3 for i in range(8)], 2.0, 1.0, 1.0),
+            # Sequence([2 for i in range(8)], 2.0, 1.0, 1.0),
+            # Sequence([1 for i in range(8)], 2.0, 1.0, 1.0),
+            # Sequence([0.5 for i in range(8)], 2.0, 1.0, 1.0),
+            # Sequence([0.1 for i in range(8)], 2.0, 1.0, 1.0),
+        ]
         self.current_sequence = 0
+        
+        self.first_run : bool = True
         
         self.get_logger().info('MotorCommander Node Created')
         
-        self.mode = 'IMU'
+        self.mode = 'SEQUENCES'
     
     def timer_callback(self):
         match self.mode:
@@ -153,6 +168,9 @@ class MotorRunner(Node):
                 data = self.do_imu()
                 self.publish_data(data)
             case 'SEQUENCES':
+                if self.first_run:
+                    self.first_run = False
+                    self.sequences[self.current_sequence].start()
                 current_sequence = self.sequences[self.current_sequence]
                 if not current_sequence.activated():
                     self.current_sequence = (self.current_sequence + 1) % len(self.sequences)
@@ -176,7 +194,7 @@ class MotorRunner(Node):
         msg = Float32MultiArray()
         msg.data = data
         
-        self.get_logger().info(f'Publishing: {msg.data}')
+        #self.get_logger().info(f'Publishing: {msg.data}')
         self.publisher.publish(msg)
 
 

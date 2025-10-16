@@ -24,13 +24,13 @@ class MotorInterface():
         Should be given an array of ints 
     """
 
-    def __init__(self, channels: List[int], numMotors: int, offset: int, max_val: int, minor_time: float, major_time: float, step_size: int, steps_used=10) -> None:
+    def __init__(self, channels: List[int], numMotors: int, offset: int, max_val: int, minor_time: float, loop_frequency: float, step_size: int = 2.5, steps_used=10) -> None:
         # info Number of motors
         self.numMotors: int = numMotors
         # info This is the amount of time between steps
         self.minor_time: float = minor_time
         # info This is the amount of time between new targets being used
-        self.major_time: float = major_time
+        self.loop_frequency: float = loop_frequency
         # info This is how to set the min value
         self.offset: int = offset
         # info This is needed as this interface will take percent and scale to output used
@@ -53,6 +53,11 @@ class MotorInterface():
         self.stop_event = threading.Event()
         
         self.logging_node = None
+        
+        self.log_frequency = 2.0
+        
+        self.num_log_iterations = 0
+        
         
 
 
@@ -93,11 +98,6 @@ class MotorInterface():
             self.motor_commander.pinStep(targets)
             time.sleep(self.minor_time*10)
 
-
-    def __percent_to_duty(self, percent: int) -> int:
-        """WARN This function is deprecated as it's functionality has been moved to motor commander"""
-        return 0 
-
     def calling_function(self) -> None:
         """Continuously updates motors toward the latest directions in real time."""
         while not self.stop_event.is_set():
@@ -108,12 +108,15 @@ class MotorInterface():
             duty_directions = self.direction_to_motor(self.last_directions)
 
             # Single incremental step toward latest target
-            self.motor_commander.pinStep(duty_directions)
+            pwm_values = self.motor_commander.pinStep(duty_directions)
 
-            if self.logging_node is not None:
-                self.logging_node.get_logger().info(f'Pin states: {self.motor_commander.pinStates}')
-
-            time.sleep(self.minor_time)
+            num_log_iterations += 1
+            if(num_log_iterations * self.loop_frequency >= 1.0 / self.log_frequency):
+                num_log_iterations = 0
+                if self.logging_node is not None:
+                    self.logging_node.get_logger().info(f'Pin states: {self.motor_commander.pinStates}')
+                    self.logging_node.get_logger().info(f'PWM values: {pwm_values}')
+            time.sleep(1.0 / self.loop_frequency)
 
     def direction_to_motor(self, directions) -> List[int]:
         """This function will have some of the direction to motor commands
@@ -163,7 +166,6 @@ class MotorInterface():
         and that pid gets very low latency feedback (not really but kinda).
         """
 
-        print("Data received is: " + str(message_rec.data))
         self.last_directions = message_rec.data
         # self.calling_function(self.last_directions)
         self.new_directions = True
