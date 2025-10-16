@@ -46,7 +46,7 @@ class MotorInterface
 
 
     public:
-    MotorInterface(std::shared_ptr<rclcpp::Node> node, std::vector<int> channel, int numMotors, int offset, int max_val, float minor_time, float major_time, int step_size, int steps_used = 10)
+    MotorInterface(rclcpp::Node * node, std::vector<int> channel, int numMotors, int offset, int max_val, float minor_time, float major_time, int step_size, int steps_used = 10)
         : channels( channel ),
           major_time( major_time ),
           max_val( max_val ),

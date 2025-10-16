@@ -1,18 +1,136 @@
-#include "rclcpp/rclcpp.hpp"
+#include "motor_command_cpp/motor_listener.hpp"
 
-// NOTE THAT THIS FILE IS A PLACEHOLDER AND DOES NOT IMPLEMENT ANY FUNCTIONALITY
-// IT IS ONLY HERE TO ALLOW THE PROJECT TO COMPILE SUCCESSFULLY
+#include "std_msgs/msg/int32_multi_array.hpp" //message type
+#include "motor_command_cpp/motor_interface.hpp" //motor interface class
+#include <memory>
+#include <thread>
+#include <vector>
+#include <iostream>
+
+namespace motor_command_cpp
+{
+  // define constants //
+  const float MIN_VAL = 0.0f;
+  const float MAX_VAL = 100.0f;
+  const float RATE_MIN = 0.1f;
+  const float RATE_MAX = 0.5f;
+  const int STEP_SIZE = 5;
+  const int OFFSET = 1500;
+  const float MAJOR_TIME = RATE_MAX;
+  const float MINOR_TIME = RATE_MIN;
+
+  // Constructor //
+  MotorListener::MotorListener() : Node("motor_listener")
+  {
+
+    RCLCPP_INFO(this->get_logger(), "Motor Listener Node started.");
+
+    // intialize motor interface 
+    motor_inferface_ = std::make_unique<MotorInterface>(
+        this, channels_, num_motors_, OFFSET, (int)MAX_VAL, MINOR_TIME, MAJOR_TIME, STEP_SIZE
+    );
+
+    // create the subscriber
+    subscription_ = this->create_subscription<std_msgs::msg::Int32MultiArray>(
+        "motor_commands", rclcpp::QoS(10), std::bind(&MotorListener::motor_callback, this, std::placeholders::_1)
+    );
+    RCLCPP_INFO(this->get_logger(), "Subscription to 'motor_commands' topic created.");
+
+    // arming
+    RCLCPP_INFO(this->get_logger(), "Arming motors...");
+
+    // threading
+    arming_thread_handle_ = motor_interface_->arm_seq();
+
+    motor_interface_->second_setup();
+
+    RCLCPP_INFO(this->get_logger(), "Motors armed and ready to receive commands.");
+  }
+
+
+  // Destructor //
+  MotorListener::~MotorListener()
+  {
+    // clean up members 
+    RCLCPP_INFO(this->get_logger(), "Thread found alvie in destructor, attempting to join...");
+    this->shutdown();
+    // join threads
+    if(arming_thread_handle_.joinable()) {
+        try {
+            arming_thread_handle_.join();
+        } catch (const std::system_error& e) {
+            RCLCPP_ERROR(this->get_logger(), "Thread join failed: %s", e.what());
+        }
+    }
+
+
+
+  }
+
+
+  // callback function //
+  void MotorListener::motor_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg)
+  {
+    // log the received message
+    std::stringstream ss;
+    ss << "Received motor command: [";
+    for (size_t i = 0; i < msg->data.size(); ++i) {
+      ss << msg->data[i];
+      if (i != msg->data.size() - 1) ss << ", ";
+    }
+    ss << "]";
+    RCLCPP_INFO(this->get_logger(), ss.str().c_str());
+
+    // pass the message to the motor interface for processing
+    if (motor_interface_) {
+      motor_interface_->callback(msg);
+    } else {
+      RCLCPP_WARN(this->get_logger(), "Motor interface not initialized.");
+    }
+  }
+
+
+  // shutdown function //
+  void MotorListener::shutdown()
+  {
+    RCLCPP_INFO(this->get_logger(), "Shutting down Motor Listener Node...");
+
+    motor_interface_->kill_motors();
+
+    //bring motors down to zero
+    RCLCPP_INFO(this->get_logger(), "Motors disarmed and interface closed");
+
+  }
+
+} //namespace motor_command_cpp
+
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<rclcpp::Node>("motor_listener_node");
+  std::cout << "Starting Motor Listener Node..." << std::endl;
+
+  // create the node instance
+  auto motor_listener_node = std::make_shared<motor_command_cpp::MotorListener>();
+
+
+  try{
+    rclcpp::spin(motor_listener_node); //spin the node
+  } catch (const rclcpp::exceptions::RCLError & e) {
+    std::cerr << "RCLError caught: " << e.what() << std::endl;
+  } catch (const std::exception & e) {
+    std::cerr << "Standard exception caught: " << e.what() << std::endl;
+  } catch (...) {
+    std::cerr << "Unknown exception caught during rclcpp::spin." << std::endl;
+  }
   
-  RCLCPP_INFO(node->get_logger(), "Motor Listener Node started.");
-  
-  // The logic for listening to a topic would go here, 
-  // or a simple while(rclcpp::ok()) loop if it's just meant to run.
-  
-  rclcpp::spin(node); 
-  rclcpp::shutdown();
+
+  //shutdown sequence 
+  motor_listener_node->shutdown();
+
+  motor_listener_node.reset(); // ensure the node is properly destroyed before shutting down ROS 2
+
+  rclcpp::shutdown(); //shutdown ros2
+
+  std::cout << "Node shutdown complete." << std::endl;
   return 0;
 }
