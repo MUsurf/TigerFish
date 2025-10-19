@@ -28,7 +28,7 @@ class MotorInterface(Node):
     """
 
     def __init__(self) -> None:
-        super().__init__('motor_listener')
+        super().__init__('motor_interface')
         self.get_logger().info('Created node')
         self.subscription = self.create_subscription(
             Float32MultiArray,

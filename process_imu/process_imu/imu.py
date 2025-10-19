@@ -1,131 +1,127 @@
-#!/usr/bin/env python3
 
-'''
-ROS 
-node: imu_node
-Publishes: 
-Subscribes:
-        - /IMUdata
-
-Maintainer: Luke Deffenbaugh
-'''
-
+# BEGIN IMPORT
+import time
 import rclpy
-from sensor_msgs.msg import Imu
-from std_msgs.msg import String
-import numpy as np
+from rclpy.node import Node
+from std_msgs.msg import Float32MultiArray
+import threading
+# END IMPORT
 
-def quaternion_to_euler(x, y, z, w):
-    # Roll (x-axis rotation)
-    sinr_cosp = 2 * (w * x + y * z)
-    cosr_cosp = 1 - 2 * (x * x + y * y)
-    roll = np.arctan2(sinr_cosp, cosr_cosp)
+from typing import List
 
-    # Pitch (y-axis rotation)
-    sinp = 2 * (w * y - z * x)
-    if np.abs(sinp) >= 1:
-        pitch = np.sign(sinp) * (np.pi / 2)  # Use 90 degrees if out of range
-    else:
-        pitch = np.arcsin(sinp)
+import board
+import busio
 
-    # Yaw (z-axis rotation)
-    siny_cosp = 2 * (w * z + x * y)
-    cosy_cosp = 1 - 2 * (y * y + z * z)
-    yaw = np.arctan2(siny_cosp, cosy_cosp)
-
-    return roll, pitch, yaw
-
-class imuData:
-    def __init__(self, data):
-        '''
-        Hold the data in specific formats
-
-        Orientation: Held in Euler format
-            0 : Roll
-            1 : Pitch
-            2 : Yaw
-
-        Angular Velocity: < Need to determine what its unit is >
-            0 : X
-            1 : Y
-            2 : Z
-
-        Linear Acceleration: < Need to determine what its unit is >
-            0 : X
-            1 : Y     
-            2 : Z   
-        '''
-
-        # Transform the data into Roll Pitch and Yaw
-        euler = quaternion_to_euler(data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w)
-
-        # Store the data into tuples
-        self.orientation = (euler[0], euler[1], euler[2])
-        self.angular_velocity = (data.angular_velocity.x, data.angular_velocity.y, data.angular_velocity.z)
-        self.linear_acceleration = (data.linear_acceleration.x, data.linear_acceleration.y, data.linear_acceleration.z)
-
-    def __repr__(self):
-        return (f"Orientation: {self.orientation[0]} {self.orientation[1]} {self.orientation[2]}\n"
-                f"Angular_Velocity: {self.angular_velocity[0]} {self.angular_velocity[1]} {self.angular_velocity[2]}\n"
-                f"Linear_Acceleration: {self.linear_acceleration[0]} {self.linear_acceleration[1]} {self.linear_acceleration[2]}\n")
+POLLING_RATE = 40 # Hz
 
 
 
+# Decleration of wrapper for threading a function
+def threaded(fn):
+    def wrapper(*args, **kwargs) -> threading.Thread:
+        thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
+        thread.start()
+        return thread
+    return wrapper
 
-def imu_callback(data):
-    '''
-    # IMU Callback Function #
-    This is the code that is called each time the subscriber receives data from the subscribed topic
-    '''
+class IMUTracker(Node):
+    def __init__(self, polling_rate : float):
+        super().__init__('imu_tracker')
+        self.polling_rate = polling_rate
+        # Initialize I2C and BNO055 sensor
+        i2c = busio.I2C(board.SCL, board.SDA)
+        self.sensor = adafruit_bno055.BNO055_I2C(i2c, address=0x28)
+        
+        # Current roll, pitch, yaw
+        self.roll = 0.0
+        self.pitch = 0.0
+        self.yaw = 0.0
+        self.vroll = 0.0
+        self.vpitch = 0.0
+        self.vyaw = 0.0
+        self.ax = 0.0
+        self.ay = 0.0
+        self.az = 0.0
+        self.vx = 0.0
+        self.vy = 0.0
+        self.vz = 0.0
+        self.x = 0.0
+        self.y = 0.0
+        self.z = 0.0
+        
+        self._last_update_time = time.time()
+        
+        self.stop_event = threading.Event()
+        
+        self.angular_publisher = self.create_publisher(
+            Float32MultiArray,
+            'angular_imu_data',
+        )
+        self.linear_publisher = self.create_publisher(
+            Float32MultiArray,
+            'linear_imu_data',
+        )
+        
+        self.polling_thread = self.polling_function()
 
-    # Initialize Object
-    imudata = imuData(data)
+    def update(self):
+        """Read current Euler angles from the BNO055."""
+        euler = self.sensor.euler  # Returns (heading, roll, pitch)
+        acc = self.sensor.acceleration  # Returns (x, y, z)
+        ang_vel = self.sensor.gyro  
+        if euler is None or acc is None:
+            # Sensor not ready yet
+            return
+        
+        self.yaw, self.roll, self.pitch = euler
+        self.vroll, self.vpitch, self.vyaw = ang_vel
+        self.ax, self.ay, self.az = acc
+        
+        
+        dt = time.time() - self._last_update_time
+        self._last_update_time = time.time()
+        self.vx += self.ax * dt
+        self.vy += self.ay * dt
+        self.vz += self.az * dt
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+        self.z += self.vz * dt
+        
+    @threaded
+    def polling_function(self):
+        while not self.stop_event.is_set():
+            self.update()
+            self.angular_publisher.publish(
+                Float32MultiArray(data=[self.roll, self.pitch, self.yaw, self.vroll, self.vpitch, self.vyaw])
+            )
+            self.linear_publisher.publish(
+                Float32MultiArray(data=[self.x, self.y, self.z, self.vx, self.vy, self.vz, self.ax, self.ay, self.az])
+            )
+            if self.stop_event.wait(timeout = 1.0 / self.polling_rate):
+                break
+            
+    def shutdown(self):
+        self.get_logger().info("Shutting down IMU tracker")
+                
+        self.stop_event.set()
+        
+        if self.polling_thread.is_alive():
+            self.polling_thread.join(timeout=10)
 
-    # Publish a string of the __repr__ function output
-    # imu_string_publisher.publish(str(imudata)) <-- This is the old way of doing it
-    msg = String() 
-    msg.data = str(imudata)
-    imu_string_publisher.publish(msg)
 
-def imu_node():
-    ''' 
-    Create and handle ROS environment setup.
-    '''
-
-    # Setup Node
-    node = rclpy.create_node("imu_node")
-    # Setup Subscriber
-    node.create_subscription(Imu, "imu_data", imu_callback, 10)
-
-    # Create a publisher
-    global imu_string_publisher
-    imu_string_publisher = node.create_publisher(String, "processed_imu", 10)
-
-
-    # Keep the node running
-    rclpy.spin(node)
-
-
-def main():
+def main(args=None):
+    rclpy.init(args=args)
+    print("Starting imu")
+    node = IMUTracker(polling_rate=POLLING_RATE)
     try:
-        # Run the node
-        rclpy.init()
-        imu_node()
-    except rclpy.exceptions.ROSInterruptException:
-        # Handle a ros interruption
+        rclpy.spin(node)
+    except KeyboardInterrupt:
         pass
-    # Add special case handlers here
+    finally:
+        node.shutdown()
+        node.destroy_node()
+        rclpy.shutdown()
 
-'''
-############ Main #############
 if __name__ == '__main__':
-    try:
-        # Run the node
-        rclpy.init()
-        imu_node()
-    except rclpy.exceptions.ROSInterruptException:
-        # Handle a ros interruption
-        pass
-    # Add special case handlers here
-
-'''
+    main()
+        
