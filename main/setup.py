@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'py_launch'
+package_name = 'main'
 
 setup(
     name=package_name,

@@ -12,6 +12,10 @@ from typing import List
 import board
 import busio
 
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+
+qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
+
 POLLING_RATE = 40 # Hz
 
 
@@ -53,15 +57,11 @@ class IMUTracker(Node):
         
         self.stop_event = threading.Event()
         
-        self.angular_publisher = self.create_publisher(
+        self.publisher = self.create_publisher(
             Float32MultiArray,
-            'angular_imu_data',
+            'imu_data',
+            qos
         )
-        self.linear_publisher = self.create_publisher(
-            Float32MultiArray,
-            'linear_imu_data',
-        )
-        
         self.polling_thread = self.polling_function()
 
     def update(self):
@@ -91,12 +91,23 @@ class IMUTracker(Node):
     def polling_function(self):
         while not self.stop_event.is_set():
             self.update()
-            self.angular_publisher.publish(
-                Float32MultiArray(data=[self.roll, self.pitch, self.yaw, self.vroll, self.vpitch, self.vyaw])
-            )
-            self.linear_publisher.publish(
-                Float32MultiArray(data=[self.x, self.y, self.z, self.vx, self.vy, self.vz, self.ax, self.ay, self.az])
-            )
+            self.publisher.publish(Float32MultiArray(data=[
+                self.roll,
+                self.pitch,
+                self.yaw,
+                self.vroll,
+                self.vpitch,
+                self.vyaw,
+                self.ax,
+                self.ay,
+                self.az,
+                self.vx,
+                self.vy,
+                self.vz,
+                self.x,
+                self.y,
+                self.z
+            ]))
             if self.stop_event.wait(timeout = 1.0 / self.polling_rate):
                 break
             

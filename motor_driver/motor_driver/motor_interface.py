@@ -6,6 +6,8 @@ import rclpy # pyright: ignore[reportMissingImports]
 from rclpy.node import Node # pyright: ignore[reportMissingImports]
 from std_msgs.msg import Float32MultiArray # pyright: ignore[reportMissingImports]
 # End imports
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+
 
 # Decleration of wrapper for threading a function
 def threaded(fn):
@@ -21,6 +23,8 @@ DELTA_LIMIT = 75 # Percent
 UPDATE_FREQUENCY = 20.0 # Hz
 LOGGING_FREQUENCY = 5.0 # Hz
 NUM_MOTORS = 8 # Number of motors
+qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
+
 
 class MotorInterface(Node):
     """
@@ -34,7 +38,7 @@ class MotorInterface(Node):
             Float32MultiArray,
             'motor_powers',
             self.callback,
-            10  # QoS profile depth
+            qos
         )
         self.stop_event = threading.Event()
         self.motor_commander : MotorCommand = MotorCommand(UPDATE_FREQUENCY, DELTA_LIMIT)
@@ -71,7 +75,7 @@ class MotorInterface(Node):
         self.motor_commander.set_targets(message_rec.data)
     
     def shutdown(self):
-        self.get_logger().info("Shutting down motor listener")
+        self.get_logger().info("Shutting down motor interface")
         
         self.clo_seq()
         
@@ -83,7 +87,7 @@ class MotorInterface(Node):
         
 def main(args=None):
     rclpy.init(args=args)
-    print("Starting listener")
+    print("Starting interface")
     node = MotorInterface()
     try:
         rclpy.spin(node)
