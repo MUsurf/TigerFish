@@ -1,11 +1,10 @@
-# Begin typing imports
-from typing import List
-# End typing imports
-
 # Begin imports
 from motor_command.motor_commander import MotorCommand
 import time
 import threading
+import rclpy # pyright: ignore[reportMissingImports]
+from rclpy.node import Node # pyright: ignore[reportMissingImports]
+from std_msgs.msg import Float32MultiArray # pyright: ignore[reportMissingImports]
 # End imports
 
 # Decleration of wrapper for threading a function
@@ -16,166 +15,84 @@ def threaded(fn):
         return thread
     return wrapper
 
+ARM_TIME = 1.0 # Seconds
+CLOSE_TIME = 2.0 # Seconds
+DELTA_LIMIT = 75 # Percent
+UPDATE_FREQUENCY = 20.0 # Hz
+LOGGING_FREQUENCY = 5.0 # Hz
+NUM_MOTORS = 8 # Number of motors
 
-
-class MotorInterface():
-    """Handles direct control of motors
+class MotorInterface(Node):
+    """
     
-        Should be given an array of ints 
     """
 
-    def __init__(self, channels: List[int], numMotors: int, offset: int, max_val: int, minor_time: float, loop_frequency: float, step_size: int = 2.5, steps_used=10) -> None:
-        # info Number of motors
-        self.numMotors: int = numMotors
-        # info This is the amount of time between steps
-        self.minor_time: float = minor_time
-        # info This is the amount of time between new targets being used
-        self.loop_frequency: float = loop_frequency
-        # info This is how to set the min value
-        self.offset: int = offset
-        # info This is needed as this interface will take percent and scale to output used
-        self.max_val: int = max_val
-        # info max steps to go from one extreme to the other
-        self.max_steps_needed: int = int(self.max_val / step_size)
-        # info This is the amount of steps used assuming motors don't need to reach value
-        self.steps_used: int = steps_used
-        # info This is the instance of motorcommand that will be used
-        self.motor_commander = MotorCommand(
-            channels, 
-            self.numMotors, 
-            step_size)
-        # info This is the latest command recieved from ros if ros fails to deliver a new value before next execution then the same values are used
-        self.last_directions: List[int] = []
-
-        # info New motor targets
-        self.new_directions: bool = False
-        # info Event to signal kill
+    def __init__(self) -> None:
+        super().__init__('motor_listener')
+        self.get_logger().info('Created node')
+        self.subscription = self.create_subscription(
+            Float32MultiArray,
+            'motor_powers',
+            self.callback,
+            10  # QoS profile depth
+        )
         self.stop_event = threading.Event()
-        
-        self.logging_node = None
-        
-        self.log_frequency = 2.0
-        
-        self.num_log_iterations = 0
-        
+        self.motor_commander : MotorCommand = MotorCommand(UPDATE_FREQUENCY, DELTA_LIMIT)
+        self.logger_thread = self.logging_function()
         
 
-
-    def second_setup(self):
-        self.range: int = abs(self.max_val - self.offset)
-        # self.arm_seq()
-
-    @threaded
     def arm_seq(self):
-        """Current method of arming all motors may change with calibration
+        """Arms the motors (Not technically needed)"""
 
-        Notes
-        -----
-            This is the correct way to set up the motors to run
-        """
+        arm_speed = [0 for _ in range(NUM_MOTORS)]
+        self.motor_commander.set_targets(arm_speed)
+        time.sleep(ARM_TIME)
 
-        target_speeds: List[List[int]] = [
-            [0 for _ in range(self.numMotors)],
-            #[20 for _ in range(self.numMotors)],
-            #[30 for _ in range(self.numMotors)],
-            #[10 for _ in range(self.numMotors)]
-        ]
-
-        for targets in target_speeds:
-            for _ in range(self.max_steps_needed):
-                self.motor_commander.pinStep(targets)
-                time.sleep(self.minor_time)
-        
-        print("Motors armed")
-
-        self.calling_function()
+        self.logger().info("Motors armed")
 
     def clo_seq(self) -> None:
         """Cleans up motors and is responsible for bringing them all back to zero"""
-
-        targets: List[int] = [0 for _ in range(self.numMotors)]
-        for _ in range(self.max_steps_needed):
-            self.motor_commander.pinStep(targets)
-            time.sleep(self.minor_time*10)
-
-    def calling_function(self) -> None:
-        """Continuously updates motors toward the latest directions in real time."""
+        
+        close_speed = [0 for _ in range(NUM_MOTORS)]
+        self.motor_commander.set_targets(close_speed)
+        time.sleep(ARM_TIME)
+        
+    @threaded
+    def logging_function(self):
         while not self.stop_event.is_set():
-            if not self.last_directions:
-                time.sleep(self.minor_time)
-                continue
-
-            duty_directions = self.direction_to_motor(self.last_directions)
-
-            # Single incremental step toward latest target
-            pwm_values = self.motor_commander.pinStep(duty_directions)
-
-            num_log_iterations += 1
-            if(num_log_iterations * self.loop_frequency >= 1.0 / self.log_frequency):
-                num_log_iterations = 0
-                if self.logging_node is not None:
-                    self.logging_node.get_logger().info(f'Pin states: {self.motor_commander.pinStates}')
-                    self.logging_node.get_logger().info(f'PWM values: {pwm_values}')
-            time.sleep(1.0 / self.loop_frequency)
-
-    def direction_to_motor(self, directions) -> List[int]:
-        """This function will have some of the direction to motor commands
-
-        Notes
-        -----
-            directions will be in the form of a list of floats
-                ['x': -1-1, 'y':-1-1, 'z':-1-1, 'pitch':-1-1, 'yaw':-1-1, 'roll':-1-1]
-
-            This function is not implemented yet and only contains the translation from percent drive of commands to duty cycle
-        """
-        # * if you wish to go to the negative end of this axis the magnitude must also be supplied as a negative
-        # info For multiple instructions to be followed at once the results post array must be added together while being grouped
-        # info This assumes that all motors are number 1-4 5-8 left to right and horizontal then vertical
-        # ~ This could be used to balance out an under preforming motor
-        motor_to_directions = [
-            [1, 1, -1, -1, 0, 0, 0, 0], # 'x-axis'
-            [1, -1, 1, -1, 0, 0, 0, 0], # 'y-axis'
-            [0, 0, 0, 0, 1, 1, 1, 1], # 'z-axis' 
-            [0, 0, 0, 0, 1, 1, -1, -1], # 'pitch' 
-            [1, -1, -1, 1, 0, 0, 0, 0], # 'yaw' 
-            [0, 0, 0, 0, 1, -1, 1, -1], # 'roll'
-            # Add depth control
-        ]
-
-        drive_in_duty = [0 for _ in range(self.numMotors)]
-
-        # ! Not working need to diagnose later <values being passed are not of type directions but are instead just motor controlls>
-        # for index in range(len(directions)):
-        #     for second_index in  range(len(motor_to_directions[0])):
-        #         drive_in_duty[second_index] += directions[index] * motor_to_directions[index][second_index]
-        # ~ Temp fix for above
-        drive_in_duty = directions
-
-        # drive_to_duty = [self.__percent_to_duty(duty) for duty in drive_in_duty]
+            self.logger().info(f"Motor Goals: {self.motor_commander.logical_pin_targets}")
+            self.logger().info(f"Motor States: {self.motor_commander.logical_pin_states}")
+            if self.stop_event.wait(timeout = 1.0 / LOGGING_FREQUENCY):
+                break
+            
+    def callback(self, message_rec : Float32MultiArray):
+        """Function that takes in and sets motor powers."""
         
-
-        # for p_direction in directions:
-        #     drive_in_duty.append(self.__percent_to_duty(p_direction))
-        return (drive_in_duty)
+        self.motor_commander.set_targets(message_rec.data)
     
-
-    def callback(self, message_rec):
-        """Function to subscribe to driver with ros
+    def shutdown(self):
+        self.get_logger().info("Shutting down motor listener")
         
-        This is set up in a way to allow ros and the motor controls to function on a async basis. This will make sure nothing locks up
-        and that pid gets very low latency feedback (not really but kinda).
-        """
+        self.clo_seq()
+        
+        self.stop_event.set()
+        self.motor_commander.stop_event.set()
+        
+        if self.logger_thread.is_alive():
+            self.logger_thread.join(timeout=10)
+        
+def main(args=None):
+    rclpy.init(args=args)
+    print("Starting listener")
+    node = MotorInterface()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.shutdown()
+        node.destroy_node()
+        rclpy.shutdown()
 
-        self.last_directions = message_rec.data
-        # self.calling_function(self.last_directions)
-        self.new_directions = True
-        # This is still set up in a way that is blocking need to incorporate a major time step to do this
-        """ Break down of cases
-        1) Motors finish getting to targets before next instruction is published 
-            They should not start running the steping program until new instructions are given
-        2) Motors finish as new targets arive 
-            Motors should run with this new information as soon as possible
-        3) Motors are not finished steping to targets
-            Motors should finish steping to targets and then start the stepping to the newest target 
-        """
-        # self.calling_function(self.last_directions)
+if __name__ == '__main__':
+    main()
