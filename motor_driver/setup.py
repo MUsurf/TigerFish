@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 from glob import glob
 
-package_name = 'motor_command'
+package_name = 'motor_driver'
 
 setup(
     name=package_name,
@@ -24,8 +24,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'motor_runner = motor_command.motor_runner:main',
-            'motor_listener = motor_command.motor_listener:main'
+            'motor_interface = motor_driver.motor_interface:main',
         ],
     },
 )

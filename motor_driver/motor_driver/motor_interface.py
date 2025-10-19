@@ -1,5 +1,5 @@
 # Begin imports
-from motor_command.motor_commander import MotorCommand
+from motor_driver.motor_commander import MotorCommand
 import time
 import threading
 import rclpy # pyright: ignore[reportMissingImports]
