@@ -84,6 +84,8 @@ class MotorInterface(Node):
         
         if self.logger_thread.is_alive():
             self.logger_thread.join(timeout=10)
+        if self.motor_commander.motor_thread.is_alive():
+            self.motor_commander.motor_thread.join(timeout=10)
         
 def main(args=None):
     rclpy.init(args=args)
