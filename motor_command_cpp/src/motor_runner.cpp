@@ -21,7 +21,7 @@ int main(int argc, char * argv[])
   int step_size = 10;
   
   auto interface = std::make_shared<MotorInterface>(
-      node, channels, numMotors, offset, max_val, minor_time, major_time, step_size
+      node.get(), channels, numMotors, offset, max_val, minor_time, major_time, step_size
   );
   
   interface->second_setup();

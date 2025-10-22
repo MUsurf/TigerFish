@@ -1,7 +1,6 @@
 #include "motor_command_cpp/motor_listener.hpp"
 
 #include "std_msgs/msg/int32_multi_array.hpp" //message type
-#include "motor_command_cpp/motor_interface.hpp" //motor interface class
 #include <memory>
 #include <thread>
 #include <vector>
@@ -26,8 +25,8 @@ namespace motor_command_cpp
     RCLCPP_INFO(this->get_logger(), "Motor Listener Node started.");
 
     // intialize motor interface 
-    motor_inferface_ = std::make_unique<MotorInterface>(
-        this, channels_, num_motors_, OFFSET, (int)MAX_VAL, MINOR_TIME, MAJOR_TIME, STEP_SIZE
+    motor_interface_ = std::make_unique<MotorInterface>(
+        this, channels_, num_motors_, motor_command_cpp::OFFSET, (int)motor_command_cpp::MAX_VAL, motor_command_cpp::MINOR_TIME, motor_command_cpp::MAJOR_TIME, motor_command_cpp::STEP_SIZE
     );
 
     // create the subscriber
@@ -52,7 +51,7 @@ namespace motor_command_cpp
   MotorListener::~MotorListener()
   {
     // clean up members 
-    RCLCPP_INFO(this->get_logger(), "Thread found alvie in destructor, attempting to join...");
+    RCLCPP_INFO(this->get_logger(), "Thread found alive in destructor, attempting to join...");
     this->shutdown();
     // join threads
     if(arming_thread_handle_.joinable()) {

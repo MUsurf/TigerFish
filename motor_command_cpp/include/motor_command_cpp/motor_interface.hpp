@@ -37,7 +37,7 @@ class MotorInterface
         int                                max_steps_needed;
         std::vector<float>                 last_directions; // Latest command received from ROS
         std::shared_ptr<std::atomic<bool>> stop_event; // Atomic flag to signal thread to stop
-        std::shared_ptr<rclcpp::Node>      logging_node; // Node for logging
+        rclcpp::Node *                     logging_node; // Node for logging
         //////////////////////////// End define all the variables /////////////////////////////////////
 
 
