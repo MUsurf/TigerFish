@@ -38,10 +38,13 @@ namespace motor_command_cpp
     // arming
     RCLCPP_INFO(this->get_logger(), "Arming motors...");
 
-    // threading
-    arming_thread_handle_ = motor_interface_->arm_seq();
-
     motor_interface_->second_setup();
+
+    auto minor_time_duration = std::chrono::duration<float>(motor_command_cpp::MINOR_TIME);
+    motor_control_timer_ = this->create_wall_timer(
+        std::chrono::duration_cast<std::chrono::milliseconds>(minor_time_duration),
+        std::bind(&MotorListener::motor_control_loop, this)
+    );
 
     RCLCPP_INFO(this->get_logger(), "Motors armed and ready to receive commands.");
   }
@@ -51,19 +54,8 @@ namespace motor_command_cpp
   MotorListener::~MotorListener()
   {
     // clean up members 
-    RCLCPP_INFO(this->get_logger(), "Thread found alive in destructor, attempting to join...");
+    RCLCPP_INFO(this->get_logger(), "Shutting down Motor Listener Node...");
     this->shutdown();
-    // join threads
-    if(arming_thread_handle_.joinable()) {
-        try {
-            arming_thread_handle_.join();
-        } catch (const std::system_error& e) {
-            RCLCPP_ERROR(this->get_logger(), "Thread join failed: %s", e.what());
-        }
-    }
-
-
-
   }
 
 
@@ -92,13 +84,28 @@ namespace motor_command_cpp
   // shutdown function //
   void MotorListener::shutdown()
   {
-    RCLCPP_INFO(this->get_logger(), "Shutting down Motor Listener Node...");
-
+    if(motor_control_timer_){
+      motor_control_timer_->cancel();
+    }
     motor_interface_->kill_motors();
 
     //bring motors down to zero
     RCLCPP_INFO(this->get_logger(), "Motors disarmed and interface closed");
 
+  }
+
+  void MotorListener::motor_control_loop()
+  {
+      // Continuously updates motors toward the latest directions in real time.
+      // do this until another thread requests that it stops
+
+      //          3) Motors are not finished steping to targets
+      //             Motors should finish steping to targets and then start the stepping to the newest target 
+      //          """
+      // Start the run_step in a new thread if not already running
+      if (motor_interface_){
+          motor_interface_->run_step();
+      }
   }
 
 } //namespace motor_command_cpp
@@ -133,3 +140,4 @@ int main(int argc, char * argv[])
   std::cout << "Node shutdown complete." << std::endl;
   return 0;
 }
+

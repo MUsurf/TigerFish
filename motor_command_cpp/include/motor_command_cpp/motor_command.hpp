@@ -14,7 +14,6 @@ class MotorCommand
         //////////////////////// Variables //////////////////////////
         
         size_t              motorNum; // Number of motors being managed
-        std::vector<int>    motor_direction; // list can only contain -1, 0, 1
         int                 step_size; // How much to move the motors at each minor step
 
 

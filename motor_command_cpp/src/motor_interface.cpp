@@ -20,7 +20,7 @@
         this->range = abs(this->max_val - this->offset);
     }
 
-    std::thread MotorInterface::arm_seq()
+    void MotorInterface::arm_seq()
     {
         // INFO Current method of arming all motors may change with calibration
 
@@ -44,7 +44,6 @@
         // that that the motors are armed
         RCLCPP_INFO(this->logging_node->get_logger(), "Motors armed");
 
-        return std::thread(&MotorInterface::calling_function, this);
     }
 
     void MotorInterface::clo_seq()
@@ -62,33 +61,22 @@
         }
     }
 
-    void MotorInterface::calling_function()
+    void MotorInterface::run_step()
     {
-        // Continuously updates motors toward the latest directions in real time.
-        // do this until another thread requests that it stops
-        while (!this->stop_event->load())
+        if(this->last_directions.empty()) {
+            //since the timer handles the period, we don't need to sleep
+            return;
+        }
+
+        std::vector<int> duty_directions = this->direction_to_motor(this->last_directions);
+
+        //take a step towards latest target
+        this->motor_commander->pinStep(duty_directions);
+
+        //log the pin states 
+        if (this->logging_node != nullptr)
         {
-            // sleep while there are not any directions 
-            if (this->last_directions.empty())
-            {
-                std::this_thread::sleep_for(std::chrono::duration<float>(this->minor_time));
-                continue;
-            }
-            
-            //convert previous instruction to direction for the motor
-            std::vector<int> duty_directions = this->direction_to_motor(this->last_directions);
-
-            // Single incremental step toward latest target
-            this->motor_commander->pinStep(duty_directions);
-
-            // log pin states
-            if (this->logging_node != nullptr)
-            {
-                RCLCPP_INFO(this->logging_node->get_logger(), "Pin states: %s", this->motor_commander->pinStates.c_str());
-            }
-
-            // cause the thread to sleep for a minor step
-            std::this_thread::sleep_for(std::chrono::duration<float>(this->minor_time));
+            RCLCPP_INFO(this->logging_node->get_logger(), "Pin states: %s", this->motor_commander->pinStates.c_str());
         }
 
     }
@@ -138,29 +126,15 @@
 
     }
 
-    //TODO - this is untested AI code that needs to be tested, but looks useful??
     void MotorInterface::kill_motors()
     {
         // This function will stop the motors and clean up the threads
 
-    // signal the thread to stop
-    if (stop_event) stop_event->store(true);
+        // run the closing sequence
+        this->clo_seq();
 
-    // wait for the thread to finish, robustly
-    if (handle1.joinable()) {
-        try {
-            handle1.join();
-        } catch (const std::system_error& e) {
-            if (logging_node)
-                RCLCPP_ERROR(logging_node->get_logger(), "Thread join failed: %s", e.what());
-        }
-    }
-
-    // run the closing sequence
-    this->clo_seq();
-
-    if (logging_node)
-        RCLCPP_INFO(logging_node->get_logger(), "Motors disarmed and interface closed");
+        if (logging_node)
+            RCLCPP_INFO(logging_node->get_logger(), "Motors disarmed and interface closed");
     }
 
     void MotorInterface::callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg)
@@ -196,10 +170,8 @@
         //          3) Motors are not finished steping to targets
         //             Motors should finish steping to targets and then start the stepping to the newest target 
         //          """
-        // Start the calling_function in a new thread if not already running
-        if (!this->handle1.joinable()) {
-            this->handle1 = std::thread(&MotorInterface::calling_function, this);
-        }
+        // Start the run_step in a new thread if not already running
+
     }
 
 
@@ -210,11 +182,5 @@
 
 
 
-// # Decleration of wrapper for threading a function
-// def threaded(fn):
-//     def wrapper(*args, **kwargs) -> threading.Thread:
-//         thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
-//         thread.start()
-//         return thread
-//     return wrapper
+
 

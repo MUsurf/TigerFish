@@ -19,9 +19,7 @@ namespace motor_command_cpp
             //smart pointer for MotorInterface Object
             std::unique_ptr<MotorInterface> motor_interface_;
 
-            //thread handler
-            std::thread arming_thread_handle_;
-
+            rclcpp::TimerBase::SharedPtr motor_control_timer_;
 
             // Motor Configuration //
             const std::vector<int> channels_ = {0, 1, 2, 3, 4, 5, 6, 7}; 
@@ -31,6 +29,8 @@ namespace motor_command_cpp
 
             // callback function 
             void motor_callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);
+
+            void motor_control_loop();
 
         public:
             MotorListener();

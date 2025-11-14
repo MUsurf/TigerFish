@@ -33,10 +33,8 @@ class MotorInterface
         int                                range;
         int                                step_size;
         int                                steps_used;
-        std::thread                        handle1; // Thread handle for motor control
         int                                max_steps_needed;
         std::vector<float>                 last_directions; // Latest command received from ROS
-        std::shared_ptr<std::atomic<bool>> stop_event; // Atomic flag to signal thread to stop
         rclcpp::Node *                     logging_node; // Node for logging
         //////////////////////////// End define all the variables /////////////////////////////////////
 
@@ -55,8 +53,6 @@ class MotorInterface
           offset( offset ),
           step_size( step_size ),
           steps_used( steps_used ),
-          handle1(),
-          stop_event( std::make_shared<std::atomic<bool>>( false ) ),
           logging_node( node )
     {
         // info max steps to go from one extreme to the other
@@ -71,15 +67,15 @@ class MotorInterface
         // initialize range 
         void second_setup();
 
-        std::thread arm_seq();
+        void arm_seq();
+
 
         void clo_seq();
 
-        void calling_function();
+        void run_step();
 
         std::vector<int> direction_to_motor(const std::vector<float>& directions);
 
-        //TODO - this is untested AI code that needs to be tested, but looks useful??
         void kill_motors();
 
         void callback(const std_msgs::msg::Int32MultiArray::SharedPtr msg);

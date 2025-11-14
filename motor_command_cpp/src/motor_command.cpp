@@ -6,7 +6,6 @@ const float PCA_FREQUENCY = 48.0f;
 MotorCommand::MotorCommand(const std::vector<int>& channels, int numMotors, int step_size ) 
 : 
     motorNum(numMotors),
-    motor_direction(std::vector<int>(numMotors, 1)),
     step_size(step_size),
     pca("/dev/i2c-1", 0x40),
     channels_(channels),
