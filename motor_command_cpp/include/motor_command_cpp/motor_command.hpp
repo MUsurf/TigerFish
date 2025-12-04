@@ -64,6 +64,9 @@ class MotorCommand
 
         void update_pinStates_string();
         
+        std::vector<int> get_pinStates_vec() const{
+            return pinStates_vec;
+        }
 };
 
 #endif // MOTOR_COMMAND_HPP

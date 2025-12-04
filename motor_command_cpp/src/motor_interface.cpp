@@ -69,14 +69,20 @@
         }
 
         std::vector<int> duty_directions = this->direction_to_motor(this->last_directions);
-
+        std::vector<int> current_states = this->motor_commander->get_pinStates_vec();
         //take a step towards latest target
         this->motor_commander->pinStep(duty_directions);
 
+        bool pin_state_changed = false;
+        if(this->motor_commander->get_pinStates_vec() != current_states){
+            pin_state_changed = true;
+
+        }
+
         //log the pin states 
-        if (this->logging_node != nullptr)
+        if (this->logging_node != nullptr && pin_state_changed)
         {
-            RCLCPP_INFO(this->logging_node->get_logger(), "Pin states: %s", this->motor_commander->pinStates.c_str());
+            RCLCPP_INFO(this->logging_node->get_logger(), "Pin states changed: %s", this->motor_commander->pinStates.c_str());
         }
 
     }
