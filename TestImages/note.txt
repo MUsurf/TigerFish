@@ -1,0 +1,1 @@
+This folder is to hold test images/videos that are fed to image processing for testing! 

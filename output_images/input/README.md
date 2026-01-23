@@ -1,0 +1,1 @@
+this folder holds outputted input images (used with writing individual frames in the image improvement)

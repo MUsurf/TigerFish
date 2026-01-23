@@ -70,7 +70,30 @@ At step 2 you should see a directory with the following structure
                 |___
                     **python files**
 
+## make file commands
+To run a make command ensure that you are using wsl. Then, you can type make "command".
+IMPORTANT: run "make checkAll" to make sure that your changes compile + adhere to formatting
+Debugging formatting may be easier with just running "make format"
+make sure to update the makefile if you want to exclude particular packages from formatting (see variables in makefile)
+
+**ALL COMMANDS:**
+- _make build_ : this will build your ros packages. run this before running the other commands (excluding checkAll, buildTest)
+- _make test_ : this will run all of the test files for the packages. honestly we don't have tests right now, but this is good to run for posterity
+- _make buildTest_ : runs build and test together
+- _make format_ : formats your code for you. some code may need to be manually formatted
+
+- _make lint_ : lints (or checks) for formatting. Will not update formatting. suggested to run after format
+- _make formatLint_ : runs format and lint together
+
+- _make checkAll_ : runs format, lint, build, and test. This is what will be done on github
+- _make clean-docker_ : theoretically will clean up any docker containers made by tigerfish. use with caution
+
+- _make view-sm_ : run after build. This runs the statemachine and will display it on localhost:5000
+- _make stop-view-sm_ : ensures that view-sm is cleaned up (shouldn't be necessary)
+
+
 ## Documentation Practices
+- Commits: try to list all the big changes you've made in a commit message. for example: "added forward motor control". This will help with keeping track of major changes.
 
 ### Catkin Modules
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(imu)
+project(imu_cpp)
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)

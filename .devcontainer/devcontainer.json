@@ -1,0 +1,30 @@
+//This file is used for the dev containers extension in vscode for easier development
+{
+  "name": "ROS 2 Jazzy Dev Environment",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-iot.vscode-ros",
+        "ms-vscode.cpptools",
+        "ms-python.python"
+      ]
+    } 
+  },
+  "remoteUser": "root",
+  "runArgs": [
+    "--privileged"
+  ],
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/ros2_ws/src,type=bind",
+  "workspaceFolder": "/home/ros2_ws/src",
+  "forwardPorts": [5000],
+  "portsAttributes": {
+    "5000": {
+      "label": "YASMIN Viewer",
+      "onAutoForward": "notify"
+    }
+  }
+}

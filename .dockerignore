@@ -11,3 +11,7 @@
 ./docker-compose.yaml
 ./Dockerfile
 ./.dockerignore
+
+build/
+install/
+log/

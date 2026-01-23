@@ -1,0 +1,1 @@
+This folder is for holding improved videos from image processing.

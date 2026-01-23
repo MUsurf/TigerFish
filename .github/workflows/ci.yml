@@ -1,0 +1,31 @@
+name: TigerFish CI
+
+on:
+  push:
+    branches: [ main, master, img ]
+  pull_request:
+    branches: [ main, master, img ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 1. Build the image first (needed for Ruff/Uncrustify to exist)
+      - name: Build Docker Image
+        run: make build
+
+      # 2. Run the format check
+      # We use 'format' but we can check if it modified anything
+      - name: Run Quality Check (Format & Lint)
+        run: make formatLint
+
+      # 3. Run the tests
+      - name: Run Logic Tests
+        run: make test

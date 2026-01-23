@@ -30,10 +30,10 @@ class ImuNode(Node):
 
     def _timer_cb(self):
         # Get data from the $5 sensor
-        quat = self.sensor.quaternion   
-        accel = self.sensor.linear_acceleration  
+        quat = self.sensor.quaternion
+        accel = self.sensor.linear_acceleration
         gyro = self.sensor.gyro
-        #calib = self.sensor.calibration_status  # (sys, gyro, accel, mag)
+        # calib = self.sensor.calibration_status  # (sys, gyro, accel, mag)
 
         if quat is None or accel is None or gyro is None:
             self.get_logger().warn("IMU read returned None, skipping publish")
@@ -44,7 +44,7 @@ class ImuNode(Node):
         w, x, y, z = quat
 
         # Normalize just in case
-        norm = math.sqrt(w*w + x*x + y*y + z*z)
+        norm = math.sqrt(w * w + x * x + y * y + z * z)
         if norm > 0:
             w /= norm
             x /= norm
@@ -76,11 +76,12 @@ class ImuNode(Node):
         imu_msg.angular_velocity.y = gy
         imu_msg.angular_velocity.z = gz
 
-        imu_msg.orientation_covariance = [0.0] * 9 # Prob need this asp
-        imu_msg.angular_velocity_covariance = [0.0] * 9 # ^
-        imu_msg.linear_acceleration_covariance = [0.0] * 9 # ^
+        imu_msg.orientation_covariance = [0.0] * 9  # Prob need this asp
+        imu_msg.angular_velocity_covariance = [0.0] * 9  # ^
+        imu_msg.linear_acceleration_covariance = [0.0] * 9  # ^
 
         self.imu_pub.publish(imu_msg)
+
 
 def main(args=None):
     rclpy.init(args=args)
