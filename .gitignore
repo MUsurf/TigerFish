@@ -1,6 +1,7 @@
 # Ignore VS code files
 *.code-workspace
 /.vscode
+.history/
 
 # Ignore Python Files
 *.env
@@ -24,3 +25,26 @@ Generated
 
 # Ignore the IGNORE tag
 #*IGNORE*
+
+# ignore ros2 files
+build/
+install/
+log/
+
+# yasmin ignore 
+src/yasmin/
+
+# python ignores 
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.env
+
+
+#ignore image folders
+/TestImages
+/output_images/*
+!output_images/**/*.md
+!output_images/**/

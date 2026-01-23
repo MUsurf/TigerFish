@@ -16,18 +16,22 @@ pca.frequency = 400  # Hz, works with BLHeli_32 PWM mode
 NUM_MOTORS = 8
 # END SETUP
 
+
 def threaded(fn):
     def wrapper(*args, **kwargs) -> threading.Thread:
         thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
         thread.start()
         return thread
+
     return wrapper
 
-class MotorCommand():
-    def __init__(self, 
+
+class MotorCommand:
+    def __init__(
+        self,
         update_frequency: float,
         delta_limit: float,
-        ) -> None:
+    ) -> None:
         self.update_frequency: float = update_frequency
         self.delta_limit: float = delta_limit
 
@@ -36,10 +40,10 @@ class MotorCommand():
         self.pin_states: List[float] = [0 for _ in range(NUM_MOTORS)]
         self.pin_targets: List[float] = [0 for _ in range(NUM_MOTORS)]
 
-
         self.motors: List[PCA9685.PWMChannel] = [
-            pca.channels[channel] for channel in range(NUM_MOTORS)]
-        
+            pca.channels[channel] for channel in range(NUM_MOTORS)
+        ]
+
         self.stop_event = threading.Event()
         self.motor_thread = self.motor_update_loop()
 
@@ -52,27 +56,25 @@ class MotorCommand():
         samp_time: float = (1 / pca.frequency) * 1_000_000  # microseconds per cycle
         duty_cycle = int((65536 * micro_sec) / samp_time)
         return duty_cycle
-    
 
     def set_motor_speed(self, motor_index: int, speed: float) -> float:
-        '''Set the speed of a single motor (-100 - 100) compatible with BLHeli_32'''
+        """Set the speed of a single motor (-100 - 100) compatible with BLHeli_32"""
 
         pwm_value = self._percent_drive_to_duty(speed)
         self.motors[motor_index].duty_cycle = pwm_value
         return pwm_value
-    
+
     @threaded
     def motor_update_loop(self):
         """Continuously update motors toward target speeds"""
-        while self.stop_event.is_set() == False:
+        while not self.stop_event.is_set():
             self.motor_step()
-            if self.stop_event.wait(timeout = 1.0 / self.update_frequency):
+            if self.stop_event.wait(timeout=1.0 / self.update_frequency):
                 break
-        
 
     def motor_step(self, targets: List[float] = None):
         """Move pin towards target supplied"""
-        
+
         if targets is None:
             targets = self.pin_targets
 
@@ -90,7 +92,6 @@ class MotorCommand():
 
         return self.set_motors(self.pinStates)
 
-
     def set_motors(self, speeds: List[float]) -> List[float]:
         """Sets pins to values given by speed position"""
         pwm_values = []
@@ -103,11 +104,14 @@ class MotorCommand():
     def _targetDistance(self, targets: List[float]) -> List[float]:
         """Figures out which direction to step pins"""
 
-        values: List[float] = [target - pinState for target, pinState in zip(targets, self.pinStates)]
-        conversions: List[float] = [float(value / abs(value)) if value != 0 else 0 for value in values]
+        values: List[float] = [
+            target - pinState for target, pinState in zip(targets, self.pinStates)
+        ]
+        conversions: List[float] = [
+            float(value / abs(value)) if value != 0 else 0 for value in values
+        ]
         return conversions
-    
+
     def set_targets(self, targets: List[float]) -> None:
         """Sets new target speeds for motors"""
         self.pin_targets = targets
-
