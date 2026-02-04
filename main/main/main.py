@@ -30,6 +30,8 @@ import time
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
+from sensor_msgs.msg import Imu
+
 # END IMPORT
 
 from typing import List
@@ -38,15 +40,15 @@ import board
 import busio
 import adafruit_bno055
 
+import math
+
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+
+from pid_node.msg import Measurement, Setpoint, Mode
 
 qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
-PITCH_KP = 0.1
-ROLL_KP = 0.1
-MIN_POWER = -50.0
-MAX_POWER = 50.0
-FREQUENCY = 10.0 # Hz
+FREQUENCY = 25.0 # Hz
 
 class IMUWrapper:
     def __init__(self):
@@ -66,22 +68,41 @@ class IMUWrapper:
         self.y = 0.0
         self.z = 0.0
         
-    def update(self, msg):
-        self.roll = msg.data[0]
-        self.pitch = msg.data[1]
-        self.yaw = msg.data[2]
-        self.vroll = msg.data[3]
-        self.vpitch = msg.data[4]
-        self.vyaw = msg.data[5]
-        self.ax = msg.data[6]
-        self.ay = msg.data[7]
-        self.az = msg.data[8]
-        self.vx = msg.data[9]
-        self.vy = msg.data[10]
-        self.vz = msg.data[11]
-        self.x = msg.data[12]
-        self.y = msg.data[13]
-        self.z = msg.data[14]
+    def update(self, msg : Imu):
+        # Alright DID ChatGPT write this? I ain't gonna say nothing
+        # --- Orientation (quaternion → roll, pitch, yaw) ---
+        qx = msg.orientation.x
+        qy = msg.orientation.y
+        qz = msg.orientation.z
+        qw = msg.orientation.w
+
+        # NED convention
+        # roll  (x-axis rotation)
+        sinr_cosp = 2.0 * (qw * qx + qy * qz)
+        cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
+        self.roll = math.atan2(sinr_cosp, cosr_cosp)
+
+        # pitch (y-axis rotation)
+        sinp = 2.0 * (qw * qy - qz * qx)
+        if abs(sinp) >= 1:
+            self.pitch = math.copysign(math.pi / 2, sinp)
+        else:
+            self.pitch = math.asin(sinp)
+
+        # yaw (z-axis rotation, right-turn positive)
+        siny_cosp = 2.0 * (qw * qz + qx * qy)
+        cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
+        self.yaw = math.atan2(siny_cosp, cosy_cosp)
+
+        # --- Angular velocity (body frame, rad/s) ---
+        self.vroll = msg.angular_velocity.x
+        self.vpitch = msg.angular_velocity.y
+        self.vyaw = msg.angular_velocity.z
+
+        # --- Linear acceleration (body frame, m/s²) ---
+        self.ax = msg.linear_acceleration.x
+        self.ay = msg.linear_acceleration.y
+        self.az = msg.linear_acceleration.z
 
 def clamp_list(values: List[float], min_value: float, max_value: float) -> List[float]:
     """Clamp each value in the list to be within the specified min and max range."""
@@ -93,29 +114,51 @@ class Main(Node):
         self.imu = IMUWrapper()
         self.imu_subscriber = self.create_subscription(
             Float32MultiArray,
-            'imu_data',
+            'processed_imu_data',
             self.imu.update,
             qos
         )
-        self.motor_publisher = self.create_publisher(Float32MultiArray, 'motor_powers', qos)
-
+        self.mode_publisher = self.create_publisher(Mode, "pid_modes", 10)
+        self.pos_measurement_publisher = self.create_publisher(Measurement, "position_measurements", 10)
+        self.vel_measurement_publisher = self.create_publisher(Measurement, "velocity_measurements", 10)
+        
         self.timer = self.create_timer(1.0 / FREQUENCY, self.timer_callback)
         
         self.get_logger().info("Main node started.")
         
     def timer_callback(self):
-        """
-        This is going to assume the following: 
-        - Motors in order: top left, top right, bottom left, bottom right BIRDS EYE VIEW
-        - Positive pitch is forward up
-        - Positive roll is right down
-        """
+        modes = Mode()
+        modes.x = False
+        modes.y = False
+        modes.z = False
+        modes.roll = True
+        modes.pitch = True
+        modes.yaw = True
         
-        pitch_correction = [-ROLL_KP, -ROLL_KP, ROLL_KP, ROLL_KP, 0, 0, 0, 0] * self.imu.pitch
-        roll_correction = [-PITCH_KP, PITCH_KP, -PITCH_KP, PITCH_KP, 0, 0, 0, 0] * self.imu.roll
-        powers = [pitch_correction[i] + roll_correction[i] for i in range(8)]
-        powers = clamp_list(powers, MIN_POWER, MAX_POWER)
-        self.motor_publisher.publish(Float32MultiArray(data=powers))
+        self.mode_publisher.publish(modes)
+        
+        pos_m = Measurement()
+        pos_m.x = self.imu.x
+        pos_m.y = self.imu.y
+        pos_m.z = self.imu.z
+        pos_m.roll = self.imu.roll
+        pos_m.pitch = self.imu.pitch
+        pos_m.yaw = self.imu.yaw
+        
+        vel_m = Measurement()
+        vel_m.x = self.imu.vx
+        vel_m.y = self.imu.vy
+        vel_m.z = self.imu.vz
+        vel_m.roll = self.imu.vroll
+        vel_m.pitch = self.imu.vpitch
+        vel_m.yaw = self.imu.vyaw
+        
+        self.pos_measurement_publisher.publish(pos_m)
+        self.vel_measurement_publisher.publish(vel_m)
+        
+
+    
+        
 
 def main(args=None):
     rclpy.init(args=args)

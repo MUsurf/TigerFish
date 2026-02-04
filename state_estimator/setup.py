@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'process_imu'
+package_name = 'state_estimator'
 
 setup(
     name=package_name,
@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'process_imu = process_imu.process_imu:main'
+            'state_estimator = state_estimator.state_estimator:main'
         ],
     },
 )

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+    <node name="state_estimator" exec="state_estimator" pkg="state_estimator"/>
+</launch>
