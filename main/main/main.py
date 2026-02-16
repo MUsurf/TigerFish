@@ -118,6 +118,7 @@ class Main(Node):
             self.imu.update,
             qos
         )
+        
         self.mode_publisher = self.create_publisher(Mode, "pid_modes", 10)
         self.pos_measurement_publisher = self.create_publisher(Measurement, "position_measurements", 10)
         self.vel_measurement_publisher = self.create_publisher(Measurement, "velocity_measurements", 10)
@@ -127,6 +128,8 @@ class Main(Node):
         self.get_logger().info("Main node started.")
         
     def timer_callback(self):
+        
+        
         modes = Mode()
         modes.x = False
         modes.y = False
@@ -155,6 +158,8 @@ class Main(Node):
         
         self.pos_measurement_publisher.publish(pos_m)
         self.vel_measurement_publisher.publish(vel_m)
+        
+        
         
 
     
