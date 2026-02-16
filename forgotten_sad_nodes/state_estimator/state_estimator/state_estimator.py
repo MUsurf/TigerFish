@@ -112,7 +112,7 @@ class StateEstimator(Node):
 
 def main():
     rclpy.init()
-    node = ProcessIMU()
+    node = StateEstimator()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

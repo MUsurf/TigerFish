@@ -1,4 +1,4 @@
-FROM ros:jazzy-ros-base
+FROM ros:humble-ros-base
 
 # Set Docker's default shell to bash instead of sh.
 SHELL ["/bin/bash", "-c"]
