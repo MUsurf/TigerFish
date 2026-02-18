@@ -1,8 +1,22 @@
 Type this command to get ros2 for the terminal: source /opt/ros/humble/setup.bash
 
-Example package creation command: ros2 pkg create --build-type ament_python --license Apache-2.0 test_node --dependencies rclpy std_msgs
+Example package creation command: ros2 pkg create --build-type ament_python --license Apache-2.0 node_name --dependencies rclpy std_msgs
     - --build-type: What it is building to. Defaults to C++ one (ament_cmake or something like that)
     - --license: The license it adds. Lowkey can remove but i think good to have (im not a lawyer idk)
     - test_node: The node name
     - --dependencies: Everything after it is a dependency that the package relies on
 
+
+imu -> process_imu -> state_estimator
+
+
+sub < -- > computer
+
+sub -> imu .... 
+sub <- 
+
+
+
+main node <- your node <- computer
+
+main node -> pid node -> motor node

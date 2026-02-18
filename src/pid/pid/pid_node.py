@@ -134,7 +134,7 @@ class PIDNode(Node):
         
         self.timer = self.create_timer(1.0 / FREQUENCY, self.timer_callback)
         
-        self.get_logger().info("Main node started.")
+        self.get_logger().info("PID node started.")
         
         self.mode = 'position'
         

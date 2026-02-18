@@ -16,7 +16,7 @@ archive
 
 # Ignore catkin files
 devel
-build
+build/
 log/
 install/
 
