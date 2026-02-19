@@ -16,9 +16,13 @@ pca.frequency = 400  # Hz, works with BLHeli_32 PWM mode
 NUM_MOTORS = 8
 # END SETUP
 
+MIN_FREQ = 1000
+MAX_FREQ = 2000
+MED_FREQ = 1500
+
 def threaded(fn):
     def wrapper(*args, **kwargs) -> threading.Thread:
-        thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
+        thread = threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True)
         thread.start()
         return thread
     return wrapper
@@ -42,11 +46,17 @@ class MotorCommand():
         
         self.stop_event = threading.Event()
         self.motor_thread = self.motor_update_loop()
-
+    
     def _percent_drive_to_duty(self, percent_drive: float) -> int:
-
+        
+        percent_drive = max(-1.0, min(1.0, percent_drive))
+        
         # Map 0-100% speed to 1000-2000 us pulse for BLHeli_32
-        micro_sec = int(1000 + int((percent_drive + 100) * 5))
+        if percent_drive >= 0:
+            micro_sec = MED_FREQ + percent_drive * (MAX_FREQ - MED_FREQ)
+        else:
+            micro_sec = MED_FREQ + percent_drive * (MED_FREQ - MIN_FREQ)
+
 
         """Convert Microsecond pulses to duty cycle for PCA9685"""
         samp_time: float = (1 / pca.frequency) * 1_000_000  # microseconds per cycle
@@ -55,7 +65,7 @@ class MotorCommand():
     
 
     def set_motor_speed(self, motor_index: int, speed: float) -> float:
-        '''Set the speed of a single motor (-100 - 100) compatible with BLHeli_32'''
+        '''Set the speed of a single motor (-1 - 1) compatible with BLHeli_32'''
 
         pwm_value = self._percent_drive_to_duty(speed)
         self.motors[motor_index].duty_cycle = pwm_value
@@ -96,7 +106,7 @@ class MotorCommand():
         pwm_values = []
         for index in range(8):
             # Clamp speed to 0-100 before sending
-            clamped_speed = max(0, min(100, speeds[index]))
+            clamped_speed = max(-1, min(1, speeds[index]))
             pwm_values.append(self.set_motor_speed(index, clamped_speed))
         return pwm_values
 
@@ -111,3 +121,6 @@ class MotorCommand():
         """Sets new target speeds for motors"""
         self.pin_targets = targets
 
+    def stop(self) -> None:
+        self.stop_event.set()        # Tell loop to stop
+        self.motor_thread.join()

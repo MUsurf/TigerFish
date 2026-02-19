@@ -18,8 +18,8 @@ def threaded(fn):
     return wrapper
 
 ARM_TIME = 1.0 # Seconds
-CLOSE_TIME = 2.0 # Seconds
-DELTA_LIMIT = 75 # Percent
+CLOSE_TIME = 0.1 # Seconds
+DELTA_LIMIT = 0.75 # -1 to 1
 UPDATE_FREQUENCY = 20.0 # Hz
 LOGGING_FREQUENCY = 5.0 # Hz
 NUM_MOTORS = 8 # Number of motors
@@ -59,7 +59,7 @@ class MotorInterface(Node):
         
         close_speed = [0 for _ in range(NUM_MOTORS)]
         self.motor_commander.set_targets(close_speed)
-        time.sleep(ARM_TIME)
+        time.sleep(CLOSE_TIME)
         
     @threaded
     def logging_function(self):
@@ -80,12 +80,12 @@ class MotorInterface(Node):
         self.clo_seq()
         
         self.stop_event.set()
-        self.motor_commander.stop_event.set()
+        # self.motor_commander.stop_event.set()
         
         if self.logger_thread.is_alive():
             self.logger_thread.join(timeout=10)
-        if self.motor_commander.motor_thread.is_alive():
-            self.motor_commander.motor_thread.join(timeout=10)
+        # if self.motor_commander.motor_thread.is_alive():
+        #     self.motor_commander.motor_thread.join(timeout=10)
         
 def main(args=None):
     rclpy.init(args=args)
@@ -96,6 +96,7 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        node.motor_commander.stop()
         node.shutdown()
         node.destroy_node()
         rclpy.shutdown()
