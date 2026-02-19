@@ -52,7 +52,7 @@ class MotorInterface(Node):
         self.motor_commander.set_targets(arm_speed)
         time.sleep(ARM_TIME)
 
-        self.logger().info("Motors armed")
+        self.get_logger().info("Motors armed")
 
     def clo_seq(self) -> None:
         """Cleans up motors and is responsible for bringing them all back to zero"""
@@ -64,8 +64,8 @@ class MotorInterface(Node):
     @threaded
     def logging_function(self):
         while not self.stop_event.is_set():
-            self.logger().info(f"Motor Goals: {self.motor_commander.logical_pin_targets}")
-            self.logger().info(f"Motor States: {self.motor_commander.logical_pin_states}")
+            # self.get_logger().info(f"Motor Goals: {self.motor_commander.logical_pin_targets}")
+            # self.get_logger().info(f"Motor States: {self.motor_commander.logical_pin_states}")
             if self.stop_event.wait(timeout = 1.0 / LOGGING_FREQUENCY):
                 break
             

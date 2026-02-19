@@ -88,13 +88,13 @@ class MotorCommand():
             else:
                 self.pin_states[index] += delta
 
-        return self.set_motors(self.pinStates)
+        return self.set_motors(self.pin_states)
 
 
     def set_motors(self, speeds: List[float]) -> List[float]:
         """Sets pins to values given by speed position"""
         pwm_values = []
-        for index in range(self.motorNum):
+        for index in range(8):
             # Clamp speed to 0-100 before sending
             clamped_speed = max(0, min(100, speeds[index]))
             pwm_values.append(self.set_motor_speed(index, clamped_speed))
@@ -103,7 +103,7 @@ class MotorCommand():
     def _targetDistance(self, targets: List[float]) -> List[float]:
         """Figures out which direction to step pins"""
 
-        values: List[float] = [target - pinState for target, pinState in zip(targets, self.pinStates)]
+        values: List[float] = [target - pinState for target, pinState in zip(targets, self.pin_states)]
         conversions: List[float] = [float(value / abs(value)) if value != 0 else 0 for value in values]
         return conversions
     

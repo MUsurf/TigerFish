@@ -7,7 +7,11 @@ from sensor_msgs.msg import Imu
 
 ALPHA = 0.2
 yaw = math.radians(45) # This should be for a 45 degree yaw rotate :)
-IMU_TO_BODY_Q = (0.0, 0.0, math.sin(yaw/2), math.cos(yaw/2))
+# IMU_TO_BODY_Q = (0.0, 0.0, math.sin(yaw/2), math.cos(yaw/2))
+IMU_TO_BODY_Q = (0.0, 0.0, 0.0, 1.0)
+
+WAIT_COUNT = 75
+BIAS_COUNT = 75
 
 class ProcessImuNode(Node):
     def __init__(self):
@@ -25,6 +29,14 @@ class ProcessImuNode(Node):
         
         self.mount_q = self._normalize_quat(*IMU_TO_BODY_Q)
         self.mount_R = self._quat_to_rotmat(self.mount_q)
+        
+        self.g_bias_list = [(0.0, 0.0, 0.0) for _ in range(BIAS_COUNT)]
+        self.a_bias_list = [(0.0, 0.0, 0.0) for _ in range(BIAS_COUNT)]
+        
+        self.bias_counter = 0
+        self.a_bias = 0.0
+        self.g_bias = 0.0
+        self.wait_counter = 0
         
         self.get_logger().info('Initialized Process Imu :)')
         
@@ -81,6 +93,29 @@ class ProcessImuNode(Node):
 
 
     def _imu_cb(self, msg : Imu):
+        if self.wait_counter < WAIT_COUNT:
+            self.wait_counter+=1
+            return
+        if self.bias_counter < BIAS_COUNT:
+            self.a_bias_list[self.bias_counter] = (
+                msg.linear_acceleration.x,
+                msg.linear_acceleration.y,
+                msg.linear_acceleration.z,
+            )
+
+            self.g_bias_list[self.bias_counter] = (
+                msg.angular_velocity.x,
+                msg.angular_velocity.y,
+                msg.angular_velocity.z,
+            )
+            self.bias_counter+=1
+            if self.bias_counter == BIAS_COUNT:
+                # I don't want to use numpy rn, trust me
+                self.a_bias = tuple(sum(vals)/len(self.a_bias_list) for vals in zip(*self.a_bias_list))
+                self.g_bias = tuple(sum(vals)/len(self.g_bias_list) for vals in zip(*self.g_bias_list))
+            else:
+                return
+            
         qx = msg.orientation.x
         qy = msg.orientation.y
         qz = msg.orientation.z
@@ -93,14 +128,14 @@ class ProcessImuNode(Node):
             qw
         )
         current_ang_vel = (
-            msg.angular_velocity.x,
-            msg.angular_velocity.y,
-            msg.angular_velocity.z,
+            msg.angular_velocity.x - self.g_bias[0],
+            msg.angular_velocity.y - self.g_bias[1],
+            msg.angular_velocity.z - self.g_bias[2],
         )
         current_linear_accel = (
-            msg.linear_acceleration.x,
-            msg.linear_acceleration.y,
-            msg.linear_acceleration.z,
+            msg.linear_acceleration.x - self.a_bias[0],
+            msg.linear_acceleration.y - self.a_bias[1],
+            msg.linear_acceleration.z - self.a_bias[2],
         )
         filt_orientation = self._low_pass(self.prev_orientation, current_orientation, self.alpha)
         filt_ang_vel = self._low_pass(self.prev_ang_vel, current_ang_vel, self.alpha)

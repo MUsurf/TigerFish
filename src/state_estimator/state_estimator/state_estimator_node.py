@@ -36,6 +36,8 @@ class StateEstimator(Node):
             self.current_odometry.pose.pose.orientation.w = 1.0
             return
         
+        # self.get_logger().info(f'aX: {msg.linear_acceleration.x:.4f} aY: {msg.linear_acceleration.y:.4f} aZ: {msg.linear_acceleration.z:.4f}')
+        
         dt = t - self.last_time
         self.last_time = t
     

@@ -19,8 +19,8 @@ RUN apt-get update && apt-get install -y \
   apt-get clean
 
 # Install packages not availble through system
-RUN python3 -m pip install --no-cache adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 --break-system-packages && \
-  python3 -m pip uninstall -y RPi.GPIO --break-system-packages
+RUN python3 -m pip install --no-cache adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 && \
+  python3 -m pip uninstall -y RPi.GPIO
 
 WORKDIR /home/ros2_ws
 
@@ -28,9 +28,12 @@ WORKDIR /home/ros2_ws
 # We are using bind mounts here to optimize build times.
 # Make sure you follow this syntax: "--mount=type=bind,source=./<your_new_package>/package.xml,target=/home/ros2_ws/deps/<your_new_package>/package.xml \"
 # Bind mounts are whitespace sensitive. You can copy and paste the given syntax and replace <your_new_package> with the name of the package you want to add.
-RUN --mount=type=bind,source=./process_depth/package.xml,target=/home/ros2_ws/deps/process_depth/package.xml \
-    --mount=type=bind,source=./process_imu/package.xml,target=/home/ros2_ws/deps/process_imu/package.xml \
-    --mount=type=bind,source=./motor_command/package.xml,target=/home/ros2_ws/deps/motor_command/package.xml \
+RUN --mount=type=bind,source=./src/motor_driver/package.xml,target=/home/ros2_ws/deps/motor_driver/package.xml \
+    # --mount=type=bind,source=./src/process_imu/package.xml,target=/home/ros2_ws/deps/process_imu/package.xml \
+    # --mount=type=bind,source=./src/state_estimator/package.xml,target=/home/ros2_ws/deps/state_estimator/package.xml \
+    --mount=type=bind,source=./src/main/package.xml,target=/home/ros2_ws/deps/main/package.xml \
+    #--mount=type=bind,source=./src/motor_command/package.xml,target=/home/ros2_ws/deps/motor_command/package.xml \
+
     rosdep update && \
     rosdep install -i --from-path ./deps --rosdistro $ROS_DISTRO -y
 
@@ -42,4 +45,4 @@ RUN source /opt/ros/$ROS_DISTRO/setup.bash && \
 # run.sh is where we run commands in the container on startup.
 COPY --chmod=u+x ./run.sh /home/ros2_ws/run.sh
 
-CMD ["bash", "-c", "screen -dmS my_session /home/ros2_ws/run.sh && tail -f /dev/null"]
+CMD ["bash", "-lc", "mkdir -p /home/ros2_ws/logs && /home/ros2_ws/run.sh > /home/ros2_ws/logs/run.log 2>&1 && tail -f /home/ros2_ws/logs/run.log"]

@@ -9,6 +9,8 @@ import board
 import busio
 import adafruit_bno055
 
+BIAS_COUNT = 10
+
 
 class ImuNode(Node):
     def __init__(self):
@@ -27,7 +29,8 @@ class ImuNode(Node):
 
         period = 1.0 / self.rate if self.rate > 0 else 0.01
         self.timer = self.create_timer(period, self._timer_cb)
-
+        
+        
     def _timer_cb(self):
         # Get data from the $5 sensor
         quat = self.sensor.quaternion   
@@ -66,6 +69,8 @@ class ImuNode(Node):
         imu_msg.linear_acceleration.x = ax
         imu_msg.linear_acceleration.y = ay
         imu_msg.linear_acceleration.z = az
+        # self.get_logger().info(f'aX: {ax:.4f} aY: {ay:.4f} aZ: {az:.4f}')
+
 
         gx, gy, gz = gyro
         gx = gx
@@ -79,7 +84,7 @@ class ImuNode(Node):
         imu_msg.orientation_covariance = [0.0] * 9 # Prob need this asp
         imu_msg.angular_velocity_covariance = [0.0] * 9 # ^
         imu_msg.linear_acceleration_covariance = [0.0] * 9 # ^
-
+            
         self.imu_pub.publish(imu_msg)
 
 def main(args=None):
