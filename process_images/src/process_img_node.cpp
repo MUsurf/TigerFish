@@ -30,6 +30,8 @@ public:
                 "camera/image_raw", 10,
                 std::bind(&processImgNode::image_callback, this, std::placeholders::_1));
 
+            // Create a publisher for marker data
+            // marker_pub_ = this->create_publisher<tiger_fish_msgs::msg::MarkerDetection>("vision/marker_data", 10);
 
             //logging
     RCLCPP_INFO(this->get_logger(), "processImgNode ready for images...");
@@ -117,9 +119,16 @@ private:
       preprocesser_->all_preprocessing(raw_frame, processed_frame);
 
                 // detect markers
-      MarkerResult result = marker_detector_->find_markers(processed_frame);
-      marker_detector_->visualize_markers(processed_frame, result);
+      MarkerResult marker_result = marker_detector_->find_markers(processed_frame);
+      marker_detector_->visualize_markers(processed_frame, marker_result);
 
+      // auto marker_msg = tiger_fish_msgs::msg::MarkerDetection();
+      // marker_msg.found = marker_result.found;
+      // marker_msg.x = marker_result.norm_position.x;
+      // marker_msg.y = marker_result.norm_position.y;
+      // marker_msg.depth = marker_result.depth;
+      // marker_msg.angle = marker_result.angle;
+      // marker_pub_->publish(marker_msg);
 
                 //stitch images
       cv::Mat combined_frame = StitchImg(raw_frame, processed_frame);
@@ -146,6 +155,8 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
   std::unique_ptr<MarkerDetector> marker_detector_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
+  // rclcpp::Publisher<tiger_fish_msgs::msg::MarkerDetection>::SharedPtr marker_pub_;
+
 
   cv::VideoWriter video_writer_;
   bool is_writer_initialized_ = false;
