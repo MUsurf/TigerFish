@@ -19,6 +19,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Standard ROS 2 interfaces and build tools
     ros-jazzy-ament-cmake \
     ros-jazzy-example-interfaces \
+    # RQT and GUI tools for RoboSub debugging
+    ros-jazzy-rqt \
+    ros-jazzy-rqt-common-plugins \
+    ros-jazzy-rqt-graph \
+    ros-jazzy-rqt-image-view \
+    ros-jazzy-rviz2 \
+    ros-jazzy-rviz-default-plugins \
     # Web requirements for yasmin_viewer
     python3-flask \
     python3-flask-cors \
