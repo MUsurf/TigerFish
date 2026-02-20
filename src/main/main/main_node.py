@@ -3,6 +3,12 @@ from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray # pyright: ignore[reportMissingImports]
 
 import rclpy
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+
+qos = QoSProfile(
+    depth=1,
+    reliability=ReliabilityPolicy.BEST_EFFORT
+)
 
 class MainNode(Node):
     def __init__(self):
@@ -10,13 +16,17 @@ class MainNode(Node):
         
         # self.orientation_subscriber = self.create_subscription(Odometry, 'state_estimation', self._odom_cb, 10)
         
-        self.motor_publisher = self.create_publisher(Float32MultiArray, "motor_powers", 10)
+        self.motor_publisher = self.create_publisher(
+            Float32MultiArray,
+            "motor_powers",
+            qos
+        )
         
         period = 1.0 / 10.0
         self.timer = self.create_timer(period, self._timer_cb)
         
     def _timer_cb(self):
-        powers = [0.50, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.50]
+        powers = [0.50, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.50]
         msg = Float32MultiArray()
         msg.data = powers
         self.motor_publisher.publish(msg)
