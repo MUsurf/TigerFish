@@ -12,6 +12,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(tiger_fish_msgs REQUIRED)
 
 include_directories(
   include
@@ -30,7 +31,7 @@ add_executable(video_pub_node
 )
 
 # link libraries
-ament_target_dependencies(process_img rclcpp sensor_msgs cv_bridge OpenCV)
+ament_target_dependencies(process_img rclcpp sensor_msgs cv_bridge OpenCV tiger_fish_msgs)
 ament_target_dependencies(video_pub_node rclcpp sensor_msgs cv_bridge OpenCV)
 
 install(TARGETS 

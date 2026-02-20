@@ -13,7 +13,7 @@ find_package(yasmin_ros REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(yasmin_viewer REQUIRED)
-
+find_package(tiger_fish_msgs REQUIRED)
 
 add_executable(state_machine_node src/state_machine.cpp)
 
@@ -28,6 +28,7 @@ ament_target_dependencies(state_machine_node
   yasmin_viewer
   std_msgs
   sensor_msgs
+  tiger_fish_msgs
 )
 
 

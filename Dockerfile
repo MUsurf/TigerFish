@@ -64,6 +64,7 @@ RUN if [ ! -d "/home/ros2_ws/src/yasmin" ]; then \
 RUN --mount=type=bind,source=./process_depth/package.xml,target=/home/ros2_ws/deps/process_depth/package.xml \
     --mount=type=bind,source=./process_imu/package.xml,target=/home/ros2_ws/deps/process_imu/package.xml \
     --mount=type=bind,source=./process_images/package.xml,target=/home/ros2_ws/deps/process_images/package.xml \
+    --mount=type=bind,source=./tiger_fish_msgs/package.xml,target=/home/ros2_ws/deps/tiger_fish_msgs/package.xml \
     apt-get update && \
     rosdep update --rosdistro $ROS_DISTRO && \
     rosdep install -i --from-path /home/ros2_ws/deps --rosdistro $ROS_DISTRO -y && \
