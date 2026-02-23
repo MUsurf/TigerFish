@@ -34,7 +34,7 @@ MIN_ROLL_VELOCITY = math.pi / 2 # 90 deg
 MIN_PITCH_VELOCITY = math.pi / 2 # 90 deg
 MIN_YAW_VELOCITY = math.pi / 2 # 90 deg
 
-FREQUENCY = 40
+FREQUENCY = 200
 MAX_POWER = 100.0
 
 class PIDController:

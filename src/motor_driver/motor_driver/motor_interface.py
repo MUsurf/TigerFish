@@ -18,7 +18,7 @@ def threaded(fn):
     return wrapper
 
 ARM_TIME = 1.0 # Seconds
-CLOSE_TIME = 0.1 # Seconds
+CLOSE_TIME = 1.5 # Seconds
 DELTA_LIMIT = 0.75 # -1 to 1
 UPDATE_FREQUENCY = 20.0 # Hz
 LOGGING_FREQUENCY = 5.0 # Hz
@@ -57,7 +57,7 @@ class MotorInterface(Node):
     def clo_seq(self) -> None:
         """Cleans up motors and is responsible for bringing them all back to zero"""
         
-        close_speed = [0 for _ in range(NUM_MOTORS)]
+        close_speed = [0.0 for _ in range(NUM_MOTORS)]
         self.motor_commander.set_targets(close_speed)
         time.sleep(CLOSE_TIME)
         
@@ -79,6 +79,8 @@ class MotorInterface(Node):
         
         self.clo_seq()
         
+        self.motor_commander.set_motors([0.0 for _ in range(NUM_MOTORS)])
+        
         self.stop_event.set()
         # self.motor_commander.stop_event.set()
         
@@ -96,7 +98,7 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        node.motor_commander.stop()
+        node.get_logger().info('Motors shutting down.')
         node.shutdown()
         node.destroy_node()
         rclpy.shutdown()

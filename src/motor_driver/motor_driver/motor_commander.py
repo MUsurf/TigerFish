@@ -121,6 +121,7 @@ class MotorCommand():
         """Sets new target speeds for motors"""
         self.pin_targets = targets
 
-    def stop(self) -> None:
+    def stop(self, max_time = 2.0) -> None:
         self.stop_event.set()        # Tell loop to stop
         self.motor_thread.join()
+        

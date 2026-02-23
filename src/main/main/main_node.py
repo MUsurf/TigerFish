@@ -3,6 +3,7 @@ from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray # pyright: ignore[reportMissingImports]
 
 import rclpy
+import time
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 qos = QoSProfile(
@@ -24,9 +25,17 @@ class MainNode(Node):
         
         period = 1.0 / 10.0
         self.timer = self.create_timer(period, self._timer_cb)
+        self.start_time = time.time()
+        self.switch_time = 1.5
         
     def _timer_cb(self):
-        powers = [0.50, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.50]
+        power = 0.25
+        powers = [0.0 for _ in range(8)]
+        time_elapsed = time.time() - self.start_time
+        
+        if (time_elapsed // self.switch_time) % 2 == 1:
+            powers[(time_elapsed // (2 * self.switch_time)) % 8] = power
+        
         msg = Float32MultiArray()
         msg.data = powers
         self.motor_publisher.publish(msg)
