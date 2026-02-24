@@ -18,7 +18,7 @@ NUM_MOTORS = 8
 
 MIN_FREQ = 1000
 MAX_FREQ = 2000
-MED_FREQ = 1500
+MED_FREQ = 1600
 
 def threaded(fn):
     def wrapper(*args, **kwargs) -> threading.Thread:
@@ -46,6 +46,7 @@ class MotorCommand():
         
         self.stop_event = threading.Event()
         self.motor_thread = self.motor_update_loop()
+        self.temp_num : float = 0
     
     def _percent_drive_to_duty(self, percent_drive: float) -> int:
         

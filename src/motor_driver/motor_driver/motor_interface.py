@@ -43,16 +43,28 @@ class MotorInterface(Node):
         self.stop_event = threading.Event()
         self.motor_commander : MotorCommand = MotorCommand(UPDATE_FREQUENCY, DELTA_LIMIT)
         self.logger_thread = self.logging_function()
+        self.arm_seq()
         
 
     def arm_seq(self):
-        """Arms the motors (Not technically needed)"""
-
-        arm_speed = [0 for _ in range(NUM_MOTORS)]
-        self.motor_commander.set_targets(arm_speed)
+        on = [0.25] * NUM_MOTORS
+        neutral = [0.0] * NUM_MOTORS
+        
+        self.motor_commander.pin_targets = neutral
+        self.motor_commander.pin_states = neutral
+        self.motor_commander.set_motors(neutral)
         time.sleep(ARM_TIME)
-
-        self.get_logger().info("Motors armed")
+        
+        # self.motor_commander.pin_targets = on
+        # self.motor_commander.pin_states = on
+        # self.motor_commander.set_motors(on)
+        # time.sleep(ARM_TIME)
+        
+        # self.motor_commander.pin_targets = neutral
+        # self.motor_commander.pin_states = neutral
+        # self.motor_commander.set_motors(neutral)
+        # time.sleep(ARM_TIME)
+        
 
     def clo_seq(self) -> None:
         """Cleans up motors and is responsible for bringing them all back to zero"""
@@ -64,8 +76,8 @@ class MotorInterface(Node):
     @threaded
     def logging_function(self):
         while not self.stop_event.is_set():
-            # self.get_logger().info(f"Motor Goals: {self.motor_commander.logical_pin_targets}")
-            # self.get_logger().info(f"Motor States: {self.motor_commander.logical_pin_states}")
+            self.get_logger().info(f"Motor Goals: {self.motor_commander.pin_targets}")
+            self.get_logger().info(f"Motor States: {self.motor_commander.pin_states}")
             if self.stop_event.wait(timeout = 1.0 / LOGGING_FREQUENCY):
                 break
             
@@ -75,33 +87,54 @@ class MotorInterface(Node):
         self.motor_commander.set_targets(message_rec.data)
     
     def shutdown(self):
-        self.get_logger().info("Shutting down motor interface")
-        
-        self.clo_seq()
-        
-        self.motor_commander.set_motors([0.0 for _ in range(NUM_MOTORS)])
-        
+        try:
+            self.get_logger().info("Shutting down motor interface")
+        except Exception:
+            pass
+
+        # HARD STOP: write neutral PWM immediately, no ROS needed.
+        try:
+            self.motor_commander.set_motors([0.0] * NUM_MOTORS)
+        except Exception:
+            pass
+
+        # Ask ramp thread to stop (optional but clean)
+        try:
+            self.motor_commander.stop_event.set()
+        except Exception:
+            pass
+
         self.stop_event.set()
-        # self.motor_commander.stop_event.set()
-        
-        if self.logger_thread.is_alive():
-            self.logger_thread.join(timeout=10)
-        # if self.motor_commander.motor_thread.is_alive():
-        #     self.motor_commander.motor_thread.join(timeout=10)
+
+        try:
+            if self.logger_thread.is_alive():
+                self.logger_thread.join(timeout=1.0)
+        except Exception:
+            pass
+
         
 def main(args=None):
     rclpy.init(args=args)
-    print("Starting interface")
     node = MotorInterface()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
-        node.get_logger().info('Motors shutting down.')
-        node.shutdown()
-        node.destroy_node()
-        rclpy.shutdown()
+        try:
+            node.shutdown()
+        except Exception:
+            pass
+        try:
+            node.destroy_node()
+        except Exception:
+            pass
+        # Guard: launch may already have shut down the context
+        try:
+            if rclpy.ok():
+                rclpy.shutdown()
+        except Exception:
+            pass
 
 if __name__ == '__main__':
     main()

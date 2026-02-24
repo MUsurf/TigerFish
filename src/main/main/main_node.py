@@ -29,17 +29,19 @@ class MainNode(Node):
         self.switch_time = 1.5
         
     def _timer_cb(self):
-        power = 0.25
+        power = 0.4
         powers = [0.0 for _ in range(8)]
         time_elapsed = time.time() - self.start_time
         
         if (time_elapsed // self.switch_time) % 2 == 1:
-            powers[(time_elapsed // (2 * self.switch_time)) % 8] = power
+            powers[int((time_elapsed // (2 * self.switch_time)) % 8)] = power
+            # powers[0] = power
+        else:
+            powers = [0.0 for _ in range(8)] # Don't need this but i hate debugging
         
         msg = Float32MultiArray()
         msg.data = powers
         self.motor_publisher.publish(msg)
-        self.get_logger().info('Bang :)')
         
     def _odom_cb(self, msg : Odometry):
         # self.get_logger().info(f'p_x: {msg.pose.pose.position.x} p_y: {msg.pose.pose.position.y} p_z: {msg.pose.pose.position.z}')
