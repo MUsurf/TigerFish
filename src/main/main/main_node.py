@@ -17,17 +17,17 @@ class MainNode(Node):
         
         # self.orientation_subscriber = self.create_subscription(Odometry, 'state_estimation', self._odom_cb, 10)
         
-        # self.motor_publisher = self.create_publisher(
-        #     Float32MultiArray,
-        #     "motor_powers",
-        #     qos
-        # )
-        
-        self.servo_publisher = self.create_publisher(
-            Float32, 
-            "topic_servo_angle",
-            10
+        self.motor_publisher = self.create_publisher(
+            Float32MultiArray,
+            "motor_powers",
+            qos
         )
+        
+        # self.servo_publisher = self.create_publisher(
+        #     Float32, 
+        #     "topic_servo_angle",
+        #     10
+        # )
         
         period = 1.0 / 10.0
         self.timer = self.create_timer(period, self._timer_cb)
@@ -40,20 +40,20 @@ class MainNode(Node):
         time_elapsed = time.time() - self.start_time
         
         if (time_elapsed // self.switch_time) % 2 == 1:
-            # powers[int((time_elapsed // (2 * self.switch_time)) % 8)] = power
+            powers[int((time_elapsed // (2 * self.switch_time)) % 8)] = power
             # powers[0] = power
-            msg = Float32()
-            msg.data = 0.0
-            self.servo_publisher.publish(msg)
+            # msg = Float32()
+            # msg.data = 0.0
+            # self.servo_publisher.publish(msg)
         else:
             powers = [0.0 for _ in range(8)] # Don't need this but i hate debugging
-            msg = Float32()
-            msg.data = 90.0
-            self.servo_publisher.publish(msg)
+            # msg = Float32()
+            # msg.data = 90.0
+            # self.servo_publisher.publish(msg)
         
-        # msg = Float32MultiArray()
-        # msg.data = powers
-        # self.motor_publisher.publish(msg)
+        msg = Float32MultiArray()
+        msg.data = powers
+        self.motor_publisher.publish(msg)
         
     def _odom_cb(self, msg : Odometry):
         # self.get_logger().info(f'p_x: {msg.pose.pose.position.x} p_y: {msg.pose.pose.position.y} p_z: {msg.pose.pose.position.z}')
