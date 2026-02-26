@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'grabber_servo=grabber_servo.grabber_servo_node:main'
+            'grabber_servo_node=grabber_servo.grabber_servo_node:main'
         ],
     },
 )

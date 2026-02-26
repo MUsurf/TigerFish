@@ -11,6 +11,7 @@ services:
     # Allow access to hardware on the pi.
     devices:
         - "/dev:/dev"
+        - /dev/gpiochip0:/dev/gpiochip0
 
 # A service for developing when you don't have a Raspberry Pi.
   no-pi:
