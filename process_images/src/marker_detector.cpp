@@ -58,11 +58,27 @@ MarkerResult MarkerDetector::find_markers(const cv::Mat & frame)
             //solidarity filter: analyze local pixel neighborhoods to preserve only the correct edges (ignore narrow/false edges)
       if(extent < 0.3) {continue;}
 
+      float left_x = left_marker.center.x;
+      float right_x = right_marker.center.x;
+      
+      // the meter distance between the cameras or something idk
+      float baseline = 0.1;
 
       result.contour = contour;
       result.center = rect.center;
       result.found = true;
-      result.depth = K / std::sqrt(area);
+
+      float disparity = left_x - right_x;
+
+      if (disparity != 0)
+      {
+        result.depth = (baseline * focal_length_) / disparity;
+      }
+      else
+      {
+        result.depth = INT_MAX;
+      }
+
       result.norm_position.x = (rect.center.x - (frame.cols / 2.0)) / (frame.cols / 2.0);
       result.norm_position.y = (rect.center.y - (frame.rows / 2.0)) / (frame.rows / 2.0);
       result.angle = rect.angle;
