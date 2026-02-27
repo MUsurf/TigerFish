@@ -55,18 +55,18 @@ MarkerResult MarkerDetector::find_markers(const cv::Mat & frame)
       if (aspect_ratio > 10.0) {continue;}     // too thin
 
 
-            //solidarity filter: analyze local pixel neighborhoods to preserve only the correct edges (ignore narrow/false edges)
+      //solidarity filter: analyze local pixel neighborhoods to preserve only the correct edges (ignore narrow/false edges)
       if(extent < 0.3) {continue;}
+
+      result.contour = contour;
+      result.center = rect.center;
+      result.found = true;
 
       float left_x = left_marker.center.x;
       float right_x = right_marker.center.x;
       
       // the meter distance between the cameras or something idk
       float baseline = 0.1;
-
-      result.contour = contour;
-      result.center = rect.center;
-      result.found = true;
 
       float disparity = left_x - right_x;
 
