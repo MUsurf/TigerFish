@@ -48,7 +48,7 @@ class RemoteControllerNode(Node):
             "controller_input": make_http_str_post(
                 self.update_controller_input
             ),
-            "command_line": make_http_str_get(
+            "command_line": make_http_str_post(
                 self.publish_command_line
             )
         }

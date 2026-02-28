@@ -57,59 +57,6 @@ def make_http_str_post(
 
 
 
-def make_http_dict_get(
-        dict_getter: Callable,
-        timestamp_getter: Callable | None = None
-) -> Callable:
-        
-    def handler() -> tuple[Response, int]:
-
-        try:
-            string = dict_getter()
-
-            if timestamp_getter != None:
-                timestamp = timestamp_getter()
-            else:
-                # datetime(1970,1,1) indicates no data present
-                timestamp = datetime(1970,1,1)
-        except:
-            return jsonify({"error": "failed to get str and/or timestamp"}), 500
-
-        response = {
-            "str": string,
-            "timestamp": timestamp.strftime(r"%H:%M:%S:%f")
-        }
-
-        return jsonify(response), 200
-
-    return handler
-
-
-def make_http_dict_post(
-        str_setter: Callable[[str], None],
-) -> Callable[[], tuple[Response, int]]:
-    
-    def handler() -> tuple[Response, int]:
-
-        if not request.is_json:
-            return jsonify({"error": "Expected application/json"}), 400
-        
-        data = request.get_json()
-
-        try:
-            str_setter(data["str"])
-
-        except:
-            return jsonify({"error": "failed to parse json"}), 400
-        
-        
-
-        return jsonify({"message": "success"}), 200
-    
-    return handler
-
-
-
 def make_http_imu_get(
         imu_getter: Callable,
         timestamp_getter: Callable | None = None

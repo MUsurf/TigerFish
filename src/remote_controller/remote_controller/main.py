@@ -19,8 +19,8 @@ def main(args=None):
     )
     server = make_server(HOST, PORT, app)
 
-    rclpy_thread = Thread(target = rclpy.spin, args=[node])
-    flask_thread = Thread(target = server.serve_forever)
+    rclpy_thread = Thread(target = rclpy.spin, args=[node], daemon=True)
+    flask_thread = Thread(target = server.serve_forever, daemon=True)
 
     try:
         node.get_logger().info("starting rclpy spinner thread")
