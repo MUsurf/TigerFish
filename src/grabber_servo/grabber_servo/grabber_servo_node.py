@@ -2,8 +2,16 @@
 import rclpy
 # End imports
 from rclpy.node import Node
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Bool
 from gpiozero import PWMOutputDevice
+
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
+kill_qos = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1
+)
 
 
 class ServoControllerNode(Node):
@@ -39,6 +47,15 @@ class ServoControllerNode(Node):
             self.angle_callbackFunction,
             self.queueSize
         )
+        
+        self.kill_subscriber = self.create_subscription(
+            Bool,
+            'kill',
+            self.kill_cb,
+            kill_qos
+        )
+        
+        self.syv
 
         # Publisher
         self.publisherTopic = 'topic_servo_angle_feedback'
@@ -75,6 +92,11 @@ class ServoControllerNode(Node):
     def destroy_node(self):
         self.pwm.close()
         super().destroy_node()
+        
+    def kill_cb(self, msg):
+        if msg.data:
+            self.get_logger().warn("Servo kill received — shutting down.")
+            rclpy.shutdown()
 
 
 def main(args=None):

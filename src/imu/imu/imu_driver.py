@@ -4,10 +4,19 @@ import rclpy
 from rclpy.node import Node
 
 from sensor_msgs.msg import Imu
+from std_msgs.msg import Bool
 
 import board
 import busio
 import adafruit_bno055
+
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
+kill_qos = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1
+)
 
 BIAS_COUNT = 10
 
@@ -29,6 +38,13 @@ class ImuNode(Node):
 
         period = 1.0 / self.rate if self.rate > 0 else 0.01
         self.timer = self.create_timer(period, self._timer_cb)
+        
+        self.kill_subscriber = self.create_subscription(
+            Bool,
+            'kill',
+            self.kill_cb,
+            kill_qos
+        )
         
         
     def _timer_cb(self):
