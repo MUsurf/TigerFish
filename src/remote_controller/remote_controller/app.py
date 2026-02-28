@@ -19,8 +19,10 @@ def make_http_str_get(
             else:
                 # datetime(1970,1,1) indicates no data present
                 timestamp = datetime(1970,1,1)
-        except:
-            return jsonify({"error": "failed to get str and/or timestamp"}), 500
+        except Exception as e:
+            return jsonify({
+                "error": f"failed to get str and/or timestamp\nerror msg: {e}"
+            }), 500
 
         response = {
             "str": string,
@@ -46,10 +48,11 @@ def make_http_str_post(
         try:
             str_setter(data["str"])
 
-        except:
-            return jsonify({"error": "failed to parse json"}), 400
-        
-        
+        except Exception as e:
+            return jsonify({
+                "error": f"failed to parse json\nerror msg: {e}"
+            }), 400
+
 
         return jsonify({"message": "success"}), 200
     
@@ -72,9 +75,10 @@ def make_http_imu_get(
             else:
                 # datetime(1970,1,1) indicates no data present
                 timestamp = datetime(1970,1,1)
-        except:
-            return jsonify({"error": "failed to get imu and/or timestamp"}), 500
-
+        except Exception as e:
+            return jsonify({
+                "error": f"failed to get str and/or timestamp\nerror msg: {e}"
+            }), 500
         response = {
             "x": imu.x,
             "y": imu.y,
@@ -105,9 +109,10 @@ def make_http_imu_post(
         try:
             imu = ControllerValues.from_dict(data)
             imu_setter(imu)
-        except:
-            return jsonify({"error": "failed to parse json"}), 400
-        
+        except Exception as e:
+            return jsonify({
+                "error": f"failed to parse json\nerror msg: {e}"
+            }), 400        
         return jsonify({"message": "success"}), 200
     
     return handler
