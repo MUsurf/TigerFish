@@ -35,7 +35,7 @@ def generate_launch_description():
         # ),
         Node(
             package='remote_controller',
-            executable='main',
+            executable='remote_controller',
             name='remote_controller'
         ),
         Node(

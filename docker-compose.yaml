@@ -12,6 +12,8 @@ services:
     devices:
         - "/dev:/dev"
         - /dev/gpiochip0:/dev/gpiochip0
+    ports:
+        - "5000:5000"
 
 # A service for developing when you don't have a Raspberry Pi.
   no-pi:

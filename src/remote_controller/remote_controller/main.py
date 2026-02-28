@@ -31,6 +31,8 @@ def main(args=None):
         rclpy_thread.join()
         flask_thread.join()
         
+        node.get_logger().info("rclpy and flask terminated")
+        
     except KeyboardInterrupt:
         node.get_logger().info("Shutting down remote_controller node.")
     finally:
