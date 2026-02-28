@@ -16,9 +16,9 @@ pca.frequency = 400  # Hz, works with BLHeli_32 PWM mode
 NUM_MOTORS = 8
 # END SETUP
 
-MIN_FREQ = 1000
-MAX_FREQ = 2000
-MED_FREQ = 1600
+MIN_FREQ = 1100
+MAX_FREQ = 1900
+MED_FREQ = 1500
 
 def threaded(fn):
     def wrapper(*args, **kwargs) -> threading.Thread:
@@ -84,7 +84,7 @@ class MotorCommand():
     def motor_step(self, targets: List[float] = None):
         """Move pin towards target supplied"""
         
-        if targets is None:
+        if targets is None or len(targets) != NUM_MOTORS:
             targets = self.pin_targets
 
         directions: List[float] = self._targetDistance(targets)
@@ -104,15 +104,18 @@ class MotorCommand():
 
     def set_motors(self, speeds: List[float]) -> List[float]:
         """Sets pins to values given by speed position"""
+        if(len(speeds) != NUM_MOTORS):
+            return None
         pwm_values = []
-        for index in range(8):
-            # Clamp speed to 0-100 before sending
+        for index in range(NUM_MOTORS):
+            # Clamp speed to -1 to 1 before sending
             clamped_speed = max(-1, min(1, speeds[index]))
             pwm_values.append(self.set_motor_speed(index, clamped_speed))
         return pwm_values
 
     def _targetDistance(self, targets: List[float]) -> List[float]:
         """Figures out which direction to step pins"""
+        if len(targets) != NUM_MOTORS : return None
 
         values: List[float] = [target - pinState for target, pinState in zip(targets, self.pin_states)]
         conversions: List[float] = [float(value / abs(value)) if value != 0 else 0 for value in values]
@@ -120,6 +123,7 @@ class MotorCommand():
     
     def set_targets(self, targets: List[float]) -> None:
         """Sets new target speeds for motors"""
+        if len(targets) != NUM_MOTORS : return None
         self.pin_targets = targets
 
     def stop(self, max_time = 2.0) -> None:
