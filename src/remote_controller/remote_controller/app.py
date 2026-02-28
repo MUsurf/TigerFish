@@ -21,7 +21,7 @@ def make_http_str_get(
                 timestamp = datetime(1970,1,1)
         except Exception as e:
             return jsonify({
-                "error": f"failed to get str and/or timestamp\nerror msg: {e}"
+                "error": f"failed to get str and/or timestamp; error msg: {e}"
             }), 500
 
         response = {
@@ -50,7 +50,7 @@ def make_http_str_post(
 
         except Exception as e:
             return jsonify({
-                "error": f"failed to parse json\nerror msg: {e}"
+                "error": f"failed to parse json; error msg: {e}"
             }), 400
 
 
@@ -77,7 +77,7 @@ def make_http_imu_get(
                 timestamp = datetime(1970,1,1)
         except Exception as e:
             return jsonify({
-                "error": f"failed to get str and/or timestamp\nerror msg: {e}"
+                "error": f"failed to get str and/or timestamp; error msg: {e}"
             }), 500
         response = {
             "x": imu.x,
@@ -111,7 +111,7 @@ def make_http_imu_post(
             imu_setter(imu)
         except Exception as e:
             return jsonify({
-                "error": f"failed to parse json\nerror msg: {e}"
+                "error": f"failed to parse json; error msg: {e}"
             }), 400        
         return jsonify({"message": "success"}), 200
     

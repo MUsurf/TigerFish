@@ -91,4 +91,6 @@ class RemoteControllerNode(Node):
 
     def publish_command_line(self, msg: str):
         
-        self.command_publisher.publish(msg)
+        ros2_msg = String()
+        ros2_msg.data = msg
+        self.command_publisher.publish(ros2_msg)
