@@ -3,11 +3,11 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
-        Node(
-            package='motor_driver',
-            executable='motor_interface',
-            name='motor_driver'
-        ),
+        # Node(
+        #     package='motor_driver',
+        #     executable='motor_interface',
+        #     name='motor_driver'
+        # ),
         # Node(
         #     package='imu',
         #     executable='imu_driver',
@@ -28,6 +28,16 @@ def generate_launch_description():
         #     executable='grabber_servo_node',
         #     name='grabber_servo'
         # ),
+        # Node(
+        #     package='grabber_servo',
+        #     executable='grabber_servo_node',
+        #     name='grabber_servo'
+        # ),
+        Node(
+            package='remote_controller',
+            executable='main',
+            name='remote_controller'
+        ),
         Node(
             package='main',
             executable='main_node',
