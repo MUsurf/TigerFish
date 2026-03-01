@@ -102,6 +102,9 @@ class ImuNode(Node):
         imu_msg.linear_acceleration_covariance = [0.0] * 9 # ^
             
         self.imu_pub.publish(imu_msg)
+    
+    def kill_cb(self):
+        return
 
 def main(args=None):
     rclpy.init(args=args)
