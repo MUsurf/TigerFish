@@ -1,6 +1,7 @@
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32, String # pyright: ignore[reportMissingImports]
+from messages.msg import PIDInput
 
 import rclpy
 import time
@@ -55,11 +56,11 @@ class MainNode(Node):
         
         self.orientation_subscriber = self.create_subscription(Odometry, 'state_estimation', self._odom_cb, 10)
         
-        self.motor_publisher = self.create_publisher(
-            Float32MultiArray,
-            "motor_powers",
-            qos
-        )
+        # self.motor_publisher = self.create_publisher(
+        #     Float32MultiArray,
+        #     "motor_powers",
+        #     qos
+        # )
         
         # self.controller_subscriber = self.create_subscription(
         #     String,
@@ -74,12 +75,19 @@ class MainNode(Node):
         #     10
         # )
         
+        self.pid_publisher = self.create_publisher(
+            PIDInput,
+            "pid_input",
+            10
+        )
+        
         period = 1.0 / 10.0
         self.timer = self.create_timer(period, self._timer_cb)
         self.start_time = time.time()
         self.switch_time = 2
         
     def _timer_cb(self):
+        return
         power = 0.1
         powers = [0.0 for _ in range(8)]
         time_elapsed = time.time() - self.start_time
@@ -109,8 +117,28 @@ class MainNode(Node):
         
     def _odom_cb(self, msg : Odometry):
         r, p, y = rpy_from_quat(msg.pose.pose.orientation)
-        self.get_logger().info(f'roll: {r} pitch {p} yaw: {y}')
-        return
+        self.get_logger().info(f'roll: {(r * 180 / np.pi):4f} pitch {(p * 180 / np.pi):4f} yaw: {(y * 180 / np.pi):4f}')
+        msg = PIDInput()
+        
+        msg.x_mode = False
+        msg.y_mode = False
+        msg.z_mode = False
+        msg.roll_mode = True
+        msg.pitch_mode = True
+        msg.yaw_mode = True
+        
+        msg.x_power = 0.0
+        msg.y_power = 0.0
+        msg.z_power = 0.0
+        
+        msg.roll_setpoint = 0.0
+        msg.roll_measurement = r * 180 / np.pi
+        msg.pitch_setpoint = 0.0
+        msg.pitch_setpoint = p * 180 / np.pi
+        msg.yaw_setpoint = 0.0
+        msg.yaw_measurement = y * 180 / np.pi
+        
+        self.pid_publisher.publish(msg)
         
         
 def main(args=None):

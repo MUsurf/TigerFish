@@ -10,6 +10,8 @@ import board
 import busio
 import adafruit_bno055
 
+import time
+
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 kill_qos = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
@@ -33,6 +35,14 @@ class ImuNode(Node):
 
         i2c = busio.I2C(board.SCL, board.SDA)
         self.sensor = adafruit_bno055.BNO055_I2C(i2c)
+        
+                
+        time.sleep(0.1)
+        # IMU-only fusion (gyro + accel, no mag)
+        self.sensor.mode = adafruit_bno055.IMUPLUS_MODE 
+
+        # NDOF
+        # self.sensor.mode = adafruit_bno055.NDOF_MODE
 
         self.imu_pub = self.create_publisher(Imu, "imu_data", 10)
 

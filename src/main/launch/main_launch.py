@@ -28,11 +28,11 @@ def generate_launch_description():
         #     executable='grabber_servo_node',
         #     name='grabber_servo'
         # ),
-        # Node(
-        #     package='grabber_servo',
-        #     executable='grabber_servo_node',
-        #     name='grabber_servo'
-        # ),
+        Node(
+            package='pid',
+            executable='pid_node',
+            name='pid'
+        ),
         # Node(
         #     package='remote_controller',
         #     executable='remote_controller',

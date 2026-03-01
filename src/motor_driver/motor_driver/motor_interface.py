@@ -8,7 +8,7 @@ import rclpy
 QOS = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
 FREQ = 40 # hz
-LOG_FREQ = 5 # hz
+LOG_FREQ = 1 # hz
 DELTA = 0.75 # per second
 
 ARM_TIME = 2.0

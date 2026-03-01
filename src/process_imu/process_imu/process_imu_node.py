@@ -6,9 +6,24 @@ from rclpy.node import Node
 from sensor_msgs.msg import Imu
 
 ALPHA = 0.2
-yaw = math.radians(45) # This should be for a 45 degree yaw rotate :)
+
+# Yaw at 45 degrees
+# yaw = math.radians(45)
 # IMU_TO_BODY_Q = (0.0, 0.0, math.sin(yaw/2), math.cos(yaw/2))
+
+# no changes
 IMU_TO_BODY_Q = (0.0, 0.0, 0.0, 1.0)
+
+# 90 degrees roll
+# roll = math.radians(90)
+# IMU_TO_BODY_Q = (math.sin(roll/2), 0.0, 0.0, math.cos(roll/2))
+
+# 90 degrees pitch
+# pitch = math.radians(90)
+# IMU_TO_BODY_Q = (0.0, math.sin(pitch/2), 0.0, math.cos(pitch/2))
+
+# idk man
+# IMU_TO_BODY_Q = (0.5, 0.5, 0.5, 0.5)
 
 WAIT_COUNT = 75
 BIAS_COUNT = 75
@@ -32,14 +47,21 @@ class ProcessImuNode(Node):
         
         self.g_bias_list = [(0.0, 0.0, 0.0) for _ in range(BIAS_COUNT)]
         self.a_bias_list = [(0.0, 0.0, 0.0) for _ in range(BIAS_COUNT)]
+        self.q_bias_list = [(0.0, 0.0, 0.0, 0.0) for _ in range(BIAS_COUNT)]
+        self.q_bias = (0.0, 0.0, 0.0, 1.0)
         
         self.bias_counter = 0
-        self.a_bias = 0.0
-        self.g_bias = 0.0
+        self.a_bias = (0.0, 0.0, 0.0)
+        self.g_bias = (0.0, 0.0, 0.0)
         self.wait_counter = 0
         
         self.get_logger().info('Initialized Process Imu :)')
         
+    def _quat_inverse(self, q):
+        x, y, z, w = q
+        # assuming normalized quaternion
+        return (-x, -y, -z, w)
+            
     def _normalize_quat(self, x, y, z, w):
         norm = math.sqrt(x * x + y * y + z * z + w * w)
         if norm == 0.0:
@@ -108,11 +130,37 @@ class ProcessImuNode(Node):
                 msg.angular_velocity.y,
                 msg.angular_velocity.z,
             )
+            
+            self.q_bias_list[self.bias_counter] = (
+                msg.orientation.x,
+                msg.orientation.y,
+                msg.orientation.z,
+                msg.orientation.w,
+            )
+            
             self.bias_counter+=1
             if self.bias_counter == BIAS_COUNT:
-                # I don't want to use numpy rn, trust me
                 self.a_bias = tuple(sum(vals)/len(self.a_bias_list) for vals in zip(*self.a_bias_list))
                 self.g_bias = tuple(sum(vals)/len(self.g_bias_list) for vals in zip(*self.g_bias_list))
+
+                # --- quaternion average with sign consistency (important) ---
+                q0 = self._normalize_quat(*self.q_bias_list[0])
+                fixed = []
+                for q in self.q_bias_list:
+                    qn = self._normalize_quat(*q)
+                    # keep quats in same hemisphere to avoid canceling
+                    if (q0[0]*qn[0] + q0[1]*qn[1] + q0[2]*qn[2] + q0[3]*qn[3]) < 0.0:
+                        qn = (-qn[0], -qn[1], -qn[2], -qn[3])
+                    fixed.append(qn)
+
+                avg_q = tuple(sum(vals)/len(fixed) for vals in zip(*fixed))
+                avg_q = self._normalize_quat(*avg_q)
+
+                # --- bias so that after mount_q, output is identity ---
+                mount_inv = self._quat_inverse(self.mount_q)
+                avg_inv   = self._quat_inverse(avg_q)
+                self.q_bias = self._quat_multiply(mount_inv, avg_inv)
+                self.q_bias = self._normalize_quat(*self.q_bias)
             else:
                 return
             
@@ -127,6 +175,9 @@ class ProcessImuNode(Node):
             qz, 
             qw
         )
+        current_orientation = self._quat_multiply(self.q_bias, current_orientation)
+        current_orientation = self._normalize_quat(*current_orientation)
+        
         current_ang_vel = (
             msg.angular_velocity.x - self.g_bias[0],
             msg.angular_velocity.y - self.g_bias[1],
