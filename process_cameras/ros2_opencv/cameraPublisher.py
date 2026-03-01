@@ -14,30 +14,30 @@ class PublisherNodeClass(Node):
     def __init__(self):
         super().__init__("publisher_node")
 
-    # Create an instance of OpenCV VideoCapture Obj
-    self.cameraDeviceNumber = 0
-    self.camera = cv2.VideoCapture(self.cameraDeviceNumber)
+        # Create an instance of OpenCV VideoCapture Obj
+        self.cameraDeviceNumber = 0
+        self.camera = cv2.VideoCapture(self.cameraDeviceNumber)
 
-    # CvBridge --> convert OpenCV images to publishable ROS2 messages
-    self.bridgeObject = CvBridge()
+        # CvBridge --> convert OpenCV images to publishable ROS2 messages
+        self.bridgeObject = CvBridge()
 
-    # Name of camera topic, must match in subscribers
-    self.topicNameFrames = "topic_camera_image"
+        # Name of camera topic, must match in subscribers
+        self.topicNameFrames = "topic_camera_image"
 
-    # The queue size for messages
-    self.queueSize = 20
+        # The queue size for messages
+        self.queueSize = 20
 
-    self.create_publisher(Image, self.topicNameFrames, self.queueSize)
+        self.create_publisher(Image, self.topicNameFrames, self.queueSize)
 
-    self.periodCommunication = 0.02  # seconds
+        self.periodCommunication = 0.02  # seconds
 
-    # Timer that calls timer_callback function every comm period
-    self.timer = self.create_timer(
-        self.periodCommunication, self.timer_callbackFunction
-    )
+        # Timer that calls timer_callback function every comm period
+        self.timer = self.create_timer(
+            self.periodCommunication, self.timer_callbackFunction
+        )
 
-    # Counter tracking published images
-    self.i = 0
+        # Counter tracking published images
+        self.i = 0
 
     # Callback function called by Timer
     def timer_callbackFunction(self):
@@ -48,7 +48,7 @@ class PublisherNodeClass(Node):
         frame = cv2.resize(frame, (820, 640), interpolation=cv2.INTER_CUBIC)
 
         # Frame read success:
-        if success == True:
+        if success:
             # Convert OpenCV frame --> ROS2 image msg
             ROS2ImageMessage = self.bridgeObject.ccv2_to_imgmsg(frame)
             # Publish the image
@@ -70,7 +70,7 @@ def main(args=None):
     try:
         # Spin node; callback function called recursively
         rclpy.spin(publisherObject)
-    except:
+    except Exception:
         print("CameraPublisher spin failure.")
 
     # Destroy
