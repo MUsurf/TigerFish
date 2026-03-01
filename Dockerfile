@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
   apt-get clean
 
 # Install packages not availble through system
-RUN python3 -m pip install --no-cache gpiozero adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 flask && \
+RUN python3 -m pip install --no-cache gpiozero adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 flask opencv-python numpy && \
   python3 -m pip uninstall -y RPi.GPIO
 
 WORKDIR /home/ros2_ws

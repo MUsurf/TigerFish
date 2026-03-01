@@ -5,6 +5,8 @@ from std_msgs.msg import Float32MultiArray, Float32, String # pyright: ignore[re
 import rclpy
 import time
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+import numpy as np
+
 
 qos = QoSProfile(
     depth=1,
@@ -12,6 +14,39 @@ qos = QoSProfile(
 )
 
 qos_controller = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
+
+def rpy_from_quat(q):
+    """
+    Convert geometry_msgs.msg.Quaternion to roll, pitch, yaw (radians).
+    
+    Assumes quaternion fields:
+        q.x, q.y, q.z, q.w
+    Uses XYZ (roll, pitch, yaw) convention.
+    """
+
+    x = q.x
+    y = q.y
+    z = q.z
+    w = q.w
+
+    # Roll (x-axis rotation)
+    sinr_cosp = 2.0 * (w * x + y * z)
+    cosr_cosp = 1.0 - 2.0 * (x * x + y * y)
+    roll = np.arctan2(sinr_cosp, cosr_cosp)
+
+    # Pitch (y-axis rotation)
+    sinp = 2.0 * (w * y - z * x)
+    if abs(sinp) >= 1:
+        pitch = np.sign(sinp) * (np.pi / 2.0)  # use 90° if out of range
+    else:
+        pitch = np.arcsin(sinp)
+
+    # Yaw (z-axis rotation)
+    siny_cosp = 2.0 * (w * z + x * y)
+    cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+    yaw = np.arctan2(siny_cosp, cosy_cosp)
+
+    return roll, pitch, yaw
 
 
 class MainNode(Node):
@@ -45,7 +80,7 @@ class MainNode(Node):
         self.switch_time = 2
         
     def _timer_cb(self):
-        power = 0.3
+        power = 0.1
         powers = [0.0 for _ in range(8)]
         time_elapsed = time.time() - self.start_time
         
@@ -65,12 +100,13 @@ class MainNode(Node):
         msg.data = powers
         self.motor_publisher.publish(msg)
         
+        
     def command_line_cb(self, msg : String):
         self.get_logger().info(msg.data)
         
     def _odom_cb(self, msg : Odometry):
-        self.get_logger().info(f'p_x: {msg.pose.pose.position.x} p_y: {msg.pose.pose.position.y} p_z: {msg.pose.pose.position.z}')
-        self.get_logger().info(f'v_x: {msg.twist.twist.linear.x} v_y: {msg.twist.twist.linear.y} v_z: {msg.twist.twist.linear.z}')
+        r, p, y = rpy_from_quat(msg.pose.pose.orientation)
+        self.get_logger().info(f'roll: {r} pitch {p} yaw: {y}')
         return
         
         
