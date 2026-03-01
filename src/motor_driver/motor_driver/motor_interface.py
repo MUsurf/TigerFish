@@ -1,140 +1,85 @@
-# Begin imports
-from motor_driver.motor_commander import MotorCommand
-import time
-import threading
-import rclpy # pyright: ignore[reportMissingImports]
-from rclpy.node import Node # pyright: ignore[reportMissingImports]
-from std_msgs.msg import Float32MultiArray # pyright: ignore[reportMissingImports]
-# End imports
+from motor_driver.motor_commander import MotorCommander, NUM_MOTORS
+from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+from std_msgs.msg import Float32MultiArray
+import time
+import rclpy
 
+QOS = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
-# Decleration of wrapper for threading a function
-def threaded(fn):
-    def wrapper(*args, **kwargs) -> threading.Thread:
-        thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
-        thread.start()
-        return thread
-    return wrapper
+FREQ = 40 # hz
+LOG_FREQ = 5 # hz
+DELTA = 0.75 # per second
 
-ARM_TIME = 1.0 # Seconds
-CLOSE_TIME = 1.5 # Seconds
-DELTA_LIMIT = 0.75 # -1 to 1
-UPDATE_FREQUENCY = 20.0 # Hz
-LOGGING_FREQUENCY = 5.0 # Hz
-NUM_MOTORS = 8 # Number of motors
-qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
+ARM_TIME = 2.0
 
+STEP_SIZE = DELTA / FREQ
 
 class MotorInterface(Node):
-    """
-    
-    """
-
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__('motor_interface')
-        self.get_logger().info('Created node')
-        self.subscription = self.create_subscription(
+        
+        self.motor_commander : MotorCommander = MotorCommander()
+        
+        self.motor_states = [0.0 for _ in range(NUM_MOTORS)]
+        self.motor_goals = [0.0 for _ in range(NUM_MOTORS)]
+        
+        self.motor_power_subscriber = self.create_subscription(
             Float32MultiArray,
             'motor_powers',
-            self.callback,
-            qos
+            self.power_cb,
+            QOS
         )
-        self.stop_event = threading.Event()
-        self.motor_commander : MotorCommand = MotorCommand(UPDATE_FREQUENCY, DELTA_LIMIT)
-        self.logger_thread = self.logging_function()
-        self.arm_seq()
         
-
-    def arm_seq(self):
-        on = [0.25] * NUM_MOTORS
-        neutral = [0.0] * NUM_MOTORS
+        self.timer = self.create_timer(1.0 / FREQ, self.timer_cb)
+        self.logging_timer = self.create_timer(1.0 / LOG_FREQ, self.log_cb)
         
-        self.motor_commander.pin_targets = neutral
-        self.motor_commander.pin_states = neutral
-        self.motor_commander.set_motors(neutral)
+        self.arm_sequence()
+        
+    def arm_sequence(self):
+        self.set_motor_goals([0.0 for _ in range(NUM_MOTORS)])
         time.sleep(ARM_TIME)
         
-        # self.motor_commander.pin_targets = on
-        # self.motor_commander.pin_states = on
-        # self.motor_commander.set_motors(on)
-        # time.sleep(ARM_TIME)
+    def timer_cb(self):
+        self.step_motors()
         
-        # self.motor_commander.pin_targets = neutral
-        # self.motor_commander.pin_states = neutral
-        # self.motor_commander.set_motors(neutral)
-        # time.sleep(ARM_TIME)
+    def log_cb(self):
+        self.get_logger().info(f'Motor goals: {self.motor_goals}')
         
-
-    def clo_seq(self) -> None:
-        """Cleans up motors and is responsible for bringing them all back to zero"""
+    def step_motors(self):
+        next_motor_powers = [0.0 for _ in range(NUM_MOTORS)]
         
-        close_speed = [0.0 for _ in range(NUM_MOTORS)]
-        self.motor_commander.set_targets(close_speed)
-        time.sleep(CLOSE_TIME)
+        for i, (goal, state) in enumerate(zip(self.motor_goals, self.motor_states)):
+            distance = goal - state
+            if abs(distance) < STEP_SIZE : next_motor_powers[i] = goal
+            else : next_motor_powers[i] = state + ((distance > 0) - (distance < 0)) * STEP_SIZE
         
-    @threaded
-    def logging_function(self):
-        while not self.stop_event.is_set():
-            self.get_logger().info(f"Motor Goals: {self.motor_commander.pin_targets}")
-            self.get_logger().info(f"Motor States: {self.motor_commander.pin_states}")
-            if self.stop_event.wait(timeout = 1.0 / LOGGING_FREQUENCY):
-                break
+        self.motor_states = next_motor_powers
+        self.motor_commander.set_motor_powers(next_motor_powers, 0.025)
             
-    def callback(self, message_rec : Float32MultiArray):
-        """Function that takes in and sets motor powers."""
-        
-        self.motor_commander.set_targets(message_rec.data)
+    def power_cb(self, msg):
+        self.set_motor_goals(msg.data)
+
+    def set_motor_goals(self, powers : list) -> bool:
+        if len(powers) != NUM_MOTORS : return False
+        self.motor_goals = powers
+        return True
     
-    def shutdown(self):
-        try:
-            self.get_logger().info("Shutting down motor interface")
-        except Exception:
-            pass
-
-        # HARD STOP: write neutral PWM immediately, no ROS needed.
-        try:
-            self.motor_commander.set_motors([0.0] * NUM_MOTORS)
-        except Exception:
-            pass
-
-        # Ask ramp thread to stop (optional but clean)
-        try:
-            self.motor_commander.stop_event.set()
-        except Exception:
-            pass
-
-        self.stop_event.set()
-
-        try:
-            if self.logger_thread.is_alive():
-                self.logger_thread.join(timeout=1.0)
-        except Exception:
-            pass
-
+    def stop(self):
+        self.motor_goals = [0.0 for _ in range(NUM_MOTORS)]
+        self.motor_commander.set_motor_powers([0.0 for _ in range(NUM_MOTORS)])
+        self.motor_states = [0.0 for _ in range(NUM_MOTORS)]
         
 def main(args=None):
     rclpy.init(args=args)
     node = MotorInterface()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
     finally:
-        try:
-            node.shutdown()
-        except Exception:
-            pass
-        try:
-            node.destroy_node()
-        except Exception:
-            pass
-        # Guard: launch may already have shut down the context
-        try:
-            if rclpy.ok():
-                rclpy.shutdown()
-        except Exception:
-            pass
+        node.stop()
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

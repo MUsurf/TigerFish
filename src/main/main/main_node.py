@@ -20,18 +20,18 @@ class MainNode(Node):
         
         # self.orientation_subscriber = self.create_subscription(Odometry, 'state_estimation', self._odom_cb, 10)
         
-        # self.motor_publisher = self.create_publisher(
-        #     Float32MultiArray,
-        #     "motor_powers",
-        #     qos
-        # )
-        
-        self.controller_subscriber = self.create_subscription(
-            String,
-            'command_line',
-            self.command_line_cb,
-            qos_controller
+        self.motor_publisher = self.create_publisher(
+            Float32MultiArray,
+            "motor_powers",
+            qos
         )
+        
+        # self.controller_subscriber = self.create_subscription(
+        #     String,
+        #     'command_line',
+        #     self.command_line_cb,
+        #     qos_controller
+        # )
         
         # self.servo_publisher = self.create_publisher(
         #     Float32, 
@@ -42,11 +42,10 @@ class MainNode(Node):
         period = 1.0 / 10.0
         self.timer = self.create_timer(period, self._timer_cb)
         self.start_time = time.time()
-        self.switch_time = 3
+        self.switch_time = 2
         
     def _timer_cb(self):
-        return
-        power = 0.4
+        power = 0.2
         powers = [0.0 for _ in range(8)]
         time_elapsed = time.time() - self.start_time
         
