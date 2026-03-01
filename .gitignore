@@ -26,6 +26,7 @@ Generated
 # Ignore python venv
 .venv/
 
+videos/
 
 # Ignore the IGNORE tag
 #*IGNORE*

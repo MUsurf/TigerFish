@@ -17,6 +17,7 @@ class PublisherNodeClass(Node):
         # Create an instance of OpenCV VideoCapture Obj
         self.cameraDeviceNumber = 0
         self.camera = cv2.VideoCapture(self.cameraDeviceNumber)
+        self.get_logger().info(f"isOpened={self.camera.isOpened()}")
 
         # CvBridge --> convert OpenCV images to publishable ROS2 messages
         self.bridgeObject = CvBridge()
@@ -27,7 +28,7 @@ class PublisherNodeClass(Node):
         # The queue size for messages
         self.queueSize = 20
 
-        self.create_publisher(Image, self.topicNameFrames, self.queueSize)
+        self.camera0_publisher = self.create_publisher(Image, self.topicNameFrames, self.queueSize)
 
         self.periodCommunication = 0.02  # seconds
 
@@ -38,24 +39,32 @@ class PublisherNodeClass(Node):
 
         # Counter tracking published images
         self.i = 0
+        
+        self.get_logger().info(
+            f"backend={self.camera.getBackendName()} "
+            f"w={self.camera.get(cv2.CAP_PROP_FRAME_WIDTH)} "
+            f"h={self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)} "
+            f"fps={self.camera.get(cv2.CAP_PROP_FPS)}"
+        )
 
     # Callback function called by Timer
     def timer_callbackFunction(self):
 
         # Read the frame using camera
-        success, frame = self.camera.read()
-        # Resize the image
-        frame = cv2.resize(frame, (820, 640), interpolation=cv2.INTER_CUBIC)
+        success, frame = self.camera.read()        
 
         # Frame read success:
         if success:
+            frame = cv2.resize(frame, (820, 640), interpolation=cv2.INTER_CUBIC)
             # Convert OpenCV frame --> ROS2 image msg
-            ROS2ImageMessage = self.bridgeObject.ccv2_to_imgmsg(frame)
+            ROS2ImageMessage = self.bridgeObject.cv2_to_imgmsg(frame)
             # Publish the image
-            self.publisher.publish(ROS2ImageMessage)
+            self.camera0_publisher.publish(ROS2ImageMessage)
+            
+            self.get_logger().info(':(')
 
         # Use logger to display image msg on screen
-        self.get_logger().info("Publishing image number %d" % self.i)
+        # self.get_logger().info("Publishing image number %d" % self.i)
         self.i += 1
 
 
@@ -79,5 +88,5 @@ def main(args=None):
     # Shutdown
     rclpy.shutdown()
 
-    if __name__ == "__main__":
-        main()
+if __name__ == "__main__":
+    main()

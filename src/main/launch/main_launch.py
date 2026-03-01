@@ -23,11 +23,16 @@ def generate_launch_description():
             executable='state_estimator_node',
             name='state_estimator'
         ),
-        # Node(
-        #     package='grabber_servo',
-        #     executable='grabber_servo_node',
-        #     name='grabber_servo'
-        # ),
+        Node(
+            package='cameras',
+            executable='camera_publisher',
+            name='camera_publisher'
+        ),
+        Node(
+            package='cameras',
+            executable='camera_subscriber',
+            name='camera_subscriber'
+        ),
         Node(
             package='pid',
             executable='pid_node',
