@@ -45,7 +45,7 @@ class MainNode(Node):
         self.switch_time = 2
         
     def _timer_cb(self):
-        power = 0.2
+        power = 0.4
         powers = [0.0 for _ in range(8)]
         time_elapsed = time.time() - self.start_time
         
