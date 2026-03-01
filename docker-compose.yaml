@@ -11,6 +11,8 @@ services:
     # Allow access to hardware on the pi.
     devices:
         - "/dev:/dev"
+    tty: true
+    stdin_open: true
 
 # A service for developing when you don't have a Raspberry Pi.
   no-pi:
