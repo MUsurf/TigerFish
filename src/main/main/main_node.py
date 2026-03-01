@@ -45,12 +45,15 @@ class MainNode(Node):
         self.switch_time = 2
         
     def _timer_cb(self):
-        power = 0.3
+        power = 0.5
         powers = [0.0 for _ in range(8)]
         time_elapsed = time.time() - self.start_time
         
         if (time_elapsed // self.switch_time) % 2 == 1:
-            powers[int((time_elapsed // (2 * self.switch_time)) % 8)] = power
+            powers[4 * int((time_elapsed // (2 * self.switch_time)) % 2)] = power
+            powers[4 * int((time_elapsed // (2 * self.switch_time)) % 2) + 1] = power
+            powers[4 * int((time_elapsed // (2 * self.switch_time)) % 2) + 2] = power
+            powers[4 * int((time_elapsed // (2 * self.switch_time)) % 2) + 3] = power
             # powers[0] = power
             # msg = Float32()
             # msg.data = 0.0
