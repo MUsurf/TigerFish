@@ -4,7 +4,10 @@ import busio
 
 i2c = busio.I2C(SCL, SDA)
 pca = PCA9685.PCA9685(i2c, address=0x40)
-pca.frequency = 50 
+
+pca.frequency = 40
+ACTUAL_PCA_FREQUENCY = 41 # Measure this with an oscilloscope
+
 NUM_MOTORS = 8
 
 MIN_WIDTH = 1100
@@ -16,7 +19,7 @@ class MotorCommander():
         self.motors : list = [pca.channels[channel] for channel in range(NUM_MOTORS)]
         
     def pulse_us_to_duty16(self, pulse_us) -> int:
-        period_us = 1_000_000.0 / pca.frequency
+        period_us = 1_000_000.0 / ACTUAL_PCA_FREQUENCY
         duty = pulse_us / period_us
         duty = max(0.0, min(1.0, duty))
         return int(round(duty * 65535))

@@ -8,21 +8,21 @@ def generate_launch_description():
             executable='motor_interface',
             name='motor_driver'
         ),
-        # Node(
-        #     package='imu',
-        #     executable='imu_driver',
-        #     name='imu'
-        # ),
-        # Node(
-        #     package='process_imu',
-        #     executable='process_imu_node',
-        #     name='process_imu'
-        # ),
-        # Node(
-        #     package='state_estimator',
-        #     executable='state_estimator_node',
-        #     name='state_estimator'
-        # ),
+        Node(
+            package='imu',
+            executable='imu_driver',
+            name='imu'
+        ),
+        Node(
+            package='process_imu',
+            executable='process_imu_node',
+            name='process_imu'
+        ),
+        Node(
+            package='state_estimator',
+            executable='state_estimator_node',
+            name='state_estimator'
+        ),
         # Node(
         #     package='grabber_servo',
         #     executable='grabber_servo_node',

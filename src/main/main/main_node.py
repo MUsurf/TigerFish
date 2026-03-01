@@ -18,7 +18,7 @@ class MainNode(Node):
     def __init__(self):
         super().__init__('main_node')
         
-        # self.orientation_subscriber = self.create_subscription(Odometry, 'state_estimation', self._odom_cb, 10)
+        self.orientation_subscriber = self.create_subscription(Odometry, 'state_estimation', self._odom_cb, 10)
         
         self.motor_publisher = self.create_publisher(
             Float32MultiArray,
@@ -45,7 +45,7 @@ class MainNode(Node):
         self.switch_time = 2
         
     def _timer_cb(self):
-        power = 0.4
+        power = 0.3
         powers = [0.0 for _ in range(8)]
         time_elapsed = time.time() - self.start_time
         
@@ -69,8 +69,8 @@ class MainNode(Node):
         self.get_logger().info(msg.data)
         
     def _odom_cb(self, msg : Odometry):
-        # self.get_logger().info(f'p_x: {msg.pose.pose.position.x} p_y: {msg.pose.pose.position.y} p_z: {msg.pose.pose.position.z}')
-        # self.get_logger().info(f'v_x: {msg.twist.twist.linear.x} v_y: {msg.twist.twist.linear.y} v_z: {msg.twist.twist.linear.z}')
+        self.get_logger().info(f'p_x: {msg.pose.pose.position.x} p_y: {msg.pose.pose.position.y} p_z: {msg.pose.pose.position.z}')
+        self.get_logger().info(f'v_x: {msg.twist.twist.linear.x} v_y: {msg.twist.twist.linear.y} v_z: {msg.twist.twist.linear.z}')
         return
         
         
