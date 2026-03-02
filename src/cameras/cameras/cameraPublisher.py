@@ -13,12 +13,18 @@ from cv_bridge import CvBridge
 class PublisherNodeClass(Node):
     def __init__(self):
         super().__init__("publisher_node")
+        
 
         # Create an instance of OpenCV VideoCapture Obj
         self.cameraDeviceNumber = 0
-        self.camera = cv2.VideoCapture(self.cameraDeviceNumber)
-        self.get_logger().info(f"isOpened={self.camera.isOpened()}")
-
+        self.camera = cv2.VideoCapture(self.cameraDeviceNumber, cv2.CAP_V4L2)
+        
+        if not self.camera.isOpened():
+            self.get_logger().info("Camera failed to open!")
+        
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        
         # CvBridge --> convert OpenCV images to publishable ROS2 messages
         self.bridgeObject = CvBridge()
 
@@ -28,7 +34,7 @@ class PublisherNodeClass(Node):
         # The queue size for messages
         self.queueSize = 20
 
-        self.camera0_publisher = self.create_publisher(Image, self.topicNameFrames, self.queueSize)
+        self.publisher = self.create_publisher(Image, self.topicNameFrames, self.queueSize)
 
         self.periodCommunication = 0.02  # seconds
 
@@ -39,33 +45,28 @@ class PublisherNodeClass(Node):
 
         # Counter tracking published images
         self.i = 0
-        
-        self.get_logger().info(
-            f"backend={self.camera.getBackendName()} "
-            f"w={self.camera.get(cv2.CAP_PROP_FRAME_WIDTH)} "
-            f"h={self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)} "
-            f"fps={self.camera.get(cv2.CAP_PROP_FPS)}"
-        )
 
     # Callback function called by Timer
     def timer_callbackFunction(self):
 
         # Read the frame using camera
-        success, frame = self.camera.read()        
-
+        success, frame = self.camera.read()
+       
         # Frame read success:
         if success:
-            frame = cv2.resize(frame, (820, 640), interpolation=cv2.INTER_CUBIC)
             # Convert OpenCV frame --> ROS2 image msg
-            ROS2ImageMessage = self.bridgeObject.cv2_to_imgmsg(frame)
-            # Publish the image
-            self.camera0_publisher.publish(ROS2ImageMessage)
-            
-            self.get_logger().info(':(')
+            ROS2ImageMessage = self.bridgeObject.cv2_to_imgmsg(frame, encoding="bgr8")
 
-        # Use logger to display image msg on screen
-        # self.get_logger().info("Publishing image number %d" % self.i)
-        self.i += 1
+            # Publish the image
+            self.publisher.publish(ROS2ImageMessage)
+            
+            self.get_logger().info(f"Frame shape: {frame.shape}")
+            self.get_logger().info(f"Img type: {frame.dtype}")
+
+            # Use logger to display image msg on screen
+            if self.i % 30 == 0:
+                self.get_logger().info(f"Publishing image {self.i}")
+            self.i += 1
 
 
 # Main function; entry point
@@ -83,6 +84,7 @@ def main(args=None):
         print("CameraPublisher spin failure.")
 
     # Destroy
+    publisherObject.camera.release()
     publisherObject.destroy_node()
 
     # Shutdown

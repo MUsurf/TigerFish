@@ -30,5 +30,5 @@ bool pitch_mode
 bool yaw_mode
 
 bool x_is_absolute
-bool x_is_absolute
-bool x_is_absolute
+bool y_is_absolute
+bool z_is_absolute

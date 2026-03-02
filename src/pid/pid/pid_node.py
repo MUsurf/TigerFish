@@ -103,7 +103,7 @@ class PIDNode(Node):
             motor_qos
         )
         
-        self.orientation_subscriber = self.create_subscription(Odometry, 'state_estimation', self._odom_cb, 10)
+        self.orientation_subscriber = self.create_subscription(Odometry, 'state_estimation', self.odom_cb, 10)
         self.last_od : Odometry = None
         
         self.last_msg = PIDInput()

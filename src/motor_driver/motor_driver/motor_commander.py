@@ -5,8 +5,8 @@ import busio
 i2c = busio.I2C(SCL, SDA)
 pca = PCA9685.PCA9685(i2c, address=0x40)
 
-pca.frequency = 40
-ACTUAL_PCA_FREQUENCY = 41 # Measure this with an oscilloscope
+pca.frequency = 350
+ACTUAL_PCA_FREQUENCY = 370.4 # Measure this with an oscilloscope
 
 NUM_MOTORS = 8
 

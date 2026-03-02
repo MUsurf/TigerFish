@@ -107,7 +107,7 @@ class MotorInterface(Node):
         
         self.motor_states = next_motor_powers
         converted_powers = [self.power_converter.convert_power(p) for p in next_motor_powers]
-        self.motor_commander.set_motor_powers(converted_powers, 0.005)
+        self.motor_commander.set_motor_powers(converted_powers, 0.02)
             
     def power_cb(self, msg):
         self.set_motor_goals(msg.data)
