@@ -20,3 +20,5 @@ sub <-
 main node <- your node <- computer
 
 main node -> pid node -> motor node
+
+docker compose --profile pi run --rm --build --service-ports --entrypoint /home/ros2_ws/run.sh pi
