@@ -18,6 +18,7 @@ BOOOOOMMMM
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
+from nav_msgs.msg import Odometry
 import numpy as np
 from messages.msg import PIDInput
 
@@ -53,6 +54,15 @@ class PIDController:
         return power
     def __call__(self, error : float, dt : float):
         return self.calculate(error, dt)
+    
+def rotate_vector_by_quat(v, q):
+    x, y, z, w = q
+    q_vec = np.array([x, y, z])
+    
+    t = 2.0 * np.cross(q_vec, v)
+    v_prime = v + w * t + np.cross(q_vec, t)
+    return v_prime
+
 
 class PIDNode(Node):
     def __init__(self,
@@ -93,12 +103,18 @@ class PIDNode(Node):
             motor_qos
         )
         
+        self.orientation_subscriber = self.create_subscription(Odometry, 'state_estimation', self._odom_cb, 10)
+        self.last_od : Odometry = None
+        
         self.last_msg = PIDInput()
         
         period = 1.0 / FREQ
         self.timer = self.create_timer(period, self.timer_cb)
         
     def timer_cb(self):
+        if not self.last_od : return
+        if not self.last_msg : return
+        
         now = self.get_clock().now()
         dt = (now - self.last_time).nanoseconds * 1e-9
         dt = max(1e-4, min(dt, 0.2))
@@ -122,9 +138,41 @@ class PIDNode(Node):
         yaw_pow = self.last_msg.yaw_power if not self.last_msg.yaw_mode \
             else self.yaw_pid(self.last_msg.yaw_setpoint - self.last_msg.yaw_measurement, dt)
             
-        x_pow = self.x_to_motor(x_pow)
-        y_pow = self.y_to_motor(y_pow)
-        z_pow = self.z_to_motor(z_pow)
+            
+        q = self.last_od.pose.pose.orientation
+        q = (q.x, q.y, q.z, q.w)
+        if not self.last_msg.x_is_absolute: 
+            x_pow = self.x_to_motor(x_pow)
+        else: 
+            v = np.array([x_pow,0,0])
+            v = rotate_vector_by_quat(v, q)
+            x_comp = self.x_to_motor(v[0])
+            y_comp = self.y_to_motor(v[1])
+            z_comp = self.z_to_motor(v[2])
+            x_pow = x_comp + y_comp + z_comp
+        
+        if not self.last_msg.y_is_absolute: 
+            y_pow = self.y_to_motor(y_pow)
+        else:
+            v = np.array([0,y_pow,0])
+            v = rotate_vector_by_quat(v, q)
+            x_comp = self.x_to_motor(v[0])
+            y_comp = self.y_to_motor(v[1])
+            z_comp = self.z_to_motor(v[2])
+            y_pow = x_comp + y_comp + z_comp
+        
+        
+        if not self.last_msg.z_is_absolute: 
+            z_pow = self.z_to_motor(z_pow)
+        else:
+            v = np.array([0,0,z_pow])
+            v = rotate_vector_by_quat(v, q)
+            x_comp = self.x_to_motor(v[0])
+            y_comp = self.y_to_motor(v[1])
+            z_comp = self.z_to_motor(v[2])
+            z_pow = x_comp + y_comp + z_comp
+        
+        
         roll_pow = self.roll_to_motor(roll_pow)
         pitch_pow = self.pitch_to_motor(pitch_pow)
         yaw_pow = self.yaw_to_motor(yaw_pow)
@@ -138,6 +186,9 @@ class PIDNode(Node):
         message = Float32MultiArray()
         message.data = motor_powers.tolist()
         self.motor_publisher.publish(message)
+        
+    def odom_cb(self, msg : Odometry):
+        self.last_od = msg
         
     def x_to_motor(self, x_power) -> np.ndarray:
         return np.array([x_power, x_power, x_power, x_power, 0, 0, 0, 0])

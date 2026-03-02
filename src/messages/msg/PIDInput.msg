@@ -28,3 +28,7 @@ bool z_mode
 bool roll_mode
 bool pitch_mode
 bool yaw_mode
+
+bool x_is_absolute
+bool x_is_absolute
+bool x_is_absolute
