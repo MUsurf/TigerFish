@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, Response
 from typing import Callable
 from datetime import datetime
 
-from remote_controller.ControllerValues import ControllerValues
+from messages.msg import ControllerInput
 
 def make_http_str_get(
         str_getter: Callable,
@@ -59,44 +59,68 @@ def make_http_str_post(
     return handler
 
 
-
-def make_http_imu_get(
-        imu_getter: Callable,
-        timestamp_getter: Callable | None = None
-) -> Callable:
+## nonfunctional atm, needs new msg configs
+# def make_http_imu_get(
+#         imu_getter: Callable,
+#         timestamp_getter: Callable | None = None
+# ) -> Callable:
     
-    def handler() -> tuple[Response, int]:
+#     def handler() -> tuple[Response, int]:
 
-        try:
-            imu = imu_getter()
+#         try:
+#             imu = imu_getter()
 
-            if timestamp_getter != None:
-                timestamp = timestamp_getter()
-            else:
-                # datetime(1970,1,1) indicates no data present
-                timestamp = datetime(1970,1,1)
-        except Exception as e:
-            return jsonify({
-                "error": f"failed to get str and/or timestamp; error msg: {e}"
-            }), 500
-        response = {
-            "x": imu.x,
-            "y": imu.y,
-            "z": imu.z,
-            "roll": imu.roll,
-            "pitch": imu.pitch,
-            "yaw": imu.yaw,
-            "timestamp": timestamp.strftime(r"%H:%M:%S:%f")
-        }
+#             if timestamp_getter != None:
+#                 timestamp = timestamp_getter()
+#             else:
+#                 # datetime(1970,1,1) indicates no data present
+#                 timestamp = datetime(1970,1,1)
+#         except Exception as e:
+#             return jsonify({
+#                 "error": f"failed to get str and/or timestamp; error msg: {e}"
+#             }), 500
+#         response = {
+#             "x": imu.x,
+#             "y": imu.y,
+#             "z": imu.z,
+#             "roll": imu.roll,
+#             "pitch": imu.pitch,
+#             "yaw": imu.yaw,
+#             "timestamp": timestamp.strftime(r"%H:%M:%S:%f")
+#         }
 
-        return jsonify(response), 200
+#         return jsonify(response), 200
 
-    return handler
+#     return handler
 
 
 
-def make_http_imu_post(
-        imu_setter: Callable[[ControllerValues], None],
+# def make_http_imu_post(
+#         imu_setter: Callable[[ControllerValues], None],
+# ) -> Callable[[], tuple[Response, int]]:
+    
+#     def handler() -> tuple[Response, int]:
+
+#         if not request.is_json:
+#             return jsonify({"error": "Expected application/json"}), 400
+        
+#         data = request.get_json()
+
+#         try:
+#             imu = ControllerValues.from_dict(data)
+#             imu_setter(imu)
+#         except Exception as e:
+#             return jsonify({
+#                 "error": f"failed to parse json; error msg: {e}"
+#             }), 400        
+#         return jsonify({"message": "success"}), 200
+    
+#     return handler
+
+
+
+def make_http_controller_input_post(
+        controller_input_setter: Callable[[dict], None],
 ) -> Callable[[], tuple[Response, int]]:
     
     def handler() -> tuple[Response, int]:
@@ -107,12 +131,14 @@ def make_http_imu_post(
         data = request.get_json()
 
         try:
-            imu = ControllerValues.from_dict(data)
-            imu_setter(imu)
+            controller_input_setter(data["controller_input"])
+
         except Exception as e:
             return jsonify({
                 "error": f"failed to parse json; error msg: {e}"
-            }), 400        
+            }), 400
+
+
         return jsonify({"message": "success"}), 200
     
     return handler
