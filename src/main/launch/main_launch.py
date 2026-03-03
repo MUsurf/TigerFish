@@ -38,11 +38,11 @@ def generate_launch_description():
             executable='pid_node',
             name='pid'
         ),
-        # Node(
-        #     package='remote_controller',
-        #     executable='remote_controller',
-        #     name='remote_controller'
-        # ),
+        Node(
+            package='remote_controller',
+            executable='remote_controller',
+            name='remote_controller'
+        ),
         Node(
             package='main',
             executable='main_node',

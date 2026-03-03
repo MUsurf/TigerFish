@@ -1,7 +1,7 @@
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32, String # pyright: ignore[reportMissingImports]
-from messages.msg import PIDInput
+from messages.msg import PIDInput, ControllerInput
 
 import rclpy
 import time
@@ -62,12 +62,19 @@ class MainNode(Node):
         #     qos
         # )
         
-        # self.controller_subscriber = self.create_subscription(
-        #     String,
-        #     'command_line',
-        #     self.command_line_cb,
-        #     qos_controller
-        # )
+        self.command_line_subscriber = self.create_subscription(
+            String,
+            'command_line',
+            self.command_line_cb,
+            qos_controller
+        )
+        
+        self.controller_subscriber = self.create_subscription(
+            ControllerInput,
+            "controller_input",
+            self.controller_cb,
+            qos_controller
+        )
         
         # self.servo_publisher = self.create_publisher(
         #     Float32, 
@@ -85,6 +92,8 @@ class MainNode(Node):
         self.timer = self.create_timer(period, self._timer_cb)
         self.start_time = time.time()
         self.switch_time = 2
+        
+        self.recent_controller_input : ControllerInput = None
         
     def _timer_cb(self):
         return
@@ -113,11 +122,16 @@ class MainNode(Node):
         
         
     def command_line_cb(self, msg : String):
-        self.get_logger().info(msg.data)
+        # self.get_logger().info(msg.data)
+        pass
+        
+    def controller_cb(self, msg : ControllerInput):
+        self.recent_controller_input = msg
+        # self.get_logger().info(f'{self.recent_controller_input.x_left_stick}')
         
     def _odom_cb(self, msg : Odometry):
         r, p, y = rpy_from_quat(msg.pose.pose.orientation)
-        self.get_logger().info(f'roll: {(r * 180 / np.pi):4f} pitch {(p * 180 / np.pi):4f} yaw: {(y * 180 / np.pi):4f}')
+        # self.get_logger().info(f'roll: {(r * 180 / np.pi):4f} pitch {(p * 180 / np.pi):4f} yaw: {(y * 180 / np.pi):4f}')
         msg = PIDInput()
         
         msg.x_mode = False
@@ -127,7 +141,7 @@ class MainNode(Node):
         msg.pitch_mode = True
         msg.yaw_mode = True
         
-        msg.x_power = 0.0
+        msg.x_power = 0 if self.recent_controller_input is None else self.recent_controller_input.x_left_stick
         msg.y_power = 0.0
         msg.z_power = 0.0
         

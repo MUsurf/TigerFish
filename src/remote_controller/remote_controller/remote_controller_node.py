@@ -99,9 +99,9 @@ class RemoteControllerNode(Node):
 
     def update_controller_input(self, msg: dict):
         self.controller_input_last_set = datetime.now()
-        self.get_logger().info(
-            f"updated controller_input at {self.controller_input_last_set}"
-        )
+        # self.get_logger().info(
+        #     f"updated controller_input at {self.controller_input_last_set}"
+        # )
 
         self.controller_input.x_left_stick = msg["x_left_stick"]
         self.controller_input.y_left_stick = msg["y_left_stick"]

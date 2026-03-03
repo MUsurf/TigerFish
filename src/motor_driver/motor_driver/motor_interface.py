@@ -21,6 +21,8 @@ ARM_TIME = 2.0
 STEP_SIZE = DELTA / FREQ
 
 MAX_CURRENT = 10 # amps
+
+DEADBAND = 0.01
 class PowerConverter():
     def __init__(self):
         pkg_share = get_package_share_directory("motor_driver")
@@ -87,6 +89,9 @@ class MotorInterface(Node):
         self.arm_sequence()
         self.power_converter = PowerConverter()
         
+        self.get_logger().info(f'Max power forward :{self.power_converter.convert_power(1.0)}')
+        self.get_logger().info(f'Max power rev :{self.power_converter.convert_power(1.0)}')
+        
     def arm_sequence(self):
         self.set_motor_goals([0.0 for _ in range(NUM_MOTORS)])
         time.sleep(ARM_TIME)
@@ -106,8 +111,12 @@ class MotorInterface(Node):
             else : next_motor_powers[i] = state + ((distance > 0) - (distance < 0)) * STEP_SIZE
         
         self.motor_states = next_motor_powers
+                
+        for i, p in enumerate(next_motor_powers) : next_motor_powers[i] = p if abs(p) > DEADBAND else 0.0
+            
         converted_powers = [self.power_converter.convert_power(p) for p in next_motor_powers]
-        self.motor_commander.set_motor_powers(converted_powers, 0.02)
+        self.motor_commander.set_motor_powers(converted_powers, 0.0)
+        self.get_logger().info(f'{converted_powers[0]}')
             
     def power_cb(self, msg):
         self.set_motor_goals(msg.data)
