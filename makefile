@@ -24,7 +24,7 @@ NC := \033[0m # No Color
 # Note: I would like to give Gemini AI credit in the making of this file.
 # You should run build if you are setting up. Otherwise ruff linter+formatter won't be recognized, for example
 
-.PHONY: build test buildTest lint format formatLint view-sm clean-docker stop-view-sm checkAll create_pkg gui-graph shell graph view-cam dashboard reconfigure plot rviz
+.PHONY: build test buildTest lint format formatLint view-sm clean-docker stop-view-sm checkAll create_pkg gui-graph shell graph view-cam dashboard reconfigure plot rviz runRos2_openCV calibrate_all
 
 # builds and then runs a test to make sure everything compiles nicely
 buildTest: build test
@@ -230,3 +230,16 @@ rviz:
 		--user "$(shell id -u):$(shell id -g)" \
 		$(IMAGE_NAME) bash -c "mkdir -p /tmp/runtime-user && chmod 700 /tmp/runtime-user && rviz2"
 ### END Utility commands - ADD NEW COMMANDS ABOVE ##############################
+
+
+### IN DOCKER CONTAINER COMMANDS - ADD NEW COMMANDS BELOW ######################
+# tests the monocular camera
+# variables:
+# - SIZE = size of grid (ie 7x9 grid)
+# - SQUARE = size of squares (ie 0.02 would be 20mm squares)
+monocularTest:
+	ros2 run camera_calibration cameracalibrator --size $(SIZE) --square $(SQUARE) --ros-args -r image:=/forward/image_raw -p camera:=/forward
+
+runRos2_openCV:
+	ros2 launch ros2_opencv camera_system.launch.py cam_ids:=0,1 record_type:=rosbag
+### END IN DOCKER CONTAINER COMMANDS - ADD NEW COMMANDS ABOVE ##################

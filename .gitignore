@@ -46,5 +46,7 @@ __pycache__/
 #ignore image folders
 /TestImages
 /output_images/*
+/output_images/processed_vid/**/*.mcap
+/output_images/processed_vid/**/*.yaml
 !output_images/**/*.md
 !output_images/**/
