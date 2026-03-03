@@ -4,7 +4,7 @@ from rclpy.node import Node
 from std_msgs.msg import Float32
 import ms5837
 
-
+# this prob right
 class DepthSensorNode(Node):
     def __init__(self):
         super().__init__('depth_sensor_node')
@@ -16,8 +16,8 @@ class DepthSensorNode(Node):
             self.get_logger().error('Sensor could not be initialized')
             raise RuntimeError('MS5837 init failed')
 
-        # Publish at 10 Hz
-        self.timer = self.create_timer(0.1, self.publish_depth)
+        # 20 hz as per the drewsters request
+        self.timer = self.create_timer(0.05, self.publish_depth)
         self.get_logger().info('Depth sensor node started')
 
     def publish_depth(self):
