@@ -6,6 +6,7 @@ SHELL ["/bin/bash", "-c"]
 # 1. Install System Dependencies, Build Tools, and YASMIN Web Requirements
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    git \
     python3-dev \
     lsb-release \
     gnupg2 \
@@ -16,6 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgpiod-dev \
     python3-libgpiod \
     python3-setuptools \
+    python3-colcon-common-extensions \
+    ros-jazzy-cv-bridge \
     # Standard ROS 2 interfaces and build tools
     ros-jazzy-ament-cmake \
     ros-jazzy-example-interfaces \
@@ -31,7 +34,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-flask-cors \
     python3-flask-socketio \
     python3-waitress \
+    # Camera calibration packages
+    ros-jazzy-camera-calibration \
+    ros-jazzy-camera-info-manager-py \
     && rm -rf /var/lib/apt/lists/*
+
 
 # 2. Install hardware-specific Python packages
 RUN python3 -m pip install --no-cache \
@@ -47,29 +54,33 @@ RUN python3 -m pip install --no-cache \
     python3 -m pip uninstall -y RPi.GPIO --break-system-packages
 
 WORKDIR /home/ros2_ws
-RUN mkdir -p /home/ros2_ws/deps
+
 
 # get yasmin if it doesn't already exist
-ARG YASMIN_VERSION=3.4.0
-RUN if [ ! -d "/home/ros2_ws/src/yasmin" ]; then \
-        git clone https://github.com/uleroboticsgroup/yasmin.git /home/ros2_ws/src/yasmin; \
-        echo "Successfully cloned YASMIN 3.4.0 - ROS JAZZY"; \
-    else \
-        echo "YASMIN already detected in src, skipping YASMIN clone."; \
-    fi
+# --- THE YASMIN SYSTEM INSTALL (VERSION 3.4.0) ---
+RUN git clone --depth 1 --branch 3.4.0 https://github.com/uleroboticsgroup/yasmin.git /tmp/yasmin && \
+    source /opt/ros/jazzy/setup.bash && \
+    cd /tmp/yasmin && \
+    colcon build \
+    --install-base /opt/ros/jazzy \
+    --merge-install \
+    --cmake-args -DCMAKE_BUILD_TYPE=Release && \
+    rm -rf /tmp/yasmin
 
+COPY . /home/ros2_ws/src
 
 # 3. Rosdep Installation
-RUN --mount=type=bind,source=./process_depth/package.xml,target=/home/ros2_ws/deps/process_depth/package.xml \
-    --mount=type=bind,source=./process_imu/package.xml,target=/home/ros2_ws/deps/process_imu/package.xml \
-    --mount=type=bind,source=./process_images/package.xml,target=/home/ros2_ws/deps/process_images/package.xml \
-    apt-get update && \
-    rosdep update --rosdistro $ROS_DISTRO && \
-    rosdep install -i --from-path /home/ros2_ws/deps --rosdistro $ROS_DISTRO -y && \
+# RUN --mount=type=bind,source=./process_depth/package.xml,target=/home/ros2_ws/deps/process_depth/package.xml \
+#     --mount=type=bind,source=./process_imu/package.xml,target=/home/ros2_ws/deps/process_imu/package.xml \
+#     --mount=type=bind,source=./process_images/package.xml,target=/home/ros2_ws/deps/process_images/package.xml \
+#     apt-get update && \
+#     rosdep update --rosdistro $ROS_DISTRO && \
+#     rosdep install -i --from-path /home/ros2_ws/deps --rosdistro $ROS_DISTRO -y && \
+#     rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    rosdep update && \
+    rosdep install --from-paths src --ignore-src -y --rosdistro jazzy && \
     rm -rf /var/lib/apt/lists/*
-
-# 4. Copy source code
-COPY ./ /home/ros2_ws/src/
 
 # 5. Clean and Build
 RUN rm -rf /home/ros2_ws/build /home/ros2_ws/install /home/ros2_ws/log && \
