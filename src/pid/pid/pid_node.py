@@ -20,13 +20,19 @@ from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
 from nav_msgs.msg import Odometry
 import numpy as np
-from messages.msg import PIDInput
+from messages.msg import PIDInput, PIDControllerParams
+import time
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 motor_qos = QoSProfile(
     depth=1,
     reliability=ReliabilityPolicy.BEST_EFFORT
+)
+
+new_controller_qos = QoSProfile(
+    depth=10,
+    reliability=ReliabilityPolicy.RELIABLE
 )
 
 FREQ = 25 # Hz
@@ -97,6 +103,13 @@ class PIDNode(Node):
             10
         )
         
+        self.new_pid_subscriber = self.create_subscription(
+            PIDControllerParams,
+            'new_pid_controller',
+            self.new_controller_cb,
+            new_controller_qos
+        )
+        
         self.motor_publisher = self.create_publisher(
             Float32MultiArray,
             'motor_powers',
@@ -111,9 +124,15 @@ class PIDNode(Node):
         period = 1.0 / FREQ
         self.timer = self.create_timer(period, self.timer_cb)
         
+        self.locked = False
+        
     def timer_cb(self):
         if not self.last_od : return
         if not self.last_msg : return
+        
+        while self.locked:
+            time.sleep(0.0005)
+        self.locked = True
         
         now = self.get_clock().now()
         dt = (now - self.last_time).nanoseconds * 1e-9
@@ -179,7 +198,7 @@ class PIDNode(Node):
         
         motor_powers = x_pow + y_pow + z_pow + roll_pow + pitch_pow + yaw_pow
         
-        motor_powers[4:8] *= 0.707
+        motor_powers[4:8] *= 0.707 # adjust the z to reflect how we lose some of our power on the x and y axis
         
         m = np.max(np.abs(motor_powers))
         if m > 1.0:
@@ -188,6 +207,23 @@ class PIDNode(Node):
         message = Float32MultiArray()
         message.data = motor_powers.tolist()
         self.motor_publisher.publish(message)
+        
+        self.locked = False
+        
+    def new_controller_cb(self, msg : PIDControllerParams):
+        while self.locked:
+            time.sleep(0.0005)
+        self.locked = True
+        
+        match msg.axis:
+            case 'x' : self.x_pid = PIDController(msg.kp, msg.ki, msg.kd)
+            case 'y' : self.y_pid = PIDController(msg.kp, msg.ki, msg.kd)
+            case 'z' : self.z_pid = PIDController(msg.kp, msg.ki, msg.kd)
+            case 'r' | 'roll': self.roll_pid = PIDController(msg.kp, msg.ki, msg.kd)
+            case 'p' | 'pitch': self.pitch_pid = PIDController(msg.kp, msg.ki, msg.kd)
+            case 'y' | 'yaw': self.yaw_pid = PIDController(msg.kp, msg.ki, msg.kd)
+            
+        self.locked = False
         
     def odom_cb(self, msg : Odometry):
         self.last_od = msg

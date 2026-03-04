@@ -1,17 +1,29 @@
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from std_msgs.msg import Float32MultiArray, Float32, String # pyright: ignore[reportMissingImports]
+from std_msgs.msg import Float32MultiArray, Float32, String, Bool # pyright: ignore[reportMissingImports]
 from messages.msg import PIDInput, ControllerInput
 
 import rclpy
 import time
-from rclpy.qos import QoSProfile, ReliabilityPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 import numpy as np
 
 
 qos = QoSProfile(
     depth=1,
     reliability=ReliabilityPolicy.BEST_EFFORT
+)
+
+kill_qos = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1
+)
+
+new_controller_qos = QoSProfile(
+    depth=10,
+    reliability=ReliabilityPolicy.RELIABLE
 )
 
 qos_controller = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
@@ -76,16 +88,16 @@ class MainNode(Node):
             qos_controller
         )
         
-        # self.servo_publisher = self.create_publisher(
-        #     Float32, 
-        #     "topic_servo_angle",
-        #     10
-        # )
-        
         self.pid_publisher = self.create_publisher(
             PIDInput,
             "pid_input",
             10
+        )
+        
+        self.kill_publisher = self.create_publisher(
+            Bool,
+            "kill",
+            kill_qos
         )
         
         period = 1.0 / 10.0
