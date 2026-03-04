@@ -1,7 +1,7 @@
 from motor_driver.motor_commander import MotorCommander, NUM_MOTORS
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy
-from std_msgs.msg import Float32MultiArray
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
+from std_msgs.msg import Float32MultiArray, Bool
 from ament_index_python.packages import get_package_share_directory
 
 import numpy as np
@@ -9,6 +9,13 @@ import time
 import rclpy
 import os
 import json
+
+kill_qos = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1
+)
 
 QOS = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
@@ -76,11 +83,20 @@ class MotorInterface(Node):
         self.motor_states = [0.0 for _ in range(NUM_MOTORS)]
         self.motor_goals = [0.0 for _ in range(NUM_MOTORS)]
         
+        self.listening = True
+        
         self.motor_power_subscriber = self.create_subscription(
             Float32MultiArray,
             'motor_powers',
             self.power_cb,
             QOS
+        )
+        
+        self.kill_subscriber = self.create_subscription(
+            Bool,
+            'kill',
+            self.kill_cb,
+            kill_qos
         )
         
         self.timer = self.create_timer(1.0 / FREQ, self.timer_cb)
@@ -122,7 +138,7 @@ class MotorInterface(Node):
         self.set_motor_goals(msg.data)
 
     def set_motor_goals(self, powers : list) -> bool:
-        if len(powers) != NUM_MOTORS : return False
+        if  not self.listening or len(powers) != NUM_MOTORS : return False
         self.motor_goals = powers
         return True
     
@@ -130,6 +146,14 @@ class MotorInterface(Node):
         self.motor_goals = [0.0 for _ in range(NUM_MOTORS)]
         self.motor_commander.set_motor_powers([0.0 for _ in range(NUM_MOTORS)])
         self.motor_states = [0.0 for _ in range(NUM_MOTORS)]
+        
+    def kill_cb(self, msg : Bool):
+        if msg.data:
+            self.listening = False
+            self.stop()
+            time.sleep(0.1)
+            raise Exception('Motors called to kill.')
+        
         
 def main(args=None):
     rclpy.init(args=args)

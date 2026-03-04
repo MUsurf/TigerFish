@@ -14,6 +14,11 @@ def generate_launch_description():
             name='imu'
         ),
         Node(
+            package='depth_sensor',
+            executable='depth_sensor_node',
+            name='depth_sensor'
+        ),
+        Node(
             package='process_imu',
             executable='process_imu_node',
             name='process_imu'

@@ -1,5 +1,3 @@
-# https://www.youtube.com/watch?v=WhkiPYPIO9M
-
 # Import OpenCV
 import cv2
 
@@ -16,18 +14,14 @@ class PublisherNodeClass(Node):
         
         # Create an instance of OpenCV VideoCapture Obj
         self.cameraDeviceNumber = 0
-        self.camera = cv2.VideoCapture(self.cameraDeviceNumber, cv2.CAP_V4L2)
+        self.camera = cv2.VideoCapture(self.cameraDeviceNumber)
         
         if not self.camera.isOpened():
             self.get_logger().info("Camera failed to open!")
         else:
             self.get_logger().info(f"Camera opened successfully")       
 
-        
         self.camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         
         # CvBridge --> convert OpenCV images to publishable ROS2 messages
         self.bridgeObject = CvBridge()

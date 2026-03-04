@@ -179,6 +179,8 @@ class PIDNode(Node):
         
         motor_powers = x_pow + y_pow + z_pow + roll_pow + pitch_pow + yaw_pow
         
+        motor_powers[4:8] *= 0.707
+        
         m = np.max(np.abs(motor_powers))
         if m > 1.0:
             motor_powers = motor_powers / m
