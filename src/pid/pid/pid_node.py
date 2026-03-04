@@ -233,11 +233,11 @@ class PIDNode(Node):
     def y_to_motor(self, y_power) -> np.ndarray:
         return np.array([y_power, -y_power, y_power, -y_power, 0, 0, 0, 0])
     def z_to_motor(self, z_power) -> np.ndarray:
-        return np.array([0, 0, 0, 0, -z_power, -z_power, -z_power, -z_power])
+        return np.array([0, 0, 0, 0, z_power, z_power, z_power, z_power])
     def roll_to_motor(self, roll_power) -> np.ndarray:
-        return np.array([0, 0, 0, 0, roll_power, -roll_power, -roll_power, roll_power])
+        return np.array([0, 0, 0, 0, -roll_power, roll_power, roll_power, -roll_power])
     def pitch_to_motor(self, pitch_power) -> np.ndarray:
-        return np.array([0, 0, 0, 0, -pitch_power, -pitch_power, pitch_power, pitch_power])
+        return np.array([0, 0, 0, 0, pitch_power, pitch_power, -pitch_power, -pitch_power])
     def yaw_to_motor(self, yaw_power) -> np.ndarray:
         return np.array([yaw_power, -yaw_power, -yaw_power, yaw_power, 0, 0, 0, 0])
         

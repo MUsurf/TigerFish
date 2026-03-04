@@ -28,6 +28,10 @@ new_controller_qos = QoSProfile(
 
 qos_controller = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
 
+YAW_DEGREE_PER_SECOND = 10
+Z_METER_PER_SECOND = 0.5
+DEAD_ZONE = 0.1
+
 def new_controller_str(text : str) -> Float32MultiArray:
     parts = text.split(":")
 
@@ -170,6 +174,8 @@ class MainNode(Node):
         self.pitch : float = 0.0
         self.yaw : float = 0.0
         
+        self.controller_last_time = None
+        
     def depth_sensor_cb(self, msg : Float32):
         self.get_logger().info(f'{msg.data}')
         
@@ -210,17 +216,36 @@ class MainNode(Node):
         if is_pid is not None : self.new_controller_publisher.publish(is_pid)
         
     def controller_cb(self, msg : ControllerInput):
+        if abs(msg.x_left_stick) < DEAD_ZONE : msg.x_left_stick = 0.0
+        if abs(msg.y_left_stick) < DEAD_ZONE : msg.y_left_stick = 0.0
+        if abs(msg.y_right_stick) < DEAD_ZONE : msg.y_right_stick = 0.0
+        if abs(msg.r_trigger) < DEAD_ZONE : msg.r_trigger = 0.0
+        if abs(msg.l_trigger) < DEAD_ZONE : msg.l_trigger = 0.0
+        
         self.recent_controller_input = msg
         self.x_power = msg.y_left_stick
         self.y_power = msg.x_left_stick
+        
+        if self.controller_last_time is None:
+            self.controller_last_time = time.time()
+            return
+        dt = time.time() - self.controller_last_time
+        self.controller_last_time = time.time()
+        
+        yaw_power = max(msg.r_trigger, msg.l_trigger)
+        yaw_power *= -1 if msg.l_trigger > msg.r_trigger else 1
+        self.yaw_setpoint += YAW_DEGREE_PER_SECOND * yaw_power * dt
+        
+        z_set = Z_METER_PER_SECOND * msg.y_right_stick * dt
+        self.z_setpoint += z_set
         
         # self.get_logger().info(f'{self.recent_controller_input.x_left_stick}')
         
     def _odom_cb(self, msg : Odometry):
         r, p, y = rpy_from_quat(msg.pose.pose.orientation)
-        self.roll = r
-        self.pitch = p
-        self.yaw = y
+        self.roll = -r
+        self.pitch = -p
+        self.yaw = - y
         self.get_logger().info(f'roll: {(r * 180 / np.pi):4f} pitch {(p * 180 / np.pi):4f} yaw: {(y * 180 / np.pi):4f}')
         # msg = PIDInput()
         
