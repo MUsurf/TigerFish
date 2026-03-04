@@ -20,7 +20,7 @@ from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
 from nav_msgs.msg import Odometry
 import numpy as np
-from messages.msg import PIDInput, PIDControllerParams
+from messages.msg import PIDInput
 import time
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy
@@ -104,7 +104,7 @@ class PIDNode(Node):
         )
         
         self.new_pid_subscriber = self.create_subscription(
-            PIDControllerParams,
+            Float32MultiArray,
             'new_pid_controller',
             self.new_controller_cb,
             new_controller_qos
@@ -210,18 +210,18 @@ class PIDNode(Node):
         
         self.locked = False
         
-    def new_controller_cb(self, msg : PIDControllerParams):
+    def new_controller_cb(self, msg : Float32MultiArray):
         while self.locked:
             time.sleep(0.0005)
         self.locked = True
         
-        match msg.axis:
-            case 'x' : self.x_pid = PIDController(msg.kp, msg.ki, msg.kd)
-            case 'y' : self.y_pid = PIDController(msg.kp, msg.ki, msg.kd)
-            case 'z' : self.z_pid = PIDController(msg.kp, msg.ki, msg.kd)
-            case 'r' | 'roll': self.roll_pid = PIDController(msg.kp, msg.ki, msg.kd)
-            case 'p' | 'pitch': self.pitch_pid = PIDController(msg.kp, msg.ki, msg.kd)
-            case 'y' | 'yaw': self.yaw_pid = PIDController(msg.kp, msg.ki, msg.kd)
+        msg = msg.data
+        if msg[0] < 0.5 : self.x_pid = PIDController(msg[1], msg[2], msg[3])
+        elif msg[0] < 1.5 : self.y_pid = PIDController(msg[1], msg[2], msg[3])
+        elif msg[0] < 2.5 : self.z_pid = PIDController(msg[1], msg[2], msg[3])
+        elif msg[0] < 3.5 : self.roll_pid = PIDController(msg[1], msg[2], msg[3])
+        elif msg[0] < 4.5 : self.pitch_pid = PIDController(msg[1], msg[2], msg[3])
+        elif msg[0] < 5.5 : self.yaw_pid = PIDController(msg[1], msg[2], msg[3])
             
         self.locked = False
         

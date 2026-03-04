@@ -1,7 +1,7 @@
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32, String, Bool # pyright: ignore[reportMissingImports]
-from messages.msg import PIDInput, ControllerInput, PIDControllerParams
+from messages.msg import PIDInput, ControllerInput
 
 import rclpy
 import time
@@ -28,7 +28,7 @@ new_controller_qos = QoSProfile(
 
 qos_controller = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
 
-def new_controller_str(text : str) -> PIDControllerParams:
+def new_controller_str(text : str) -> Float32MultiArray:
     parts = text.split(":")
 
     if len(parts) != 4:
@@ -36,7 +36,21 @@ def new_controller_str(text : str) -> PIDControllerParams:
 
     axis = parts[0]
     
-    if not (axis in ['x', 'y', 'z', 'r', 'roll', 'p', 'pitch', 'y', 'yaw']):
+    axis = str(axis).lower()
+    
+    if axis == 'x':
+        axis = 0.0
+    elif axis == 'y':
+        axis = 1.0
+    elif axis == 'z':
+        axis = 2.0
+    elif axis in ['roll', 'r']:
+        axis = 3.0
+    elif axis == ['pitch', 'p']:
+        axis = 4.0
+    elif axis == ['yaw', 'y']:
+        axis = 5.0
+    else:
         return None
 
     try:
@@ -45,6 +59,11 @@ def new_controller_str(text : str) -> PIDControllerParams:
         v3 = float(parts[3])
     except ValueError:
         None
+        
+    msg = Float32MultiArray()
+    msg.data = [axis, v1, v2, v3]
+    return msg
+
 
 def rpy_from_quat(q):
     """
@@ -106,6 +125,13 @@ class MainNode(Node):
             qos_controller
         )
         
+        self.depth_sensor_subscriber = self.create_subscription(
+            Float32,
+            'depth',
+            self.depth_sensor_cb,
+            10
+        )
+        
         self.pid_publisher = self.create_publisher(
             PIDInput,
             "pid_input",
@@ -113,7 +139,7 @@ class MainNode(Node):
         )
         
         self.new_controller_publisher = self.create_publisher(
-            PIDControllerParams,
+            Float32MultiArray,
             'new_pid_controller',
             new_controller_qos
         )
@@ -131,31 +157,46 @@ class MainNode(Node):
         
         self.recent_controller_input : ControllerInput = None
         
+        self.x_pow : float = 0.0
+        self.y_pow : float = 0.0
+        
+        self.z_setpoint : float = 0.0
+        self.roll_setpoint : float = 0.0
+        self.pitch_setpoint : float = 0.0
+        self.yaw_setpoint : float = 0.0
+        
+        self.depth : float = 0.0
+        self.roll : float = 0.0
+        self.pitch : float = 0.0
+        self.yaw : float = 0.0
+        
+    def depth_sensor_cb(self, msg : Float32):
+        self.get_logger().info(f'{msg.data}')
+        
     def _timer_cb(self):
-        return
-        power = 0.1
-        powers = [0.0 for _ in range(8)]
-        time_elapsed = time.time() - self.start_time
+        msg = PIDInput()
         
-        if (time_elapsed // self.switch_time) % 2 == 1:
-            powers[4 * int((time_elapsed // (2 * self.switch_time)) % 2)] = power
-            powers[4 * int((time_elapsed // (2 * self.switch_time)) % 2) + 1] = power
-            powers[4 * int((time_elapsed // (2 * self.switch_time)) % 2) + 2] = power
-            powers[4 * int((time_elapsed // (2 * self.switch_time)) % 2) + 3] = power
-            # powers[0] = power
-            # msg = Float32()
-            # msg.data = 0.0
-            # self.servo_publisher.publish(msg)
-        else:
-            powers = [0.0 for _ in range(8)] # Don't need this but i hate debugging
-            # msg = Float32()
-            # msg.data = 90.0
-            # self.servo_publisher.publish(msg)
+        msg.x_mode = False
+        msg.y_mode = False
+        msg.z_mode = True
+        msg.roll_mode = True
+        msg.pitch_mode = True
+        msg.yaw_mode = True
         
-        msg = Float32MultiArray()
-        msg.data = powers
-        self.motor_publisher.publish(msg)
+        msg.x_power = 0 if self.recent_controller_input is None else self.recent_controller_input.x_left_stick
+        msg.y_power = 0.0
+
+        msg.z_setpoint = self.z_setpoint
+        msg.z_measurement = max(0.0, self.depth)
         
+        msg.roll_setpoint = 0.0
+        msg.roll_measurement = self.roll * 180 / np.pi
+        msg.pitch_setpoint = 0.0
+        msg.pitch_setpoint = self.pitch * 180 / np.pi
+        msg.yaw_setpoint = 0.0
+        msg.yaw_measurement = self.yaw * 180 / np.pi
+        
+        self.pid_publisher.publish(msg)
         
     def command_line_cb(self, msg : String):
         text = msg.data.strip()
@@ -170,32 +211,38 @@ class MainNode(Node):
         
     def controller_cb(self, msg : ControllerInput):
         self.recent_controller_input = msg
+        self.x_power = msg.y_left_stick
+        self.y_power = msg.x_left_stick
+        
         # self.get_logger().info(f'{self.recent_controller_input.x_left_stick}')
         
     def _odom_cb(self, msg : Odometry):
         r, p, y = rpy_from_quat(msg.pose.pose.orientation)
-        # self.get_logger().info(f'roll: {(r * 180 / np.pi):4f} pitch {(p * 180 / np.pi):4f} yaw: {(y * 180 / np.pi):4f}')
-        msg = PIDInput()
+        self.roll = r
+        self.pitch = p
+        self.yaw = y
+        self.get_logger().info(f'roll: {(r * 180 / np.pi):4f} pitch {(p * 180 / np.pi):4f} yaw: {(y * 180 / np.pi):4f}')
+        # msg = PIDInput()
         
-        msg.x_mode = False
-        msg.y_mode = False
-        msg.z_mode = False
-        msg.roll_mode = True
-        msg.pitch_mode = True
-        msg.yaw_mode = True
+        # msg.x_mode = False
+        # msg.y_mode = False
+        # msg.z_mode = False
+        # msg.roll_mode = True
+        # msg.pitch_mode = True
+        # msg.yaw_mode = True
         
-        msg.x_power = 0 if self.recent_controller_input is None else self.recent_controller_input.x_left_stick
-        msg.y_power = 0.0
-        msg.z_power = 0.0
+        # msg.x_power = 0 if self.recent_controller_input is None else self.recent_controller_input.x_left_stick
+        # msg.y_power = 0.0
+        # msg.z_power = 0.0
         
-        msg.roll_setpoint = 0.0
-        msg.roll_measurement = r * 180 / np.pi
-        msg.pitch_setpoint = 0.0
-        msg.pitch_setpoint = p * 180 / np.pi
-        msg.yaw_setpoint = 0.0
-        msg.yaw_measurement = y * 180 / np.pi
+        # msg.roll_setpoint = 0.0
+        # msg.roll_measurement = r * 180 / np.pi
+        # msg.pitch_setpoint = 0.0
+        # msg.pitch_setpoint = p * 180 / np.pi
+        # msg.yaw_setpoint = 0.0
+        # msg.yaw_measurement = y * 180 / np.pi
         
-        self.pid_publisher.publish(msg)
+        # self.pid_publisher.publish(msg)
         
         
 def main(args=None):
