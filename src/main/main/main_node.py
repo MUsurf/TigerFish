@@ -1,7 +1,7 @@
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32, String, Bool # pyright: ignore[reportMissingImports]
-from messages.msg import PIDInput, ControllerInput
+from messages.msg import PIDInput, ControllerInput, PIDControllerParams
 
 import rclpy
 import time
@@ -27,6 +27,24 @@ new_controller_qos = QoSProfile(
 )
 
 qos_controller = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
+
+def new_controller_str(text : str) -> PIDControllerParams:
+    parts = text.split(":")
+
+    if len(parts) != 4:
+        return None
+
+    axis = parts[0]
+    
+    if not (axis in ['x', 'y', 'z', 'r', 'roll', 'p', 'pitch', 'y', 'yaw']):
+        return None
+
+    try:
+        v1 = float(parts[1])
+        v2 = float(parts[2])
+        v3 = float(parts[3])
+    except ValueError:
+        None
 
 def rpy_from_quat(q):
     """
@@ -94,6 +112,12 @@ class MainNode(Node):
             10
         )
         
+        self.new_controller_publisher = self.create_publisher(
+            PIDControllerParams,
+            'new_pid_controller',
+            new_controller_qos
+        )
+        
         self.kill_publisher = self.create_publisher(
             Bool,
             "kill",
@@ -134,8 +158,15 @@ class MainNode(Node):
         
         
     def command_line_cb(self, msg : String):
-        # self.get_logger().info(msg.data)
-        pass
+        text = msg.data.strip()
+        
+        if text == 'kill' or text == 'k':
+            msg = Bool()
+            msg.data = True
+            self.kill_publisher.publish(msg)
+
+        is_pid = new_controller_str(text)
+        if is_pid is not None : self.new_controller_publisher.publish(is_pid)
         
     def controller_cb(self, msg : ControllerInput):
         self.recent_controller_input = msg

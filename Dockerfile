@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y \
   libgpiod-dev \
   python3-libgpiod \
   libgpiod-doc \
+  ros-humble-camera-calibration \
+  ros-humble-camera-info-manager-py \
   python3-setuptools && \
   rm -rf /var/lib/apt/lists/* && \
   apt-get clean

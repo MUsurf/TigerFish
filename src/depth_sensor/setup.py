@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'depth_sensor = depth_sensor.depth_sensor_node:main'
+            'depth_sensor_node = depth_sensor.depth_sensor_node:main'
         ],
     },
 )
