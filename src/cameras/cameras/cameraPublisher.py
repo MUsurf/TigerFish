@@ -14,13 +14,17 @@ class PublisherNodeClass(Node):
     def __init__(self):
         super().__init__("publisher_node")
         
-
         # Create an instance of OpenCV VideoCapture Obj
         self.cameraDeviceNumber = 0
         self.camera = cv2.VideoCapture(self.cameraDeviceNumber, cv2.CAP_V4L2)
         
         if not self.camera.isOpened():
             self.get_logger().info("Camera failed to open!")
+        else:
+            self.get_logger().info(f"Camera opened successfully")       
+
+        
+        self.camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -36,7 +40,7 @@ class PublisherNodeClass(Node):
 
         self.publisher = self.create_publisher(Image, self.topicNameFrames, self.queueSize)
 
-        self.periodCommunication = 0.02  # seconds
+        self.periodCommunication = 0.1  # seconds
 
         # Timer that calls timer_callback function every comm period
         self.timer = self.create_timer(
@@ -51,7 +55,7 @@ class PublisherNodeClass(Node):
 
         # Read the frame using camera
         success, frame = self.camera.read()
-       
+
         # Frame read success:
         if success:
             # Convert OpenCV frame --> ROS2 image msg
@@ -67,6 +71,9 @@ class PublisherNodeClass(Node):
             if self.i % 30 == 0:
                 self.get_logger().info(f"Publishing image {self.i}")
             self.i += 1
+        else:
+            self.get_logger().info(f"POOP")     
+
 
 
 # Main function; entry point
@@ -76,12 +83,12 @@ def main(args=None):
 
     # Create publisher instance
     publisherObject = PublisherNodeClass()
-
+        
     try:
         # Spin node; callback function called recursively
         rclpy.spin(publisherObject)
     except Exception:
-        print("CameraPublisher spin failure.")
+        publisherObject.get_logger().info("cameras gone :(")
 
     # Destroy
     publisherObject.camera.release()

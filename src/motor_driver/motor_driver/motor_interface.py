@@ -116,7 +116,7 @@ class MotorInterface(Node):
             
         converted_powers = [self.power_converter.convert_power(p) for p in next_motor_powers]
         self.motor_commander.set_motor_powers(converted_powers, 0.0)
-        self.get_logger().info(f'{converted_powers[0]}')
+        # self.get_logger().info(f'{converted_powers[0]}')
             
     def power_cb(self, msg):
         self.set_motor_goals(msg.data)

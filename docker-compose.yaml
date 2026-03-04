@@ -14,8 +14,12 @@ services:
         - /dev/gpiochip0:/dev/gpiochip0
         - /dev/video0:/dev/video0
         - /dev/video1:/dev/video1
+        - /dev/media0:/dev/media0
+        - /dev/media0:/dev/media1
     ports:
         - "5000:5000"
+    group_add:
+      - video
 
 # A service for developing when you don't have a Raspberry Pi.
   no-pi:
