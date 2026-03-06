@@ -12,10 +12,8 @@ services:
     devices:
         - "/dev:/dev"
         - /dev/gpiochip0:/dev/gpiochip0
-        - /dev/video0:/dev/video0
-        - /dev/video1:/dev/video1
-        - /dev/media0:/dev/media0
-        - /dev/media0:/dev/media1
+        - /dev/media4:/dev/media4
+        - "/dev/v4l/by-id/usb-046d_HD_Pro_Webcam_C920_8851116F-video-index0:/dev/video0"
     ports:
         - "5000:5000"
     group_add:

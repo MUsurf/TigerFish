@@ -2,15 +2,23 @@
 import rclpy
 # End imports
 from rclpy.node import Node
-from std_msgs.msg import Float64, Bool
+from std_msgs.msg import Float32, Bool
 from gpiozero import PWMOutputDevice
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
+
 kill_qos = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
     durability=DurabilityPolicy.TRANSIENT_LOCAL,
     history=HistoryPolicy.KEEP_LAST,
     depth=1
+)
+
+servo_qos = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=10
 )
 
 
@@ -39,13 +47,12 @@ class ServoControllerNode(Node):
 
         # Subscriber
         self.subscribedTopic = 'topic_servo_angle'
-        self.queueSize = 10
 
         self.subscription = self.create_subscription(
-            Float64,
+            Float32,
             self.subscribedTopic,
             self.angle_callbackFunction,
-            self.queueSize
+            servo_qos
         )
         
         self.kill_subscriber = self.create_subscription(
@@ -58,7 +65,7 @@ class ServoControllerNode(Node):
         # Publisher
         self.publisherTopic = 'topic_servo_angle_feedback'
         self.feedback_publisher = self.create_publisher(
-            Float64,
+            Float32,
             self.publisherTopic,
             self.queueSize
         )
@@ -88,7 +95,7 @@ class ServoControllerNode(Node):
 
         self.current_angle = max(self.min_angle, min(angle, self.max_angle))
 
-        feedback_msg = Float64()
+        feedback_msg = Float32()
         feedback_msg.data = self.current_angle
         self.feedback_publisher.publish(feedback_msg)
 

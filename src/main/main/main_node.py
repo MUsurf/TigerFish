@@ -21,6 +21,13 @@ kill_qos = QoSProfile(
     depth=1
 )
 
+servo_qos = QoSProfile(
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=10
+)
+
 new_controller_qos = QoSProfile(
     depth=10,
     reliability=ReliabilityPolicy.RELIABLE
@@ -148,11 +155,18 @@ class MainNode(Node):
             new_controller_qos
         )
         
+        self.servo_publisher = self.create_publisher(
+            Float32,
+            "topic_servo_angle",
+            servo_qos
+        )
+        
         self.kill_publisher = self.create_publisher(
             Bool,
             "kill",
             kill_qos
         )
+        
         
         period = 1.0 / 10.0
         self.timer = self.create_timer(period, self._timer_cb)
@@ -180,6 +194,11 @@ class MainNode(Node):
         self.get_logger().info(f'{msg.data}')
         
     def _timer_cb(self):
+        temp = Float32()
+        temp.msg = 0
+        self.servo_publisher.publish(temp)
+        
+        
         msg = PIDInput()
         
         msg.x_mode = False
@@ -189,7 +208,7 @@ class MainNode(Node):
         msg.pitch_mode = True
         msg.yaw_mode = True
         
-        msg.x_power = 0 if self.recent_controller_input is None else self.recent_controller_input.x_left_stick
+        msg.x_power = 0.0 if self.recent_controller_input is None else self.recent_controller_input.x_left_stick
         msg.y_power = 0.0
 
         msg.z_setpoint = self.z_setpoint

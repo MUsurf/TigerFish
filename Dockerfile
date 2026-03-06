@@ -37,7 +37,7 @@ RUN \
     # --mount=type=bind,source=./src/process_imu/package.xml,target=/home/ros2_ws/deps/process_imu/package.xml \
     # --mount=type=bind,source=./src/state_estimator/package.xml,target=/home/ros2_ws/deps/state_estimator/package.xml \
     --mount=type=bind,source=./src/main/package.xml,target=/home/ros2_ws/deps/main/package.xml \
-    # --mount=type=bind,source=./src/grabber_servo/package.xml,target=/home/ros2_ws/deps/grabber_servo/package.xml \
+    --mount=type=bind,source=./src/grabber_servo/package.xml,target=/home/ros2_ws/deps/grabber_servo/package.xml \
     #--mount=type=bind,source=./src/motor_command/package.xml,target=/home/ros2_ws/deps/motor_command/package.xml \
 
     rosdep update && \
