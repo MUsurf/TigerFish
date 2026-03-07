@@ -3,10 +3,12 @@ from datetime import datetime
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
+from nav_msgs.msg import Odometry
 
 from remote_controller.app import \
+    make_http_rpy_get, \
     make_http_str_post, \
-    make_http_controller_input_post
+    make_http_controller_input_post \
 
 from messages.msg import ControllerInput
 
@@ -24,28 +26,17 @@ class RemoteControllerNode(Node):
 
         # --- node's internally kept values ---
 
-        ## defunct without setpointobj or message to send
-        ## needs proper msg formatting
-        # self.curr_position = SomeSetpointObj()
-        # self.curr_velocity = SomeSetpointObj()
-
-        # # datetime(1970,1,1) represents never set
-        # self.curr_position_last_set = datetime(1970,1,1)
-        # self.curr_velocity_last_set = datetime(1970,1,1)
+        self.odometry = Odometry()
+        self.odometry_stamp = datetime(1970,1,1)
 
         self.controller_input = ControllerInput()
-        self.controller_input_last_set = datetime(1970,1,1)
+        self.controller_input_stamp = datetime(1970,1,1)
 
         self.get_endpoints = {
-            ## can't function without working setpoi
-            # "curr_position": make_http_imu_get(
-            #     lambda: self.curr_position,
-            #     lambda: self.curr_position_last_set
-            # ),
-            # "curr_velocity": make_http_imu_get(
-            #     lambda: self.curr_velocity,
-            #     lambda: self.curr_velocity_last_set
-            # )
+            "get_odometry": make_http_rpy_get(
+                lambda: self.odometry,
+                lambda: self.odometry_stamp
+            )
         }
 
         self.post_endpoints = {
@@ -56,6 +47,14 @@ class RemoteControllerNode(Node):
                 self.publish_command_line
             )
         }
+
+        self.orientation_subscriber = self.create_subscription(
+            Odometry, 
+            'state_estimation', 
+            self._odom_cb, 
+            10
+        )
+
 
         self.command_publisher = self.create_publisher(
             String,
@@ -68,39 +67,32 @@ class RemoteControllerNode(Node):
             QOS
         )
 
-        self.timer = self.create_timer(1.0 / FREQUENCY, self.timer_callback)
+        self.timer = self.create_timer(1.0 / FREQUENCY, self._timer_callback)
 
-    def timer_callback(self):
+
+    def _timer_callback(self):
 
         # publish topics
         self.controller_input_publisher.publish(
             self.controller_input
         )
 
+    def _odom_cb(self, msg: Odometry):
+        self.odometry = msg
 
 
-    def publish_command_line(self, msg: str):
+    def publish_command_line(self, cmd: str):
         
-        ros2_msg = String()
-        ros2_msg.data = msg
-        self.command_publisher.publish(ros2_msg)
+        msg = String()
+        msg.data = cmd
+        self.command_publisher.publish(msg)
 
-        
 
-    # def update_curr_position(self, msg: SomeSetpointObj):
-    #     self.get_logger().info(f"updated curr_position to: {msg}")
-    #     self.curr_position = msg
-    #     self.curr_position_last_set = datetime.now()
-
-    # def update_curr_velocity(self, msg: SomeSetpointObj):
-    #     self.get_logger().info(f"updated curr_velocity to: {msg}")
-    #     self.curr_velocity = msg
-    #     self.curr_velocity_last_set = datetime.now()
 
     def update_controller_input(self, msg: dict):
-        self.controller_input_last_set = datetime.now()
+        self.controller_input_stamp = datetime.now()
         # self.get_logger().info(
-        #     f"updated controller_input at {self.controller_input_last_set}"
+        #     f"updated controller_input at {self.controller_input_stamp}"
         # )
 
         self.controller_input.x_left_stick = msg["x_left_stick"]

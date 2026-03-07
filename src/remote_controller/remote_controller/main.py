@@ -28,7 +28,6 @@ def main(args=None):
 
 
     rclpy_thread = Thread(target = rclpy.spin, args=[node], daemon=True)
-
     flask_thread = Thread(target = server.serve_forever, daemon=True)
 
     try:
