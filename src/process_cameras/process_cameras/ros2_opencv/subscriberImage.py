@@ -21,7 +21,9 @@ class SubscriberNodeClass(Node):
         self.bridgeObject = CvBridge()
         self.video_writer = None
         self.output_path = (
-            "/home/ros2_ws/src/output_images/processed_vid/" + datetime + "_processed_output.avi"
+            "/home/ros2_ws/src/output_images/processed_vid/"
+            + datetime
+            + "_processed_output.avi"
         )
 
         # Name must match publisher node
@@ -51,7 +53,9 @@ class SubscriberNodeClass(Node):
         # in mp4v format! UwU
         if self.video_writer is None:
             os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
-            fourcc = cv2.VideoWriter_fourcc(*"MJPG")  # MJPG format initialization (more crash resistant than mp4)
+            fourcc = cv2.VideoWriter_fourcc(
+                *"MJPG"
+            )  # MJPG format initialization (more crash resistant than mp4)
 
             height, width = openCVImage.shape[:2]
 
@@ -65,7 +69,7 @@ class SubscriberNodeClass(Node):
                 30.0,  # frames
                 (width, height),  # frame size
             )
-            
+
         self.video_writer.write(openCVImage)  # write the video
 
 

@@ -8,12 +8,13 @@
 #include "process_images/marker_detector.hpp"
 
 
-class processImgNode : public rclcpp::Node{
+class processImgNode : public rclcpp::Node
+{
 public:
   processImgNode()
-  :Node("process_img_node")
+  : Node("process_img_node")
   {
-            // preprocessing setup
+    // preprocessing setup
     cv::Size kernel = cv::Size(16, 16);
     float clipLimit = 2.0;
 
@@ -21,26 +22,26 @@ public:
     marker_detector_ = std::make_unique<MarkerDetector>(600.0, 1.2);
 
 
-            //create a publisher for the video feed
+    //create a publisher for the video feed
     publisher_ = this->create_publisher<sensor_msgs::msg::Image>(
-                "camera/image_processed", 10
+      "camera/image_processed", 10
     );
-            // subscriber
+    // subscriber
     subscription_ = this->create_subscription<sensor_msgs::msg::Image>(
-                "camera/image_raw", 10,
-                std::bind(&processImgNode::image_callback, this, std::placeholders::_1));
+      "camera/image_raw", 10,
+      std::bind(&processImgNode::image_callback, this, std::placeholders::_1));
 
 
-            //logging
+    //logging
     RCLCPP_INFO(this->get_logger(), "processImgNode ready for images...");
 
 
   }
 
-        // destructor
+  // destructor
   ~processImgNode()
   {
-    if(is_writer_initialized_) {
+    if (is_writer_initialized_) {
       video_writer_.release();
       RCLCPP_INFO(this->get_logger(), "Video file finalized and saved.");
     }
@@ -49,39 +50,40 @@ public:
 private:
   void WriteVideo(const cv::Mat & processed_frame)
   {
-            // Visualization ////////////////////////////////
-            // So there are a couple ways to do this:
-            // a) install x11 forwarding and use imshow (this is annoying)
-            // b) write every ith frame to a folder
-            // c) write the new video
-            // It should be noted that these should not be active on the real sub :)
+    // Visualization ////////////////////////////////
+    // So there are a couple ways to do this:
+    // a) install x11 forwarding and use imshow (this is annoying)
+    // b) write every ith frame to a folder
+    // c) write the new video
+    // It should be noted that these should not be active on the real sub :)
 
-            // a) x11 forwarding option ////////////////////////////////
-            // cv::imshow("Raw Feed", raw_frame);
-            // cv::imshow("Processed Feed (CLAHE)", processed_frame);
-            // cv::waitKey(1);
-            ///////////////////////////////////////////////////////////
+    // a) x11 forwarding option ////////////////////////////////
+    // cv::imshow("Raw Feed", raw_frame);
+    // cv::imshow("Processed Feed (CLAHE)", processed_frame);
+    // cv::waitKey(1);
+    ///////////////////////////////////////////////////////////
 
 
-            // b) write every ith frame /////////////////////////////////////////////
-            // static int frame_count = 0;
-            //captures every "ith" frame (ie 30th frame)
-            // const int ith_frame = 30;
-            // if (frame_count % ith_frame == 0){
-            //     std::string filename = "/home/ros2_ws/src/output_images/processed/frame_"+ std::to_string(frame_count)+ ".jpg";
-            //     cv::imwrite(filename, processed_frame);
+    // b) write every ith frame /////////////////////////////////////////////
+    // static int frame_count = 0;
+    //captures every "ith" frame (ie 30th frame)
+    // const int ith_frame = 30;
+    // if (frame_count % ith_frame == 0){
+    //     std::string filename = "/home/ros2_ws/src/output_images/processed/frame_"+ std::to_string(frame_count)+ ".jpg";
+    //     cv::imwrite(filename, processed_frame);
 
-            //     std::string filename2 = "/home/ros2_ws/src/output_images/input/frame_"+ std::to_string(frame_count)+ ".jpg";
-            //     cv::imwrite(filename, raw_frame);
+    //     std::string filename2 = "/home/ros2_ws/src/output_images/input/frame_"+ std::to_string(frame_count)+ ".jpg";
+    //     cv::imwrite(filename, raw_frame);
 
-            // }
-            // frame_count++;
-            ///////////////////////////////////////////////////////////////////////
+    // }
+    // frame_count++;
+    ///////////////////////////////////////////////////////////////////////
 
-            // c) write vid //////////////////////////////////////////////////////
-    if(!is_writer_initialized_) {
+    // c) write vid //////////////////////////////////////////////////////
+    if (!is_writer_initialized_) {
       int fourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
-      video_writer_.open("/home/ros2_ws/src/output_images/processed_vid/processed_output.mp4",
+      video_writer_.open(
+        "/home/ros2_ws/src/output_images/processed_vid/processed_output.mp4",
         fourcc, 30.0, processed_frame.size());
       is_writer_initialized_ = true;
 
@@ -92,9 +94,9 @@ private:
 
   cv::Mat StitchImg(cv::Mat & raw_frame, cv::Mat & processed_frame)
   {
-            //stitch together original feed + raw feed
+    //stitch together original feed + raw feed
     cv::Mat combined_frame;
-    if(raw_frame.rows == processed_frame.rows && raw_frame.cols == processed_frame.cols) {
+    if (raw_frame.rows == processed_frame.rows && raw_frame.cols == processed_frame.cols) {
       std::vector<cv::Mat> images = {raw_frame, processed_frame};
       cv::hconcat(images, combined_frame);
     } else {
@@ -104,33 +106,33 @@ private:
     return combined_frame;
 
   }
-        // image callback
+  // image callback
   void image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
   {
     try {
-                //convert ros to opencv
+      //convert ros to opencv
       cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
       cv::Mat raw_frame = cv_ptr->image;
       cv::Mat processed_frame;
 
-                //improvements
+      //improvements
       preprocesser_->all_preprocessing(raw_frame, processed_frame);
 
-                // detect markers
+      // detect markers
       MarkerResult result = marker_detector_->find_markers(processed_frame);
       marker_detector_->visualize_markers(processed_frame, result);
 
 
-                //stitch images
+      //stitch images
       cv::Mat combined_frame = StitchImg(raw_frame, processed_frame);
 
-                //TODO: change this to be the version of the image that will be written + broadcast
+      //TODO: change this to be the version of the image that will be written + broadcast
       cv::Mat ImgToWrite = combined_frame;
 
       WriteVideo(combined_frame);
 
 
-                // in addition to writing the vid it will be published (to view in realtime)
+      // in addition to writing the vid it will be published (to view in realtime)
       std_msgs::msg::Header header = msg->header;           //timestamp
       cv_bridge::CvImage img_bridge = cv_bridge::CvImage(header, "bgr8", processed_frame);
       publisher_->publish(*img_bridge.toImageMsg());
@@ -141,7 +143,7 @@ private:
 
   }
 
-        // variables  ///////////////////////////////////////////////
+  // variables  ///////////////////////////////////////////////
   std::unique_ptr<process_images::img_preprocesser> preprocesser_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
   std::unique_ptr<MarkerDetector> marker_detector_;
@@ -153,13 +155,13 @@ private:
 
 int main(int argc, char * argv[])
 {
-    //init ros
+  //init ros
   rclcpp::init(argc, argv);
 
-    // spin - keep the node active
+  // spin - keep the node active
   rclcpp::spin(std::make_shared<processImgNode>());
 
-    // shutdown
+  // shutdown
   rclcpp::shutdown();
   return 0;
 }

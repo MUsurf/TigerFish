@@ -4,94 +4,81 @@ from datetime import datetime
 import numpy as np
 
 from nav_msgs.msg import Odometry
-from messages.msg import ControllerInput
+
 
 def make_http_str_get(
-        str_getter: Callable,
-        timestamp_getter: Callable | None = None
+    str_getter: Callable, timestamp_getter: Callable | None = None
 ) -> Callable:
-        
+
     def handler() -> tuple[Response, int]:
 
         try:
             string = str_getter()
 
-            if timestamp_getter != None:
+            if timestamp_getter is not None:
                 timestamp = timestamp_getter()
             else:
                 # datetime(1970,1,1) indicates no data present
-                timestamp = datetime(1970,1,1)
+                timestamp = datetime(1970, 1, 1)
         except Exception as e:
-            return jsonify({
-                "error": f"failed to get str and/or timestamp; error msg: {e}"
-            }), 500
+            return jsonify(
+                {"error": f"failed to get str and/or timestamp; error msg: {e}"}
+            ), 500
 
-        response = {
-            "str": string,
-            "timestamp": timestamp.strftime(r"%H:%M:%S:%f")
-        }
+        response = {"str": string, "timestamp": timestamp.strftime(r"%H:%M:%S:%f")}
 
         return jsonify(response), 200
 
     return handler
 
 
-
 def make_http_str_post(
-        str_setter: Callable[[str], None],
+    str_setter: Callable[[str], None],
 ) -> Callable[[], tuple[Response, int]]:
-    
+
     def handler() -> tuple[Response, int]:
 
         if not request.is_json:
             return jsonify({"error": "Expected application/json"}), 400
-        
+
         data = request.get_json()
 
         try:
             str_setter(data["str"])
 
         except Exception as e:
-            return jsonify({
-                "error": f"failed to parse json; error msg: {e}"
-            }), 400
-
+            return jsonify({"error": f"failed to parse json; error msg: {e}"}), 400
 
         return jsonify({"message": "success"}), 200
-    
+
     return handler
 
 
-
 def make_http_controller_input_post(
-        controller_input_setter: Callable[[dict], None],
+    controller_input_setter: Callable[[dict], None],
 ) -> Callable[[], tuple[Response, int]]:
-    
+
     def handler() -> tuple[Response, int]:
 
         if not request.is_json:
             return jsonify({"error": "Expected application/json"}), 400
-        
+
         data = request.get_json()
 
         try:
             controller_input_setter(data["controller_input"])
 
         except Exception as e:
-            return jsonify({
-                "error": f"failed to parse json; error msg: {e}"
-            }), 400
-
+            return jsonify({"error": f"failed to parse json; error msg: {e}"}), 400
 
         return jsonify({"message": "success"}), 200
-    
+
     return handler
 
 
-
 def make_http_rpy_get(
-        odometry_getter: Callable[[], Odometry],
-        timestamp_getter: Callable[[], datetime] | None
+    odometry_getter: Callable[[], Odometry],
+    timestamp_getter: Callable[[], datetime] | None,
 ):
     def handler() -> tuple[Response, int]:
 
@@ -99,16 +86,16 @@ def make_http_rpy_get(
         try:
             odometry = odometry_getter()
 
-            if timestamp_getter != None:
+            if timestamp_getter is not None:
                 timestamp = timestamp_getter()
             else:
                 # datetime(1970,1,1) indicates no data present
-                timestamp = datetime(1970,1,1)
+                timestamp = datetime(1970, 1, 1)
         except Exception as e:
-            return jsonify({
-                "error": f"failed to get odometry and/or timestamp; error msg: {e}"
-            }), 500
-        
+            return jsonify(
+                {"error": f"failed to get odometry and/or timestamp; error msg: {e}"}
+            ), 500
+
         # process values for REST protocol
         r, p, y = rpy_from_quat(odometry.pose.pose.orientation)
 
@@ -117,12 +104,11 @@ def make_http_rpy_get(
             "roll": r,
             "pitch": p,
             "yaw": y,
-            "timestamp": timestamp.strftime(r"%H:%M:%S:%f")
+            "timestamp": timestamp.strftime(r"%H:%M:%S:%f"),
         }
         return jsonify(response), 200
 
     return handler
-
 
 
 # TODO: make a utilities library folder on sub so code like this doesn't have to bloat scripts
@@ -130,7 +116,7 @@ def make_http_rpy_get(
 def rpy_from_quat(q):
     """
     Convert geometry_msgs.msg.Quaternion to roll, pitch, yaw (radians).
-    
+
     Assumes quaternion fields:
         q.x, q.y, q.z, q.w
     Uses XYZ (roll, pitch, yaw) convention.
@@ -161,10 +147,8 @@ def rpy_from_quat(q):
     return roll, pitch, yaw
 
 
-
 def build_app(
-        get_endpoints: dict[str, Callable],
-        post_endpoints: dict[str, Callable]
+    get_endpoints: dict[str, Callable], post_endpoints: dict[str, Callable]
 ) -> Flask:
     app = Flask("remote_controller")
 
@@ -175,7 +159,7 @@ def build_app(
             rule=f"/{endpoint}",
             endpoint=f"get_{endpoint}",
             view_func=func,
-            methods=["GET"]
+            methods=["GET"],
         )
 
     for endpoint in post_endpoints.keys():
@@ -185,7 +169,7 @@ def build_app(
             rule=f"/{endpoint}",
             endpoint=f"post_{endpoint}",
             view_func=func,
-            methods=["POST"]
+            methods=["POST"],
         )
 
     return app

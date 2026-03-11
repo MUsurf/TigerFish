@@ -12,16 +12,14 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer='root',
-    maintainer_email='creeon99@gmail.com',
-    description='IMU data processing node for TigerFish',
-    license='Apache-2.0',
+    maintainer="root",
+    maintainer_email="creeon99@gmail.com",
+    description="IMU data processing node for TigerFish",
+    license="Apache-2.0",
     extras_require={
-        'test': ['pytest'],
+        "test": ["pytest"],
     },
     entry_points={
-        'console_scripts': [
-            'process_imu_node = process_imu.process_imu_node:main'
-        ],
+        "console_scripts": ["process_imu_node = process_imu.process_imu_node:main"],
     },
 )

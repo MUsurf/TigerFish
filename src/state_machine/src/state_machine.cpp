@@ -14,7 +14,8 @@
 
 // This is where the real statemachine should go. Currently it is the same as the example.
 // --- FORWARD STATE ---
-class ForwardState : public yasmin::State {
+class ForwardState : public yasmin::State
+{
 public:
   ForwardState()
   : yasmin::State({"time_up", "running"}) {}
@@ -44,7 +45,8 @@ private:
 };
 
 // --- ROTATE STATE ---
-class RotateState : public yasmin::State {
+class RotateState : public yasmin::State
+{
 public:
   RotateState()
   : yasmin::State({"time_up", "running"}) {}                 //constructor - returns outcome "time up"
@@ -73,7 +75,8 @@ private:
   bool started_ = false;
 };
 
-class state_machine_node : public rclcpp::Node {
+class state_machine_node : public rclcpp::Node
+{
 public:
   state_machine_node()
   : Node("state_machine_node")
@@ -81,13 +84,13 @@ public:
 
     state_machine_ = std::make_shared<yasmin::StateMachine>(std::set<std::string>{"final_outcome"});
 
-        // Use unordered_map to match yasmin::Transitions
+    // Use unordered_map to match yasmin::Transitions
     std::unordered_map<std::string, std::string> forward_transitions = {{"time_up", "ROTATE"},
       {"running", "FORWARD"}};
     std::unordered_map<std::string, std::string> rotate_transitions = {{"time_up", "FORWARD"},
       {"running", "ROTATE"}};
 
-        // Add states with their transition maps
+    // Add states with their transition maps
     state_machine_->add_state("FORWARD", std::make_shared<ForwardState>(), forward_transitions);
     state_machine_->add_state("ROTATE", std::make_shared<RotateState>(), rotate_transitions);
 
@@ -97,7 +100,7 @@ public:
     yasmin_pub_ = std::make_unique<yasmin_viewer::YasminViewerPub>(state_machine_, "TigerFish_SM");
 
     timer_ = this->create_wall_timer(
-            std::chrono::milliseconds(100),
+      std::chrono::milliseconds(100),
       [this]() {(*state_machine_)();});
 
     RCLCPP_INFO(this->get_logger(), "State machine initialized successfully!");
@@ -109,7 +112,7 @@ private:
   std::unique_ptr<yasmin_viewer::YasminViewerPub> yasmin_pub_;
 };
 
-int main(int argc, char **argv)
+int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<state_machine_node>());

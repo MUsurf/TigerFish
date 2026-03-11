@@ -19,7 +19,7 @@ class PublisherNodeClass(Node):
         self.camera = cv2.VideoCapture(0, cv2.CAP_V4L2)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        
+
         # CvBridge --> convert OpenCV images to publishable ROS2 messages
         self.bridgeObject = CvBridge()
 
@@ -29,7 +29,9 @@ class PublisherNodeClass(Node):
         # The queue size for messages
         self.queueSize = 20
 
-        self.publisher = self.create_publisher(Image, self.topicNameFrames, self.queueSize)
+        self.publisher = self.create_publisher(
+            Image, self.topicNameFrames, self.queueSize
+        )
 
         self.periodCommunication = 0.02  # seconds
 
@@ -46,17 +48,17 @@ class PublisherNodeClass(Node):
 
         # Read the frame using camera
         success, frame = self.camera.read()
-       
+
         # Frame read success:
         if success:
-             # Resize the image
+            # Resize the image
             frame = cv2.resize(frame, (820, 640), interpolation=cv2.INTER_CUBIC)
             # Convert OpenCV frame --> ROS2 image msg
             ROS2ImageMessage = self.bridgeObject.cv2_to_imgmsg(frame, encoding="bgr8")
 
             # Publish the image
             self.publisher.publish(ROS2ImageMessage)
-            
+
             self.get_logger().info("Frame shape: " + frame.shape)
             self.get_logger().info("Img type: " + frame.dtype)
 

@@ -10,7 +10,7 @@ BUILD ?= cmake
 
 # Define the list of packages to work with. To ignore a package add it to skip packages 
 # ENSURE TO UPDATE SKIP PACKAGES if you are using an external github for example or external code
-ALL_FOLDERS = $(shell ls -d */ | sed 's|/||')
+ALL_FOLDERS = $(shell ls -d src/*/ | sed 's|src/||' | sed 's|/||')
 SKIP_PACKAGES = yasmin yasmin_ros yasmin_viewer yasmin_factory yasmin_viewer_msgs build install log TestImages output_images Helpers imu_cpp # update the packages here
 MY_PACKAGES = $(filter-out $(SKIP_PACKAGES), $(ALL_FOLDERS))
 
@@ -59,16 +59,18 @@ format:
 		--user "$(shell id -u):$(shell id -g)" \
 		-e FORCE_COLOR=1 \
 		$(IMAGE_NAME) bash -c \
-		"for pkg in $(MY_PACKAGES); do \
+		"source /opt/ros/humble/setup.bash && \
+		for pkg in $(MY_PACKAGES); do \
 			echo -e \"$(CYAN)--- Formatting \$$pkg ---$(NC)\"; \
-			pkg_path=/home/ros2_ws/src/TigerFish/\$$pkg; \
-			if find \$$pkg_path -name '*.py' | grep -q .; then \
-				ruff check \$$pkg_path --fix --no-cache --exclude 'launch,test,*_launch.py,test_*.py' --ignore D,ANN,ERA,EXE,INP,T201 || true; \
-				ruff format \$$pkg_path --no-cache --exclude 'launch,test,*_launch.py,test_*.py' || true; \
-			fi; \
-			source /home/ros2_ws/install/setup.bash && \
-			if find \$$pkg_path -name '*.cpp' -o -name '*.hpp' -o -name '*.h' | grep -q .; then \
-				ament_uncrustify --reformat \$$pkg_path || true; \
+			pkg_path=/home/ros2_ws/src/\$$pkg; \
+			if [ -d \"\$$pkg_path\" ]; then \
+				if find \$$pkg_path -name '*.py' | grep -q .; then \
+					ruff check \$$pkg_path --fix --no-cache --exclude 'launch,test,*_launch.py,test_*.py' --ignore D,ANN,ERA,EXE,INP,T201 || true; \
+					ruff format \$$pkg_path --no-cache --exclude 'launch,test,*_launch.py,test_*.py' || true; \
+				fi; \
+				if find \$$pkg_path -name '*.cpp' -o -name '*.hpp' -o -name '*.h' | grep -q .; then \
+					ament_uncrustify --reformat \$$pkg_path || true; \
+				fi; \
 			fi; \
 		done && \
 		echo -e \"$(GREEN)--- Formatting Complete! ---$(NC)\""
@@ -81,7 +83,7 @@ lint:
 		-e FORCE_COLOR=1 \
 		$(IMAGE_NAME) bash -c \
 		"for pkg in $(MY_PACKAGES); do \
-			pkg_path=/home/ros2_ws/src/TigerFish/\$$pkg; \
+			pkg_path=/home/ros2_ws/src/\$$pkg; \
 			if [ -d \"\$$pkg_path\" ] && find \"\$$pkg_path\" -name '*.py' | grep -q .; then \
 				echo -e \"$(CYAN)--- Linting \$$pkg ---$(NC)\"; \
 				ruff check \"\$$pkg_path\" \
@@ -91,6 +93,9 @@ lint:
 			fi; \
 		done && \
 		echo -e \"$(GREEN)--- Linting Passed! ---$(NC)\""
+
+list-pkgs:
+	@echo "Detected packages: $(MY_PACKAGES)"
 
 # Kill any running TigerFish-related containers if things get stuck
 clean-docker:

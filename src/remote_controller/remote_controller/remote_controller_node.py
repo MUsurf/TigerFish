@@ -5,11 +5,11 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 
-from remote_controller.app import \
-    make_http_rpy_get, \
-    make_http_str_post, \
-    make_http_controller_input_post \
-
+from remote_controller.app import (
+    make_http_rpy_get,
+    make_http_str_post,
+    make_http_controller_input_post,
+)
 from messages.msg import ControllerInput
 
 QOS = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
@@ -20,22 +20,22 @@ LEGAL_MODES = [
     "target_position",
 ]
 
+
 class RemoteControllerNode(Node):
     def __init__(self):
-        super().__init__('main')
+        super().__init__("main")
 
         # --- node's internally kept values ---
 
         self.odometry = Odometry()
-        self.odometry_stamp = datetime(1970,1,1)
+        self.odometry_stamp = datetime(1970, 1, 1)
 
         self.controller_input = ControllerInput()
-        self.controller_input_stamp = datetime(1970,1,1)
+        self.controller_input_stamp = datetime(1970, 1, 1)
 
         self.get_endpoints = {
             "get_odometry": make_http_rpy_get(
-                lambda: self.odometry,
-                lambda: self.odometry_stamp
+                lambda: self.odometry, lambda: self.odometry_stamp
             )
         }
 
@@ -43,51 +43,33 @@ class RemoteControllerNode(Node):
             "controller_input": make_http_controller_input_post(
                 self.update_controller_input
             ),
-            "command_line": make_http_str_post(
-                self.publish_command_line
-            )
+            "command_line": make_http_str_post(self.publish_command_line),
         }
 
         self.orientation_subscriber = self.create_subscription(
-            Odometry, 
-            'state_estimation', 
-            self._odom_cb, 
-            10
+            Odometry, "state_estimation", self._odom_cb, 10
         )
 
-
-        self.command_publisher = self.create_publisher(
-            String,
-            "command_line",
-            QOS
-        )
+        self.command_publisher = self.create_publisher(String, "command_line", QOS)
         self.controller_input_publisher = self.create_publisher(
-            ControllerInput,
-            "controller_input",
-            QOS
+            ControllerInput, "controller_input", QOS
         )
 
         self.timer = self.create_timer(1.0 / FREQUENCY, self._timer_callback)
 
-
     def _timer_callback(self):
 
         # publish topics
-        self.controller_input_publisher.publish(
-            self.controller_input
-        )
+        self.controller_input_publisher.publish(self.controller_input)
 
     def _odom_cb(self, msg: Odometry):
         self.odometry = msg
 
-
     def publish_command_line(self, cmd: str):
-        
+
         msg = String()
         msg.data = cmd
         self.command_publisher.publish(msg)
-
-
 
     def update_controller_input(self, msg: dict):
         self.controller_input_stamp = datetime.now()

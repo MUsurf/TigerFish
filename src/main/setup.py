@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 import os
-from glob import glob 
+from glob import glob
 
 package_name = "main"
 
@@ -16,16 +16,14 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer='root',
-    maintainer_email='creeon99@gmail.com',
-    description='Main mission control and launch package for TigerFish',
-    license='Apache-2.0',
+    maintainer="root",
+    maintainer_email="creeon99@gmail.com",
+    description="Main mission control and launch package for TigerFish",
+    license="Apache-2.0",
     extras_require={
-        'test': ['pytest'],
+        "test": ["pytest"],
     },
     entry_points={
-        'console_scripts': [
-            'main_node = main.main_node:main'
-        ],
+        "console_scripts": ["main_node = main.main_node:main"],
     },
 )

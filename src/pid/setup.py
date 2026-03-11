@@ -12,17 +12,17 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer='root',
-    maintainer_email='creeon99@gmail.com',
-    description='State estimation and PID control for TigerFish',
-    license='Apache-2.0',
+    maintainer="root",
+    maintainer_email="creeon99@gmail.com",
+    description="State estimation and PID control for TigerFish",
+    license="Apache-2.0",
     extras_require={
-        'test': ['pytest'],
+        "test": ["pytest"],
     },
     entry_points={
-        'console_scripts': [
-            'state_estimator_node = state_estimator.state_estimator:main',
-            'pid_node = state_estimator.pid_node:main'
+        "console_scripts": [
+            "state_estimator_node = state_estimator.state_estimator:main",
+            "pid_node = state_estimator.pid_node:main",
         ],
     },
 )

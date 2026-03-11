@@ -28,9 +28,7 @@ class SubscriberNodeClass(Node):
         ns = self.get_namespace().strip("/")
         camera_name = ns if ns else "camera"
 
-        self.base_dir = (
-            f"videos/processed_vid/{camera_name}_records"
-        )
+        self.base_dir = f"videos/processed_vid/{camera_name}_records"
         os.makedirs(self.base_dir, exist_ok=True)
 
         self.bag_dir = os.path.join(self.base_dir, f"bag_{timestamp}")

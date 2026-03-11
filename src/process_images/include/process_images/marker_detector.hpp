@@ -17,9 +17,10 @@ struct MarkerResult
 };
 
 
-class MarkerDetector{
+class MarkerDetector
+{
 public:
-        //takes the focal length of the camera; actual width of the markers
+  //takes the focal length of the camera; actual width of the markers
   MarkerDetector(double focal_length, double actual_width);
 
   MarkerResult find_markers(const cv::Mat & frame);

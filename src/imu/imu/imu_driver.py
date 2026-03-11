@@ -13,11 +13,12 @@ import adafruit_bno055
 import time
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
+
 kill_qos = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
     durability=DurabilityPolicy.TRANSIENT_LOCAL,
     history=HistoryPolicy.KEEP_LAST,
-    depth=1
+    depth=1,
 )
 
 BIAS_COUNT = 10
@@ -35,11 +36,10 @@ class ImuNode(Node):
 
         i2c = busio.I2C(board.SCL, board.SDA)
         self.sensor = adafruit_bno055.BNO055_I2C(i2c)
-        
-                
+
         time.sleep(0.1)
         # IMU-only fusion (gyro + accel, no mag)
-        self.sensor.mode = adafruit_bno055.IMUPLUS_MODE 
+        self.sensor.mode = adafruit_bno055.IMUPLUS_MODE
 
         # NDOF
         # self.sensor.mode = adafruit_bno055.NDOF_MODE
@@ -48,15 +48,11 @@ class ImuNode(Node):
 
         period = 1.0 / self.rate if self.rate > 0 else 0.01
         self.timer = self.create_timer(period, self._timer_cb)
-        
+
         self.kill_subscriber = self.create_subscription(
-            Bool,
-            'kill',
-            self.kill_cb,
-            kill_qos
+            Bool, "kill", self.kill_cb, kill_qos
         )
-        
-        
+
     def _timer_cb(self):
         # Get data from the $5 sensor
         quat = self.sensor.quaternion
@@ -97,7 +93,6 @@ class ImuNode(Node):
         imu_msg.linear_acceleration.z = az
         # self.get_logger().info(f'aX: {ax:.4f} aY: {ay:.4f} aZ: {az:.4f}')
 
-
         gx, gy, gz = gyro
         gx = gx
         gy = gy
@@ -107,19 +102,12 @@ class ImuNode(Node):
         imu_msg.angular_velocity.y = gy
         imu_msg.angular_velocity.z = gz
 
-<<<<<<< HEAD:imu/process_imu/imu.py
         imu_msg.orientation_covariance = [0.0] * 9  # Prob need this asp
         imu_msg.angular_velocity_covariance = [0.0] * 9  # ^
         imu_msg.linear_acceleration_covariance = [0.0] * 9  # ^
 
-=======
-        imu_msg.orientation_covariance = [0.0] * 9 # Prob need this asp
-        imu_msg.angular_velocity_covariance = [0.0] * 9 # ^
-        imu_msg.linear_acceleration_covariance = [0.0] * 9 # ^
-            
->>>>>>> clean_branch:src/imu/imu/imu_driver.py
         self.imu_pub.publish(imu_msg)
-    
+
     def kill_cb(self):
         return
 

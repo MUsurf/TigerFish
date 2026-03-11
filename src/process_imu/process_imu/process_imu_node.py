@@ -28,6 +28,7 @@ IMU_TO_BODY_Q = (0.0, 0.0, 0.0, 1.0)
 WAIT_COUNT = 75
 BIAS_COUNT = 75
 
+
 class ProcessImuNode(Node):
     def __init__(self):
         super().__init__("process_imu_node")
@@ -43,24 +44,24 @@ class ProcessImuNode(Node):
 
         self.mount_q = self._normalize_quat(*IMU_TO_BODY_Q)
         self.mount_R = self._quat_to_rotmat(self.mount_q)
-        
+
         self.g_bias_list = [(0.0, 0.0, 0.0) for _ in range(BIAS_COUNT)]
         self.a_bias_list = [(0.0, 0.0, 0.0) for _ in range(BIAS_COUNT)]
         self.q_bias_list = [(0.0, 0.0, 0.0, 0.0) for _ in range(BIAS_COUNT)]
         self.q_bias = (0.0, 0.0, 0.0, 1.0)
-        
+
         self.bias_counter = 0
         self.a_bias = (0.0, 0.0, 0.0)
         self.g_bias = (0.0, 0.0, 0.0)
         self.wait_counter = 0
-        
-        self.get_logger().info('Initialized Process Imu :)')
-        
+
+        self.get_logger().info("Initialized Process Imu :)")
+
     def _quat_inverse(self, q):
         x, y, z, w = q
         # assuming normalized quaternion
         return (-x, -y, -z, w)
-            
+
     def _normalize_quat(self, x, y, z, w):
         norm = math.sqrt(x * x + y * y + z * z + w * w)
         if norm == 0.0:
@@ -112,10 +113,9 @@ class ProcessImuNode(Node):
             R[2][0] * vx + R[2][1] * vy + R[2][2] * vz,
         )
 
-
-    def _imu_cb(self, msg : Imu):
+    def _imu_cb(self, msg: Imu):
         if self.wait_counter < WAIT_COUNT:
-            self.wait_counter+=1
+            self.wait_counter += 1
             return
         if self.bias_counter < BIAS_COUNT:
             self.a_bias_list[self.bias_counter] = (
@@ -129,18 +129,22 @@ class ProcessImuNode(Node):
                 msg.angular_velocity.y,
                 msg.angular_velocity.z,
             )
-            
+
             self.q_bias_list[self.bias_counter] = (
                 msg.orientation.x,
                 msg.orientation.y,
                 msg.orientation.z,
                 msg.orientation.w,
             )
-            
-            self.bias_counter+=1
+
+            self.bias_counter += 1
             if self.bias_counter == BIAS_COUNT:
-                self.a_bias = tuple(sum(vals)/len(self.a_bias_list) for vals in zip(*self.a_bias_list))
-                self.g_bias = tuple(sum(vals)/len(self.g_bias_list) for vals in zip(*self.g_bias_list))
+                self.a_bias = tuple(
+                    sum(vals) / len(self.a_bias_list) for vals in zip(*self.a_bias_list)
+                )
+                self.g_bias = tuple(
+                    sum(vals) / len(self.g_bias_list) for vals in zip(*self.g_bias_list)
+                )
 
                 # --- quaternion average with sign consistency (important) ---
                 q0 = self._normalize_quat(*self.q_bias_list[0])
@@ -148,35 +152,32 @@ class ProcessImuNode(Node):
                 for q in self.q_bias_list:
                     qn = self._normalize_quat(*q)
                     # keep quats in same hemisphere to avoid canceling
-                    if (q0[0]*qn[0] + q0[1]*qn[1] + q0[2]*qn[2] + q0[3]*qn[3]) < 0.0:
+                    if (
+                        q0[0] * qn[0] + q0[1] * qn[1] + q0[2] * qn[2] + q0[3] * qn[3]
+                    ) < 0.0:
                         qn = (-qn[0], -qn[1], -qn[2], -qn[3])
                     fixed.append(qn)
 
-                avg_q = tuple(sum(vals)/len(fixed) for vals in zip(*fixed))
+                avg_q = tuple(sum(vals) / len(fixed) for vals in zip(*fixed))
                 avg_q = self._normalize_quat(*avg_q)
 
                 # --- bias so that after mount_q, output is identity ---
                 mount_inv = self._quat_inverse(self.mount_q)
-                avg_inv   = self._quat_inverse(avg_q)
+                avg_inv = self._quat_inverse(avg_q)
                 self.q_bias = self._quat_multiply(mount_inv, avg_inv)
                 self.q_bias = self._normalize_quat(*self.q_bias)
             else:
                 return
-            
+
         qx = msg.orientation.x
         qy = msg.orientation.y
         qz = msg.orientation.z
         qw = msg.orientation.w
         qx, qy, qz, qw = self._normalize_quat(qx, qy, qz, qw)
-        current_orientation = (
-            qx, 
-            qy, 
-            qz, 
-            qw
-        )
+        current_orientation = (qx, qy, qz, qw)
         current_orientation = self._quat_multiply(self.q_bias, current_orientation)
         current_orientation = self._normalize_quat(*current_orientation)
-        
+
         current_ang_vel = (
             msg.angular_velocity.x - self.g_bias[0],
             msg.angular_velocity.y - self.g_bias[1],

@@ -12,25 +12,27 @@
 using namespace std::chrono_literals;
 
 
-class VideoPublisher : public rclcpp::Node {
+class VideoPublisher : public rclcpp::Node
+{
 public:
   VideoPublisher()
   : Node("video_publisher")
   {
-            //setup
+    //setup
     publisher_ = this->create_publisher<sensor_msgs::msg::Image>("camera/image_raw", 10);
 
-            //mp4 setup - update path to follow what is on your PC
+    //mp4 setup - update path to follow what is on your PC
     cap_.open("/home/ros2_ws/src/TestImages/FirstTestFeb2026.mp4");
 
-            // check that we opened the mp4 correctly
-    if(!cap_.isOpened()) {
-      RCLCPP_ERROR(this->get_logger(),
+    // check that we opened the mp4 correctly
+    if (!cap_.isOpened()) {
+      RCLCPP_ERROR(
+        this->get_logger(),
         "MP4 video in video publisher not able to be opened. -_(-_-)_-");
       return;
     }
 
-            //timer setup for how often the video is published
+    //timer setup for how often the video is published
     timer_ = this->create_wall_timer(33ms, std::bind(&VideoPublisher::timer_callback, this));
 
   }
@@ -40,11 +42,11 @@ private:
   {
     cv::Mat frame;
 
-    if(cap_.read(frame)) {
+    if (cap_.read(frame)) {
       auto msg = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", frame).toImageMsg();
       publisher_->publish(*msg);
     } else {
-                //reset video
+      //reset video
       cap_.set(cv::CAP_PROP_POS_FRAMES, 0);
       RCLCPP_INFO(this->get_logger(), "Video looped.");
     }

@@ -6,20 +6,21 @@
 
 namespace process_images
 {
-class img_preprocesser {
+class img_preprocesser
+{
 public:
-            //constructor - define the CLAHE clipping limit as well as the kernel to use
+  //constructor - define the CLAHE clipping limit as well as the kernel to use
   img_preprocesser(
     double CLAHE_clip_lim = 2.0, cv::Size tile_grid_size = cv::Size(8, 8),
     double gamma_ = 0.7);
 
-            // define the functions that will be used to improve the image
+  // define the functions that will be used to improve the image
   void CLAHE_Improve(const cv::Mat & input_img, cv::Mat & output_img);
   void color_enhance(const cv::Mat & input_img, cv::Mat & output_img);
   void gamma_correction(const cv::Mat & input_img, cv::Mat & output_img);
   void sharpness_correction(const cv::Mat & input_img, cv::Mat & output_img);
 
-            // // define a function to do all of the improvements at once - convenience function
+  // // define a function to do all of the improvements at once - convenience function
   void all_preprocessing(const cv::Mat & input_img, cv::Mat & output_img);
 
 private:
