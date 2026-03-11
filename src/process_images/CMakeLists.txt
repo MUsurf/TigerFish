@@ -30,8 +30,21 @@ add_executable(video_pub_node
 )
 
 # link libraries
-ament_target_dependencies(process_img rclcpp sensor_msgs cv_bridge OpenCV)
-ament_target_dependencies(video_pub_node rclcpp sensor_msgs cv_bridge OpenCV)
+
+target_include_directories(process_img PRIVATE 
+  include 
+  ${OpenCV_INCLUDE_DIRS}
+)
+target_include_directories(video_pub_node PRIVATE 
+  include 
+  ${OpenCV_INCLUDE_DIRS}
+)
+
+ament_target_dependencies(process_img rclcpp sensor_msgs cv_bridge)
+ament_target_dependencies(video_pub_node rclcpp sensor_msgs cv_bridge)
+
+target_link_libraries(process_img ${OpenCV_LIBRARIES})
+target_link_libraries(video_pub_node ${OpenCV_LIBRARIES})
 
 install(TARGETS 
   process_img

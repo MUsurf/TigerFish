@@ -1,10 +1,6 @@
 from setuptools import find_packages, setup
 
-<<<<<<< HEAD:state_estimator/setup.py
-package_name = "state_estimator"
-=======
-package_name = 'pid'
->>>>>>> clean_branch:src/pid/setup.py
+package_name = "pid"
 
 setup(
     name=package_name,
@@ -16,28 +12,17 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-<<<<<<< HEAD:state_estimator/setup.py
-    maintainer="root",
-    maintainer_email="root@todo.todo",
-    description="TODO: Package description",
-    license="Apache-2.0",
-    tests_require=["pytest"],
-    entry_points={
-        "console_scripts": ["state_estimator = state_estimator.state_estimator:main"],
-=======
     maintainer='root',
     maintainer_email='creeon99@gmail.com',
-    description='TODO: Package description',
+    description='State estimation and PID control for TigerFish',
     license='Apache-2.0',
     extras_require={
-        'test': [
-            'pytest',
-        ],
+        'test': ['pytest'],
     },
     entry_points={
         'console_scripts': [
-            'pid_node=pid.pid_node:main'
+            'state_estimator_node = state_estimator.state_estimator:main',
+            'pid_node = state_estimator.pid_node:main'
         ],
->>>>>>> clean_branch:src/pid/setup.py
     },
 )

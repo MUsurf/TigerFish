@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
-#include "cv_bridge/cv_bridge.hpp"
+#include <cv_bridge/cv_bridge.h>
 
 //NOTE: this currently is meant for testing with mp4s
 // to modify this for the actual sub, we may want to look into intra-process communication to avoid making copies of video

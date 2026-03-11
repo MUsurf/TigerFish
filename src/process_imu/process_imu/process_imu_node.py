@@ -6,11 +6,6 @@ from rclpy.node import Node
 from sensor_msgs.msg import Imu
 
 ALPHA = 0.2
-<<<<<<< HEAD:process_imu/process_imu/process_imu.py
-yaw = math.radians(45)  # This should be for a 45 degree yaw rotate :)
-IMU_TO_BODY_Q = (0.0, 0.0, math.sin(yaw / 2), math.cos(yaw / 2))
-
-=======
 
 # Yaw at 45 degrees
 # yaw = math.radians(45)
@@ -32,7 +27,6 @@ IMU_TO_BODY_Q = (0.0, 0.0, 0.0, 1.0)
 
 WAIT_COUNT = 75
 BIAS_COUNT = 75
->>>>>>> clean_branch:src/process_imu/process_imu/process_imu_node.py
 
 class ProcessImuNode(Node):
     def __init__(self):
@@ -49,11 +43,6 @@ class ProcessImuNode(Node):
 
         self.mount_q = self._normalize_quat(*IMU_TO_BODY_Q)
         self.mount_R = self._quat_to_rotmat(self.mount_q)
-<<<<<<< HEAD:process_imu/process_imu/process_imu.py
-
-        self.get_logger().info("Initialized Process Imu :)")
-
-=======
         
         self.g_bias_list = [(0.0, 0.0, 0.0) for _ in range(BIAS_COUNT)]
         self.a_bias_list = [(0.0, 0.0, 0.0) for _ in range(BIAS_COUNT)]
@@ -72,7 +61,6 @@ class ProcessImuNode(Node):
         # assuming normalized quaternion
         return (-x, -y, -z, w)
             
->>>>>>> clean_branch:src/process_imu/process_imu/process_imu_node.py
     def _normalize_quat(self, x, y, z, w):
         norm = math.sqrt(x * x + y * y + z * z + w * w)
         if norm == 0.0:
@@ -124,9 +112,6 @@ class ProcessImuNode(Node):
             R[2][0] * vx + R[2][1] * vy + R[2][2] * vz,
         )
 
-<<<<<<< HEAD:process_imu/process_imu/process_imu.py
-    def _imu_cb(self, msg: Imu):
-=======
 
     def _imu_cb(self, msg : Imu):
         if self.wait_counter < WAIT_COUNT:
@@ -178,15 +163,11 @@ class ProcessImuNode(Node):
             else:
                 return
             
->>>>>>> clean_branch:src/process_imu/process_imu/process_imu_node.py
         qx = msg.orientation.x
         qy = msg.orientation.y
         qz = msg.orientation.z
         qw = msg.orientation.w
         qx, qy, qz, qw = self._normalize_quat(qx, qy, qz, qw)
-<<<<<<< HEAD:process_imu/process_imu/process_imu.py
-        current_orientation = (qx, qy, qz, qw)
-=======
         current_orientation = (
             qx, 
             qy, 
@@ -196,7 +177,6 @@ class ProcessImuNode(Node):
         current_orientation = self._quat_multiply(self.q_bias, current_orientation)
         current_orientation = self._normalize_quat(*current_orientation)
         
->>>>>>> clean_branch:src/process_imu/process_imu/process_imu_node.py
         current_ang_vel = (
             msg.angular_velocity.x - self.g_bias[0],
             msg.angular_velocity.y - self.g_bias[1],

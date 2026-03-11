@@ -1,5 +1,5 @@
 # VARIABLES ---------------------------------------------------------
-IMAGE_NAME = ros2-jazzy-app
+IMAGE_NAME = ros2-humble-app
 WS_PATH = /home/ros2_ws
 
 # new package creation variables -
@@ -55,7 +55,7 @@ test:
 # format should be run before the lint command. It will format your code and catch most formatting bugs
 format:
 	docker run --rm \
-		-v "$(CURDIR):/home/ros2_ws/src/TigerFish" \
+		-v "$(CURDIR):/home/ros2_ws" \
 		--user "$(shell id -u):$(shell id -g)" \
 		-e FORCE_COLOR=1 \
 		$(IMAGE_NAME) bash -c \
@@ -76,7 +76,7 @@ format:
 # Lint will check the code for formatting
 lint:
 	docker run --rm \
-		-v "$(CURDIR):/home/ros2_ws/src/TigerFish" \
+		-v "$(CURDIR):/home/ros2_ws" \
 		--user "$(shell id -u):$(shell id -g)" \
 		-e FORCE_COLOR=1 \
 		$(IMAGE_NAME) bash -c \
@@ -108,10 +108,10 @@ view-sm:
 	-docker stop tigerfish_sm_viewer > /dev/null 2>&1
 	@echo -e "\033[0;32m--- Starting YASMIN Viewer at http://127.0.0.1:5000 ---\033[0m"
 	docker run --rm -it \
-		-v "$(CURDIR):/home/ros2_ws/src/TigerFish" \
+		-v "$(CURDIR):/home/ros2_ws" \
 		-p 5000:5000 \
 		--name tigerfish_sm_viewer \
-		ros2-jazzy-app bash -c \
+		ros2-humble-app bash -c \
 		"source /home/ros2_ws/install/setup.bash && \
 		 (ros2 run yasmin_viewer yasmin_viewer_node --ros-args -p host:=0.0.0.0 > /dev/null 2>&1 &) && \
 		 echo -e '\033[0;33m--- State Machine running (Logs Muted) ---\033[0m' && \
@@ -136,7 +136,7 @@ create_pkg:
 	
 	# 1. Base package creation
 	docker run --rm \
-		-v "$(CURDIR):/home/ros2_ws/src/TigerFish" \
+		-v "$(CURDIR):/home/ros2_ws" \
 		--user "$(shell id -u):$(shell id -g)" \
 		$(IMAGE_NAME) bash -c "cd /home/ros2_ws/src/TigerFish && \
 		if [ \"$(BUILD)\" = \"python\" ]; then \
@@ -149,7 +149,7 @@ create_pkg:
 ifeq ($(TYPE), msg)
 	@echo -e "$(CYAN)--- Configuring interface generation for $(NAME) ---$(NC)"
 	docker run --rm \
-		-v "$(CURDIR):/home/ros2_ws/src/TigerFish" \
+		-v "$(CURDIR):/home/ros2_ws" \
 		--user "$(shell id -u):$(shell id -g)" \
 		$(IMAGE_NAME) bash -c "mkdir -p /home/ros2_ws/src/TigerFish/$(NAME)/msg && \
 		printf 'int64 data\nstring status\n' > /home/ros2_ws/src/TigerFish/$(NAME)/msg/MyMessage.msg && \
@@ -168,7 +168,7 @@ graph:
 # opens a ros shell
 shell:
 	docker run --rm -it \
-		-v "$(CURDIR):/home/ros2_ws/src/TigerFish" \
+		-v "$(CURDIR):/home/ros2_ws" \
 		--net=host \
 		$(IMAGE_NAME) /bin/bash
 

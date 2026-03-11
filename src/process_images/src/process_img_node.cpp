@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include "process_images/img_preprocessing.hpp"
 #include "sensor_msgs/msg/image.hpp"
-#include "cv_bridge/cv_bridge.hpp"
+#include <cv_bridge/cv_bridge.h>
 #include "process_images/img_preprocessing.hpp"
 #include "process_images/marker_detector.hpp"
 
