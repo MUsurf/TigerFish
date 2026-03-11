@@ -17,11 +17,17 @@ archive
 
 # Ignore catkin files
 devel
-build
+build/
+log/
+install/
 
 # Ignore documentation files to be built locally
 Generated
 
+# Ignore python venv
+.venv/
+
+videos/
 
 # Ignore the IGNORE tag
 #*IGNORE*

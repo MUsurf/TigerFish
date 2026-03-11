@@ -11,8 +11,13 @@ services:
     # Allow access to hardware on the pi.
     devices:
         - "/dev:/dev"
-    tty: true
-    stdin_open: true
+        - /dev/gpiochip0:/dev/gpiochip0
+        - /dev/media4:/dev/media4
+        - "/dev/v4l/by-id/usb-046d_HD_Pro_Webcam_C920_8851116F-video-index0:/dev/video0"
+    ports:
+        - "5000:5000"
+    group_add:
+      - video
 
 # A service for developing when you don't have a Raspberry Pi.
   no-pi:
