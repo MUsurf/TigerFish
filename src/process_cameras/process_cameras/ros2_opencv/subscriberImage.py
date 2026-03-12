@@ -27,7 +27,7 @@ class SubscriberNodeClass(Node):
         )
 
         # Name must match publisher node
-        self.topicNameFrames = "topic_camera_image"
+        self.topicNameFrames = "image_raw"
 
         self.queueSize = 20
 

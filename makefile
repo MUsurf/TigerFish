@@ -247,4 +247,12 @@ monocularTest:
 
 runRos2_openCV:
 	ros2 launch ros2_opencv camera_system.launch.py cam_ids:=0,1 record_type:=rosbag
+
+process_images:
+	ros2 run process_images camera_publisher_node --ros-args -p camera_index:=0
+
+IMAGE_TOPIC_NAME = image_raw
+record:
+	@echo "Starting Video Recording"
+	ros2 run process_images subscriber_node --ros-args --remap topic_camera_image:=$(IMAGE_TOPIC_NAME)
 ### END IN DOCKER CONTAINER COMMANDS - ADD NEW COMMANDS ABOVE ##################

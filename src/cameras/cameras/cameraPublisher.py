@@ -18,25 +18,30 @@ class PublisherNodeClass(Node):
         self.declare_parameter("camera_index", 0)
         idx = self.get_parameter("camera_index").value
 
-        pi_pipeline = (
-            f"libcamerasrc camera-name={idx} autofocus-mode=1 ! "
-            "video/x-raw, width=800, height=600 ! "
-            "videoconvert ! video/x-raw, format=BGR ! appsink"
-        )
+        # pi_pipeline = (
+        #     f"libcamerasrc camera-name={idx} autofocus-mode=1 ! "
+        #     "video/x-raw, width=800, height=600 ! "
+        #     "videoconvert ! video/x-raw, format=BGR ! appsink"
+        # )
 
         self.get_logger().info("Attempting to open camera...")
-        self.camera = cv2.VideoCapture(pi_pipeline, cv2.CAP_GSTREAMER)
+        # self.camera = cv2.VideoCapture(pi_pipeline, cv2.CAP_GSTREAMER)
 
+        self.camera = cv2.VideoCapture(idx)
+        self.camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fouorcc(*'MJPG'))
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
+
+        
         if not self.camera.isOpened():
-            self.get_logger().warn(
-                "Pi (3) camera does not work :'( Initiating a backup option :)"
-            )
-            self.camera = cv2.VideoCapture(idx)
-            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
-            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
-        else:
-            self.get_logger().info("Pi camera is set up!!")
+            self.get_logger().error(
+                "Camera hardware not found."
 
+            )
+            return
+            #TODO: fix failure - do we want to do emergency exit in the case of the cameras not working?
+        else:
+            self.get_logger().info(f"Camera opened at {self.camera.get(cv2.CAP_PROP_FRAME_WIDTH)}x{self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
         # CvBridge --> convert OpenCV images to publishable ROS2 messages
         self.bridgeObject = CvBridge()
         self.topicNameFrames = (
