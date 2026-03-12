@@ -1,0 +1,5 @@
+To run the state machine visualizer:
+- run: source /home/ros2_ws/install/setup.bash
+- ensure that the state machine that you need to run is running, eg: ros2 run state_machine state_machine_node
+- to start the python webserver for the node visualizer run: ros2 run yasmin_viewer yasmin_viewer_node --ros-args -p host:='0.0.0.0'
+- this should create a python visualizer in the docker container. To see it go to localhost:5000 in your web browser :) 
