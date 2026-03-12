@@ -12,6 +12,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(messages REQUIRED)
 
 include_directories(
   include
@@ -40,8 +41,8 @@ target_include_directories(video_pub_node PRIVATE
   ${OpenCV_INCLUDE_DIRS}
 )
 
-ament_target_dependencies(process_img rclcpp sensor_msgs cv_bridge)
-ament_target_dependencies(video_pub_node rclcpp sensor_msgs cv_bridge)
+ament_target_dependencies(process_img rclcpp sensor_msgs cv_bridge messages)
+ament_target_dependencies(video_pub_node rclcpp sensor_msgs cv_bridge messages)
 
 target_link_libraries(process_img ${OpenCV_LIBRARIES})
 target_link_libraries(video_pub_node ${OpenCV_LIBRARIES})

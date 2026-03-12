@@ -51,7 +51,7 @@ test:
 			--ctest-args -E '(uncrustify|cpplint|flake8|lint_cmake|xmllint|copyright|pep257)' && \
 		colcon test-result --all --verbose"
 
-# lint + format is not really helpful atm...
+
 # format should be run before the lint command. It will format your code and catch most formatting bugs
 format:
 	docker run --rm \

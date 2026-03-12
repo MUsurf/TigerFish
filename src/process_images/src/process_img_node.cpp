@@ -6,6 +6,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include "process_images/img_preprocessing.hpp"
 #include "process_images/marker_detector.hpp"
+// #include "messages/msg/marker_detection.hpp"
 
 
 class processImgNode : public rclcpp::Node
@@ -21,7 +22,8 @@ public:
     preprocesser_ = std::make_unique<process_images::img_preprocesser>(clipLimit, kernel);
     marker_detector_ = std::make_unique<MarkerDetector>(600.0, 1.2);
 
-
+    // create a publisher for marker data 
+    // marker_pub_ = this->create_publisher<tiger_fish_msgs::msg::MarkerDetection>("vision/marker_data", 10);
     //create a publisher for the video feed
     publisher_ = this->create_publisher<sensor_msgs::msg::Image>(
       "camera/image_processed", 10
@@ -119,9 +121,18 @@ private:
       preprocesser_->all_preprocessing(raw_frame, processed_frame);
 
       // detect markers
-      MarkerResult result = marker_detector_->find_markers(processed_frame);
-      marker_detector_->visualize_markers(processed_frame, result);
+      MarkerResult marker_result = marker_detector_->find_markers(processed_frame);
+      marker_detector_->visualize_markers(processed_frame, marker_result);
 
+      // auto marker_msg = tiger_fish_msgs::msg::MarkerDetection();
+
+      // marker_msg.header = msg->header;
+      // marker_msg.found = marker_result.found;
+      // marker_msg.x = marker_result.norm_position.x;
+      // marker_msg.y = marker_result.norm_position.y;
+      // marker_msg.depth = marker_result.depth;
+      // marker_msg.angle = marker_result.angle;
+      // marker_pub_->publish(marker_msg);
 
       //stitch images
       cv::Mat combined_frame = StitchImg(raw_frame, processed_frame);
@@ -137,6 +148,8 @@ private:
       cv_bridge::CvImage img_bridge = cv_bridge::CvImage(header, "bgr8", processed_frame);
       publisher_->publish(*img_bridge.toImageMsg());
 
+      
+
     } catch (cv_bridge::Exception & e) {
       RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
     }
@@ -148,6 +161,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
   std::unique_ptr<MarkerDetector> marker_detector_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
+  // rclcpp::Publisher<tiger_fish_msgs::msg::MarkerDetection>::SharedPtr marker_pub_;
 
   cv::VideoWriter video_writer_;
   bool is_writer_initialized_ = false;
