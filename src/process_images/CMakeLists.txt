@@ -23,6 +23,7 @@ add_executable(process_img
   src/process_img_node.cpp
   src/img_preprocessing.cpp
   src/marker_detector.cpp
+  src/goal_detection.cpp
 )
 
 add_executable(video_pub_node
