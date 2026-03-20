@@ -1,5 +1,5 @@
 #include <opencv2/opencv.hpp>
-#include "process_images/goal_detection.hpp"
+#include "process_images/gate_detection.hpp"
 #include <iostream>
 #include <algorithm>
 #include <random>
@@ -10,7 +10,7 @@
 
 // This is a helper that I am using to abstract away openCV's weird HSV scaling. which goes from 0-179 for H, 0-255 for S and V
 // pluging it in like this allows us to visualize the color space with commonly available color pickers.
-cv::Scalar Goal_detection::hsvToOpenCV(float h_deg, float s_pct, float v_pct)
+cv::Scalar Gate_detection::hsvToOpenCV(float h_deg, float s_pct, float v_pct)
 {
     // Convert
   int h = static_cast<int>(h_deg / 2.0f);     // 0-360 -> 0-180 (OpenCV uses 0-179)
@@ -31,7 +31,7 @@ cv::Scalar Goal_detection::hsvToOpenCV(float h_deg, float s_pct, float v_pct)
 // helper function to fit line
 // Detect up to maxLines line models from a point cloud using iterative RANSAC,
 // removing inliers after each detection (multi-line extraction).
-std::vector<cv::Vec4f> Goal_detection::ransacDetectLines(
+std::vector<cv::Vec4f> Gate_detection::ransacDetectLines(
   std::vector<cv::Point2f> points,     // pass by value on purpose (we mutate / shrink it)
   int maxLines,
   int iterations,
@@ -131,10 +131,10 @@ std::vector<cv::Vec4f> Goal_detection::ransacDetectLines(
   return linesOut;
 }
 
-GoalResult Goal_detection::find_gate(
+GateResult Gate_detection::find_gate(
   const cv::Mat & frame) // I don't think we need the lines input
 {
-  GoalResult result;
+  GateResult result;
   cv::Mat frameProc = frame.clone();
 
   // ===== RED MASK (HSV) =====
@@ -147,16 +147,16 @@ GoalResult Goal_detection::find_gate(
 
   cv::inRange(
         hsv,
-        Goal_detection::hsvToOpenCV(0.0f, 30.0f, 30.0f),
-        Goal_detection::hsvToOpenCV(40.0f, 100.0f, 100.0f),
+        Gate_detection::hsvToOpenCV(0.0f, 30.0f, 30.0f),
+        Gate_detection::hsvToOpenCV(40.0f, 100.0f, 100.0f),
         maskRed1
   );
 
     // maskRed2: 315°..360°
   cv::inRange(
         hsv,
-        Goal_detection::hsvToOpenCV(315.0f, 30.0f, 30.0f),
-        Goal_detection::hsvToOpenCV(360.0f, 100.0f, 100.0f),
+        Gate_detection::hsvToOpenCV(315.0f, 30.0f, 30.0f),
+        Gate_detection::hsvToOpenCV(360.0f, 100.0f, 100.0f),
         maskRed2
   );
   cv::bitwise_or(maskRed1, maskRed2, colorMask);
@@ -208,7 +208,7 @@ GoalResult Goal_detection::find_gate(
     return result; // Not enough points to fit a line
   }
 
-  std::vector<cv::Vec4f> ransacLines = Goal_detection::ransacDetectLines(edgePoints);
+  std::vector<cv::Vec4f> ransacLines = Gate_detection::ransacDetectLines(edgePoints);
   result.lines = ransacLines;
   result.found = true;
 
@@ -216,7 +216,7 @@ GoalResult Goal_detection::find_gate(
 }
 
 // Draw an infinite line (vx,vy,x0,y0) clipped to image bounds
-void Goal_detection::drawFitLines(
+void Gate_detection::drawFitLines(
   const std::vector<cv::Vec4f> & lines,
   cv::Mat & image,
   const cv::Scalar & color,
@@ -235,10 +235,10 @@ void Goal_detection::drawFitLines(
   }
 }
 
-void Goal_detection::visualize_lines(
+void Gate_detection::visualize_lines(
   cv::Mat & display_frame,
-  const GoalResult & result)
+  const GateResult & result)
 {
   const auto & lines = result.lines;
-  Goal_detection::drawFitLines(lines, display_frame, cv::Scalar(255, 0, 0), 3);
+  Gate_detection::drawFitLines(lines, display_frame, cv::Scalar(255, 0, 0), 3);
 }

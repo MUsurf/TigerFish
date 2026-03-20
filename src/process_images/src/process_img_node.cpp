@@ -3,9 +3,9 @@
 #include <opencv2/opencv.hpp>
 #include "process_images/img_preprocessing.hpp"
 #include "sensor_msgs/msg/image.hpp"
-#include "cv_bridge/cv_bridge.hpp"
+#include "cv_bridge/cv_bridge.h"
 #include "process_images/marker_detector.hpp"
-#include "process_images/goal_detection.hpp"
+#include "process_images/gate_detection.hpp"
 
 class processImgNode : public rclcpp::Node
 {
@@ -19,7 +19,7 @@ public:
 
     preprocesser_ = std::make_unique<process_images::img_preprocesser>(clipLimit, kernel);
     marker_detector_ = std::make_unique<MarkerDetector>(600.0, 1.2);
-    goal_detector_ = std::make_unique<Goal_detection>();
+    goal_detector_ = std::make_unique<Gate_detection>();
 
     // create a publisher for the video feed
     publisher_ = this->create_publisher<sensor_msgs::msg::Image>(
@@ -122,8 +122,8 @@ private:
       // marker_detector_->visualize_markers(processed_frame, marker_detector_result);
 
       // add the line detection stuff here, pull in result
-      GoalResult goal_result = goal_detector_->find_gate(processed_frame);
-      goal_detector_->visualize_lines(processed_frame, goal_result);
+      GateResult gate_result = goal_detector_->find_gate(processed_frame);
+      goal_detector_->visualize_lines(processed_frame, gate_result);
 
       // stitch images
       cv::Mat combined_frame = StitchImg(raw_frame, processed_frame);
@@ -148,7 +148,7 @@ private:
   std::unique_ptr<process_images::img_preprocesser> preprocesser_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
   std::unique_ptr<MarkerDetector> marker_detector_;
-  std::unique_ptr<Goal_detection> goal_detector_;
+  std::unique_ptr<Gate_detection> goal_detector_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
 
   cv::VideoWriter video_writer_;

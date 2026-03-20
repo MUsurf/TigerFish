@@ -4,21 +4,21 @@
 #include <algorithm>
 #include <random>
 
-struct GoalResult
+struct GateResult
 {
   std::vector<cv::Vec4f> lines;   // (vx,vy,x0,y0) format for each line
   bool found = false; // whether any lines were found
 };
 
-class Goal_detection
+class Gate_detection
 {
 public:
-  Goal_detection() = default;
+  Gate_detection() = default;
 
-  static GoalResult find_gate(const cv::Mat & frame);
+  static GateResult find_gate(const cv::Mat & frame);
 // returns ransac lines in (vx,vy,x0,y0) format, where (vx,vy) is the normalized direction vector and (x0,y0) is a point on the line
 
-  static void visualize_lines(cv::Mat & display_frame, const GoalResult & result);
+  static void visualize_lines(cv::Mat & display_frame, const GateResult & result);
 // draws the ransac lines on the provided frame, for visualization purposes
 
 private:
