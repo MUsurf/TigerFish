@@ -1,0 +1,4 @@
+#ifndef PREQUAL_GATE_HPP
+#define PREQUAL_GATE_HPP
+
+#endif // PREQUAL_GATE_HPP

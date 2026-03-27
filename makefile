@@ -24,7 +24,7 @@ NC := \033[0m # No Color
 # Note: I would like to give Gemini AI credit in the making of this file.
 # You should run build if you are setting up. Otherwise ruff linter+formatter won't be recognized, for example
 
-.PHONY: build test buildTest lint format formatLint view-sm clean-docker stop-view-sm checkAll create_pkg gui-graph shell graph view-cam dashboard reconfigure plot rviz runRos2_openCV calibrate_all
+.PHONY: build test buildTest lint format formatLint view-sm clean-docker stop-view-sm checkAll create_pkg gui-graph shell graph view-cam dashboard reconfigure plot rviz runRos2_openCV calibrate_all clean_ros build_ros fix_build
 
 # builds and then runs a test to make sure everything compiles nicely
 buildTest: build test
@@ -247,4 +247,24 @@ monocularTest:
 
 runRos2_openCV:
 	ros2 launch ros2_opencv camera_system.launch.py cam_ids:=0,1 record_type:=rosbag
+
+clean_ros:
+	rm -rf build/ install/ log/
+
+build_ros:
+	colcon build --symlink-install
+
+fix_build:
+	rm -rf build/ install/ log/
+	colcon build --symlink-install
+
+processImgNode:
+	ros2 run process_images process_img
+
+vid_publisher:
+	ros2 run process_images video_pub_node
+
+rqt_image_view_in_container:
+	ros2 run rqt_image_view rqt_image_view
+	
 ### END IN DOCKER CONTAINER COMMANDS - ADD NEW COMMANDS ABOVE ##################

@@ -7,9 +7,6 @@ from yasmin.state import State
 from yasmin.state_machine import StateMachine
 from yasmin_viewer.yasmin_viewer_pub import YasminViewerPub
 
-from messages.msg import PIDInput
-from messages.msg import depth
-
 
 class State1(State):
     def __init__(self):
@@ -17,11 +14,10 @@ class State1(State):
         super().__init__(outcomes=["next_state"])
 
     def execute(self) -> str:
-        
+
         timeMe = time.time()
 
-        while(timeMe + 2 > time.time()):
-             
+        while timeMe + 2 > time.time():
             # do something
 
             print("state 1")
@@ -30,17 +26,17 @@ class State1(State):
 
         return "next_state"
 
+
 class State2(State):
     def __init__(self):
         # valid outcomes for this state
         super().__init__(outcomes=["next_state"])
 
     def execute(self) -> str:
-        
+
         timeMe = time.time()
 
-        while(timeMe + 2 > time.time()):
-             
+        while timeMe + 2 > time.time():
             # do something
 
             print("state 1")
@@ -57,9 +53,13 @@ class StateMachineNode(Node):
         # terminal outcomes
         self.state_machine = StateMachine(outcomes={"complete"})
 
-        self.state_machine.add_state("STATE1", State1(), transitions={"next_state" : "STATE2"})
+        self.state_machine.add_state(
+            "STATE1", State1(), transitions={"next_state": "STATE2"}
+        )
 
-        self.state_machine.add_state("START2", State2(), transitions={"next_state" : "STATE1"})
+        self.state_machine.add_state(
+            "START2", State2(), transitions={"next_state": "STATE1"}
+        )
 
         self.state_machine.set_start_state("STATE1")
 
