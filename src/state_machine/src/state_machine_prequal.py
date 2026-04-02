@@ -20,17 +20,18 @@ class StartingState(State):
         msg = PIDInput()
         msgDepth = depth()
 
-        if(msgDepth.depth < 5):
 
-            # goes down for 0.2 seconds at 0.2 power
-            msg.x_mode = False
-            msg.z_mode = False
-            msg.roll_mode = False
-            msg.pitch_mode = False
-            msg.yaw_mode = False
-            msg.y_power = -0.2
+        msg.x_mode = True
+        msg.y_mode = True
+        msg.z_mode = True
+        msg.roll_mode = True
+        msg.pitch_mode = True
+        msg.yaw_mode = True
+        msg.z_setpoint = 3
 
-            time.sleep(0.2)
+        while(msgDepth < 3):
+            
+            time.sleep(0.1)
 
         return "finished"
 
