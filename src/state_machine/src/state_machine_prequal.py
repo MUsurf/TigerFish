@@ -30,18 +30,24 @@ class StartingState(State):
         msg.z_setpoint = 3
 
         while(msgDepth < 3):
-            
+
             time.sleep(0.1)
 
         return "finished"
 
 
-class StateMachineNode(Node):
+class StateMachine(Node):
     def __init__(self):
         super().__init__("state_machine_node")
 
+        self.depth_sensor_subscriber = self.create_subscription(
+            Float32, "depth", self.depth_sensor_cb, 10
+        )
+
         # terminal outcomes
         self.state_machine = StateMachine(outcomes={"complete"})
+
+        self.currentDepth = 0
 
         self.state_machine.add_state("START", StartingState(), transitions={"finished" : "IDK"})
 
@@ -53,10 +59,17 @@ class StateMachineNode(Node):
 
         self.get_logger().info("State machine initialized successfully!")
 
+    def getDepth(self):
+        return self.currentDepth
+    
+    def depth_sensor_cb(self, msg: Float32):
+        self.get_logger().info(f"{msg.data}")
+        self.currentDepth = msg.data
+
 
 def main(args=None):
     rclpy.init(args=args)
-    node = StateMachineNode()
+    node = StateMachine()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
