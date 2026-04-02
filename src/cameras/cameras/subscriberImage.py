@@ -28,9 +28,7 @@ class SubscriberNodeClass(Node):
         ns = self.get_namespace().strip("/")
         camera_name = ns if ns else "camera"
 
-        self.base_dir = (
-            f"videos/processed_vid/{camera_name}_records"
-        )
+        self.base_dir = f"/home/tigerfish/TigerFish/videos/processed_vid/{camera_name}_records"
         os.makedirs(self.base_dir, exist_ok=True)
 
         self.bag_dir = os.path.join(self.base_dir, f"bag_{timestamp}")
@@ -42,7 +40,7 @@ class SubscriberNodeClass(Node):
             self.setup_rosbag()
             self.get_logger().info(f"recording to rosbag at {self.base_dir}")
         else:
-            self.output_path = os.path.join(self.base_dir, f"{camera_name}_raw_log.mp4")
+            self.output_path = os.path.join(self.base_dir, f"{camera_name}_raw_log_{timestamp}.mp4") #mp4
             self.get_logger().info(f"recording to mp4 at {self.output_path}")
 
         # Name must match publisher node
@@ -71,7 +69,7 @@ class SubscriberNodeClass(Node):
 
         self.bag_writer.create_topic(topic_info)
 
-    # Callback function that displays the recieved image
+    # Callback function that writes the recieved image
     def listener_callbackFunction(self, imageMessage):
         # Display msg to console
         # self.get_logger().info("The image frame is received")
@@ -97,7 +95,7 @@ class SubscriberNodeClass(Node):
             # in mp4v format! UwU
             if self.video_writer is None:
                 os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
-                fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # mpv4 format initialization
+                fourcc = cv2.VideoWriter_fourcc(*"avc1")  # mp4v format initialization
                 height, width = openCVImage.shape[:2]
 
                 self.video_writer = cv2.VideoWriter(
@@ -106,7 +104,11 @@ class SubscriberNodeClass(Node):
                     25.0,  # frames
                     (width, height),  # frame size
                 )
+                
+                self.get_logger().info(f"Absolute path: {os.path.abspath(self.output_path)}")
                 self.get_logger().info(f"VideoWriter initialized at {width}x{height}")
+
+
             self.video_writer.write(openCVImage)  # write the video
 
     def destroy_node(self):
@@ -132,9 +134,12 @@ def main(args=None):
         rclpy.spin(subscriberNode)
     except Exception:
         print("CameraSubscriber spin failure.")
+    except KeyboardInterrupt:
+        subscriberNode.get_logger().info("KeyboardInterrupt received (Ctrl+C)")   
     finally:
         subscriberNode.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

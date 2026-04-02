@@ -5,15 +5,26 @@ services:
     build:
       context: ./
       dockerfile: ./Dockerfile
+      network: host
+      pull: false
     privileged: true
+    network_mode: host
     profiles:
       - pi
     # Allow access to hardware on the pi.
-    devices:
-        - "/dev:/dev"
-        - /dev/gpiochip0:/dev/gpiochip0
-        - /dev/media4:/dev/media4
-        - "/dev/v4l/by-id/usb-046d_HD_Pro_Webcam_C920_8851116F-video-index0:/dev/video0"
+    volumes:
+      - ./videos:/home/tigerfish/TigerFish/videos
+      - /dev:/dev
+      - .:/home/ros2_ws/src
+      - ./output_images:/home/ros2_ws/output_images
+    # devices:
+    #     - "/dev:/dev"
+    #     - /dev/gpiochip0:/dev/gpiochip0
+    #     - /dev/media4:/dev/media4
+    #     - "/dev/video0:/dev/video0"
+    #     - "/dev/video1:/dev/video1"
+    #     - "/dev/video2:/dev/video2"
+    #     - "/dev/video3:/dev/video3"
     ports:
         - "5000:5000"
     group_add:

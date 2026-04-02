@@ -3,7 +3,9 @@ import rclpy
 # End imports
 from rclpy.node import Node
 from std_msgs.msg import Float32, Bool
-from gpiozero import PWMOutputDevice
+# from gpiozero import PWMOutputDevice  # not for Jetson
+
+import Jetson.GPIO as GPIO  # for Jetson
 
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 
@@ -27,7 +29,7 @@ class ServoControllerNode(Node):
         super().__init__('servo_controller')
 
         # Declare parameters
-        self.declare_parameter('servo_pin', 18)
+        self.declare_parameter('servo_pin', 32) 
         self.declare_parameter('min_angle', 0.0)
         self.declare_parameter('max_angle', 83.94)
         self.declare_parameter('pwm_frequency', 50)
@@ -41,9 +43,14 @@ class ServoControllerNode(Node):
         self.min_duty_cycle = self.get_parameter('min_duty_cycle').value
         self.max_duty_cycle = self.get_parameter('max_duty_cycle').value
         pwm_frequency = self.get_parameter('pwm_frequency').value
+        
+        # Jetson GPIO setup (BOARD numbering)
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(self.servo_pin, GPIO.OUT)
 
-        # gpiozero PWM device (0.0–1.0 duty cycle range)
-        self.pwm = PWMOutputDevice(self.servo_pin, frequency=pwm_frequency)
+        # PWM device (duty cycle is 0–100)
+        self.pwm = GPIO.PWM(self.servo_pin, pwm_frequency)
+        self.pwm.start(0)
 
         # Subscriber
         self.subscribedTopic = 'topic_servo_angle'
@@ -67,12 +74,12 @@ class ServoControllerNode(Node):
         self.feedback_publisher = self.create_publisher(
             Float32,
             self.publisherTopic,
-            self.queueSize
+            10  # self.queueSize
         )
 
         self.current_angle = self.max_angle
         initial_duty = self.angle_to_duty_cycle(self.max_angle)
-        self.pwm.value = initial_duty
+        self.pwm.ChangeDutyCycle(initial_duty)
 
     def angle_to_duty_cycle(self, angle):
         angle = max(self.min_angle, min(angle, self.max_angle))
@@ -83,15 +90,14 @@ class ServoControllerNode(Node):
             (self.max_angle - self.min_angle) # Normalize within our min/max angle range
         ) * (self.max_duty_cycle - self.min_duty_cycle) # Normalize within our duty cycle range
 
-        # Convert percent to gpiozero 0.0–1.0 range
-        return duty_percent / 100.0
+        return duty_percent  # Jetson expects 0–100 duty cycle
 
     def angle_callbackFunction(self, msg_angle):
         angle = msg_angle.data
         self.get_logger().info(f'Received angle command: {angle}')
 
         duty = self.angle_to_duty_cycle(angle)
-        self.pwm.value = duty
+        self.pwm.ChangeDutyCycle(duty)
 
         self.current_angle = max(self.min_angle, min(angle, self.max_angle))
 
@@ -100,7 +106,8 @@ class ServoControllerNode(Node):
         self.feedback_publisher.publish(feedback_msg)
 
     def destroy_node(self):
-        self.pwm.close()
+        self.pwm.stop()     
+        GPIO.cleanup()       
         super().destroy_node()
         
     def kill_cb(self, msg):

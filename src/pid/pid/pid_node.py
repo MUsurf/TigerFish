@@ -75,9 +75,9 @@ class PIDNode(Node):
              x_gains=(0.1, 0.0, 0.0),
              y_gains=(0.1, 0.0, 0.0),
              z_gains=(0.1, 0.0, 0.0),
-             roll_gains=(0.035, 0.0, 0.0),
-             pitch_gains=(0.035, 0.0, 0.0),
-             yaw_gains=(0.025, 0.0, 0.0)):
+             roll_gains=(0.01, 0.0, 0.0),
+             pitch_gains=(0.01, 0.0, 0.0),
+             yaw_gains=(0.01, 0.0, 0.0)):
         super().__init__('pid_node')
         self.x_kP, self.x_kI, self.x_kD = x_gains
         self.y_kP, self.y_kI, self.y_kD = y_gains
@@ -126,12 +126,15 @@ class PIDNode(Node):
         
         self.locked = False
         
+        self.get_logger().info("PID node created")
+        
     def timer_cb(self):
         if not self.last_od : return
         if not self.last_msg : return
+
         
-        while self.locked:
-            time.sleep(0.0005)
+        if self.locked:
+            return
         self.locked = True
         
         now = self.get_clock().now()
@@ -203,6 +206,8 @@ class PIDNode(Node):
         m = np.max(np.abs(motor_powers))
         if m > 1.0:
             motor_powers = motor_powers / m
+        
+        motor_powers[4:8] = motor_powers[4:8] * -1
             
         message = Float32MultiArray()
         message.data = motor_powers.tolist()
@@ -233,7 +238,7 @@ class PIDNode(Node):
     def y_to_motor(self, y_power) -> np.ndarray:
         return np.array([y_power, -y_power, y_power, -y_power, 0, 0, 0, 0])
     def z_to_motor(self, z_power) -> np.ndarray:
-        return np.array([0, 0, 0, 0, z_power, z_power, z_power, z_power])
+        return np.array([0, 0, 0, 0, z_power, z_power, - z_power, - z_power])
     def roll_to_motor(self, roll_power) -> np.ndarray:
         return np.array([0, 0, 0, 0, -roll_power, roll_power, roll_power, -roll_power])
     def pitch_to_motor(self, pitch_power) -> np.ndarray:

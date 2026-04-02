@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y \
   apt-get clean
 
 # Install packages not availble through system
-RUN python3 -m pip install --no-cache gpiozero adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 flask numpy Picamera2 cv_bridge smbus2 && \
+RUN python3 -m pip install --no-cache gpiozero adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 flask numpy Picamera2 cv_bridge smbus2 Jetson.GPIO && \
   python3 -m pip uninstall -y RPi.GPIO
 
 WORKDIR /home/ros2_ws
@@ -44,11 +44,14 @@ RUN \
     rosdep install -i --from-path ./deps --rosdistro $ROS_DISTRO -y
 
 COPY ./ /home/ros2_ws/src/
+COPY ./makefile /home/ros2_ws/makefile
 
 RUN source /opt/ros/$ROS_DISTRO/setup.bash && \
-  colcon build --symlink-install
+  colcon build --symlink-install --parallel-workers 4
 
 # run.sh is where we run commands in the container on startup.
 COPY --chmod=u+x ./run.sh /home/ros2_ws/run.sh
 
-CMD ["bash", "-lc", "mkdir -p /home/ros2_ws/logs && /home/ros2_ws/run.sh > /home/ros2_ws/logs/run.log 2>&1 && tail -f /home/ros2_ws/logs/run.log"]
+# CMD ["bash", "-lc", "mkdir -p /home/ros2_ws/logs && /home/ros2_ws/run.sh > /home/ros2_ws/logs/run.log 2>&1 && tail -f /home/ros2_ws/logs/run.log"]
+# This version ensures you see the errors in your 'make up' terminal
+CMD ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && source /home/ros2_ws/install/setup.bash && /home/ros2_ws/run.sh"]

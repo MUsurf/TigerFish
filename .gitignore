@@ -27,6 +27,8 @@ Generated
 .venv/
 
 videos/
+output_images/
+bang.tar
 
 # Ignore the IGNORE tag
 #*IGNORE*
