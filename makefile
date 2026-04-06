@@ -24,7 +24,7 @@ NC := \033[0m # No Color
 # Note: I would like to give Gemini AI credit in the making of this file.
 # You should run build if you are setting up. Otherwise ruff linter+formatter won't be recognized, for example
 
-.PHONY: build test buildTest lint format formatLint view-sm clean-docker stop-view-sm checkAll create_pkg gui-graph shell graph view-cam dashboard reconfigure plot rviz runRos2_openCV calibrate_all
+.PHONY: build test buildTest lint format formatLint view-sm clean-docker stop-view-sm checkAll create_pkg gui-graph shell graph view-cam dashboard reconfigure plot rviz runRos2_openCV calibrate_all shell_orin play-bag calibrate
 
 # builds and then runs a test to make sure everything compiles nicely
 buildTest: build test
@@ -38,7 +38,7 @@ checkAll: format lint build test
 # runs a simple docker build and ensures it runs with build kit
 build:
 	# Force BuildKit to show color during the build process
-	DOCKER_BUILDKIT=1 docker build --progress=plain -t $(IMAGE_NAME) .
+	DOCKER_BUILDKIT=1 docker build --network=host --progress=tty -t $(IMAGE_NAME) .
 
 #Run tests: need to run build before test
 test:
@@ -177,6 +177,14 @@ shell:
 		--net=host \
 		$(IMAGE_NAME) /bin/bash
 
+# open a ros shell on the orin nano!!-
+shell_orin:
+	docker run --rm -it \
+		--net=host \
+		--runtime nvidia \
+		-v "$(CURDIR):/home/ros2_ws" \
+		$(IMAGE_NAME) /bin/bash
+
 # show gui graph - expects wsl 2.6.2 atleast!
 gui-graph:
 	@# Grant permission for the local root user (docker) to access X11
@@ -234,6 +242,15 @@ rviz:
 		-v /tmp/.X11-unix:/tmp/.X11-unix \
 		--user "$(shell id -u):$(shell id -g)" \
 		$(IMAGE_NAME) bash -c "mkdir -p /tmp/runtime-user && chmod 700 /tmp/runtime-user && rviz2"
+
+
+up:
+	@echo -e "$(CYAN)--- Starting TigerFish Environment (Orin/Pi) ---$(NC)"
+	docker compose --profile pi up --build
+
+up_shell:
+	@echo "--- Entering TigerFish Container ---"
+	docker exec -it tigerfish-pi-1 /bin/bash || docker exec -it tigerfish-pi /bin/bash
 ### END Utility commands - ADD NEW COMMANDS ABOVE ##############################
 
 
@@ -247,4 +264,37 @@ monocularTest:
 
 runRos2_openCV:
 	ros2 launch ros2_opencv camera_system.launch.py cam_ids:=0,1 record_type:=rosbag
+
+
+# Runs the camera system in the background
+run-cam:
+	@echo "--- Starting Camera Publisher (cameras package) ---"
+	@/bin/bash -c "source /opt/ros/humble/setup.bash && \
+	if [ -f /home/ros2_ws/install/setup.bash ]; then \
+		source /home/ros2_ws/install/setup.bash && \
+		ros2 launch cameras camera_system.launch.py cam_ids:=0; \
+	else \
+		echo 'ERROR: Package [cameras] not found in install. Run colcon build.'; \
+		exit 1; \
+	fi"
+
+# Usage: make record-calib NAME:=arducam_test
+record-calib:
+	@echo "--- Recording Rosbag for Calibration ---"
+	/bin/bash -c "source /opt/ros/humble/setup.bash && \
+	source /home/ros2_ws/install/setup.bash && \
+	ros2 bag record -o /home/ros2_ws/output_images/bags/$(NAME) /cam_0/image_raw /cam_0/camera_info"
+calibrate:
+	@echo "--- Launching Integrated Calibration Session ---"
+	@/bin/bash -c "make run-cam & \
+	sleep 10 && \
+	make record-calib NAME=$(NAME); \
+	sleep 3 && \
+	pkill -f cameras"
+# Usage: make play-bag-local NAME:=TEST123_2026...
+play-bag:
+	@echo "--- Playing back rosbag (Local) ---"
+	/bin/bash -c "source /opt/ros/$(ROS_DISTRO)/setup.bash && \
+	if [ -f /home/ros2_ws/install/setup.bash ]; then source /home/ros2_ws/install/setup.bash; fi && \
+	ros2 bag play /home/ros2_ws/output_images/bags/$(NAME)"
 ### END IN DOCKER CONTAINER COMMANDS - ADD NEW COMMANDS ABOVE ##################

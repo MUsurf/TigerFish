@@ -11,15 +11,18 @@ def generate_launch_description():
         default_value='0,1',
         description='Comma-separated list of camera indices'
     )
-    rec_type = DeclareLaunchArgument('record_type', default_value='mp4')
+    rec_type = DeclareLaunchArgument('record_type', default_value='mp4', description="type of recording (ie mp4)")
 
     cam_ids_str = LaunchConfiguration('cam_ids')
 
     
     def create_camera_nodes(context):
         # Convert the string '0,1,2' back into a list [0, 1, 2]
-        ids = context.launch_configurations['cam_ids'].split(',')
-        rec_type = context.launch_configurations['record_type']
+        ids_str = cam_ids_str.perform(context)
+        ids = ids_str.split(',')
+
+
+        rec_type = context.launch_configurations.get('record_type', 'mp4')
         entities = []
         for i in ids:
             i = i.strip()
@@ -32,8 +35,8 @@ def generate_launch_description():
             
             # Publisher
             entities.append(Node(
-                package='ros2_opencv',
-                executable='publisher_node',
+                package='cameras',
+                executable='camera_publisher',
                 namespace=ns,
                 parameters=[{'camera_index': idx}],
                 output='screen'
@@ -41,7 +44,7 @@ def generate_launch_description():
 
             # Subscriber (Processor)
             entities.append(Node(
-                package='ros2_opencv',
+                package='cameras',
                 executable='subscriber_node',
                 namespace=ns,
                 parameters=[{'record_type': rec_type}],
@@ -53,5 +56,6 @@ def generate_launch_description():
     from launch.actions import OpaqueFunction
     return LaunchDescription([
         camera_ids_arg,
+        rec_type,
         OpaqueFunction(function=create_camera_nodes)
     ])

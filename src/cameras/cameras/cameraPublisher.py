@@ -18,14 +18,18 @@ class PublisherNodeClass(Node):
         self.declare_parameter("camera_index", 0)
         idx = self.get_parameter("camera_index").value
 
-        pi_pipeline = (
-            f"libcamerasrc camera-name={idx} autofocus-mode=1 ! "
-            "video/x-raw, width=800, height=600 ! "
-            "videoconvert ! video/x-raw, format=BGR ! appsink"
-        )
+        # pi_pipeline = (
+        #     f"libcamerasrc camera-name={idx} autofocus-mode=1 ! "
+        #     "video/x-raw, width=800, height=600 ! "
+        #     "videoconvert ! video/x-raw, format=BGR ! appsink"
+        # )
 
         self.get_logger().info("Attempting to open camera...")
-        self.camera = cv2.VideoCapture(pi_pipeline, cv2.CAP_GSTREAMER)
+        # self.camera = cv2.VideoCapture(pi_pipeline, cv2.CAP_GSTREAMER)
+        self.get_logger().info("Opening camera via standard V4L2...")
+        self.camera = cv2.VideoCapture(idx) 
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
         if not self.camera.isOpened():
             self.get_logger().warn(
@@ -47,10 +51,19 @@ class PublisherNodeClass(Node):
         # information for the calibration ####
         namespace = self.get_namespace().strip("/")
         self.camera_name = namespace if namespace else f"camera_{idx}"
-        info_url = f"package://tiger_fish/config/{self.camera_name}_info.yaml"
-        self.cinfo_manager = CameraInfoManager(
-            self, cname=self.camera_name, url=info_url
-        )
+
+        try:
+            info_url = f"package://tiger_fish/config/{self.camera_name}_info.yaml"
+            self.cinfo_manager = CameraInfoManager(
+                self, cname=self.camera_name, url=info_url
+            )
+            self.cinfo_manager.loadCameraInfo()
+        except Exception as e:
+            self.get_logger().warn(f"Could not load tiger_fish config: {e}. Using default info.")
+            self.cinfo_manager = CameraInfoManager(
+                self, cname=self.camera_name, url=""
+            )
+            self.cinfo_manager.loadCameraInfo()
         self.info_publisher = self.create_publisher(
             CameraInfo, "camera_info", self.queueSize
         )
@@ -89,7 +102,7 @@ class PublisherNodeClass(Node):
             ROS2ImageMessage.header.stamp = now
             ROS2ImageMessage.header.frame_id = f"{self.camera_name}_optical_frame"
 
-            info_msg = self.cinfo_manager.get_camera_info()
+            info_msg = self.cinfo_manager.getCameraInfo()
             info_msg.header = ROS2ImageMessage.header
 
             # Publish the image
@@ -114,13 +127,12 @@ def main(args=None):
         rclpy.spin(publisherObject)
     except Exception:
         print("CameraPublisher spin failure.")
-
-    # Destroy
-    publisherObject.destroy_node()
-
-    # Shutdown
-    rclpy.shutdown()
-
+        import traceback
+        publisherObject.get_logger().error(f"Node crashed! Traceback:\n{traceback.format_exc()}")
+    finally:
+        if rclpy.ok():
+            publisherObject.destroy_node()
+            rclpy.shutdown()
 
 if __name__ == "__main__":
     main()

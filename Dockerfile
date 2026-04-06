@@ -71,7 +71,7 @@ RUN apt-get update && apt-get install -y \
   apt-get clean
 
 # Install packages not availble through system
-RUN python3 -m pip install --no-cache gpiozero adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 flask numpy Picamera2 smbus2 && \
+RUN python3 -m pip install --no-cache gpiozero adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 flask numpy Picamera2 cv_bridge smbus2 Jetson.GPIO && \
   python3 -m pip uninstall -y RPi.GPIO
 
 WORKDIR /home/ros2_ws
@@ -107,15 +107,13 @@ RUN --mount=type=bind,source=./src/motor_driver/package.xml,target=/home/ros2_ws
     #--mount=type=bind,source=./src/motor_command/package.xml,target=/home/ros2_ws/deps/motor_command/package.xml \
     apt-get update && \
     rosdep update && \
-    rosdep install --from-paths src --ignore-src -y --rosdistro humble && \
-    rm -rf /var/lib/apt/lists/*
+    rosdep install -i --from-path ./deps --rosdistro $ROS_DISTRO -y
 
+COPY ./ /home/ros2_ws/src/
+COPY ./makefile /home/ros2_ws/makefile
 
-RUN apt-get update && apt-get install -y ros-humble-cv-bridge ros-humble-vision-opencv
-# 5. Clean and Build
-RUN rm -rf /home/ros2_ws/build /home/ros2_ws/install /home/ros2_ws/log && \
-    source /opt/ros/$ROS_DISTRO/setup.bash && \
-    colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+RUN source /opt/ros/$ROS_DISTRO/setup.bash && \
+  colcon build --symlink-install --parallel-workers 4
 
 # 6. Automate Environment Sourcing for the User
 # This makes 'ros2' and 'colcon' commands work immediately in new terminals
@@ -125,6 +123,6 @@ RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /etc/bash.bashrc && \
 # 7. Startup scripts
 COPY --chmod=u+x ./run.sh /home/ros2_ws/run.sh
 
-CMD ["bash", "-lc", "mkdir -p /home/ros2_ws/logs && /home/ros2_ws/run.sh > /home/ros2_ws/logs/run.log 2>&1 && tail -f /home/ros2_ws/logs/run.log"]
-
-# CMD ["bash", "-c", "screen -dmS my_session /home/ros2_ws/run.sh && tail -f /dev/null"]
+# CMD ["bash", "-lc", "mkdir -p /home/ros2_ws/logs && /home/ros2_ws/run.sh > /home/ros2_ws/logs/run.log 2>&1 && tail -f /home/ros2_ws/logs/run.log"]
+# This version ensures you see the errors in your 'make up' terminal
+CMD ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && source /home/ros2_ws/install/setup.bash && /home/ros2_ws/run.sh"]
