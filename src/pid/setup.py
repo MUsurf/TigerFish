@@ -21,8 +21,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "state_estimator_node = state_estimator.state_estimator:main",
-            "pid_node = state_estimator.pid_node:main",
+            "pid_node = pid.pid_node:main",
         ],
     },
 )

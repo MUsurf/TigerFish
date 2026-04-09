@@ -88,8 +88,6 @@ RUN git clone --depth 1 --branch 3.4.0 https://github.com/uleroboticsgroup/yasmi
     --cmake-args -DCMAKE_BUILD_TYPE=Release && \
     rm -rf /tmp/yasmin
 
-COPY . /home/ros2_ws/
-
 # 3. Rosdep Installation
 # RUN --mount=type=bind,source=./process_depth/package.xml,target=/home/ros2_ws/deps/process_depth/package.xml \
 #     --mount=type=bind,source=./process_imu/package.xml,target=/home/ros2_ws/deps/process_imu/package.xml \
