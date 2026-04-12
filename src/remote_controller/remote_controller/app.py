@@ -4,7 +4,9 @@ from datetime import datetime
 import numpy as np
 
 from nav_msgs.msg import Odometry
+from messages.msg import GuiBox
 
+from remote_controller_node import NUM_GUI_BOXES
 
 def make_http_str_get(
     str_getter: Callable, timestamp_getter: Callable | None = None
@@ -106,6 +108,38 @@ def make_http_rpy_get(
             "yaw": y,
             "timestamp": timestamp.strftime(r"%H:%M:%S:%f"),
         }
+        return jsonify(response), 200
+
+    return handler
+
+
+def make_http_gui_box_get(
+        list_gui_box_getter: Callable[[], list[GuiBox]]
+):
+    def handler() -> tuple[Response, int]:
+
+        # fetch values from node
+        try:
+            gui_boxes = list_gui_box_getter()
+
+        except Exception as e:
+            return jsonify(
+                {"error": f"failed to get gui boxes; error msg: {e}"}
+            ), 500
+
+
+        # build and return response
+        response = {
+            "boxes": [
+                {
+                    "id": gui_boxes[i].id,
+                    "name": gui_boxes[i].name,
+                    "data": gui_boxes[i].data
+                } for i in range(NUM_GUI_BOXES)
+            ],
+            "timestamp": datetime.now(),
+        }
+
         return jsonify(response), 200
 
     return handler
