@@ -49,7 +49,7 @@ class StateMachineNode(Node):
         self.state_machine.add_state("START_STATE", StartState(), transitions={"next_state" : "GATE_STATE"})
         self.state_machine.add_state("GATE_STATE", GateState(self.pid_publisher), transitions={"next_state" : "TO_POLE_STATE"}) # Make Gate state work in both directions --> terminate on back through
         self.state_machine.add_state("TO_POLE_STATE", ToPoleState(self.pid_publisher), transitions={"next_state" : "CIRCLE_POLE_STATE"})
-        self.state_machine.add_state("CIRCLE_POLE_STATE", CirclePoleState(self.pid_publisher), transitions={"next_state" : "TO_POLE_STATE"})
+        self.state_machine.add_state("CIRCLE_POLE_STATE", CirclePoleState(self.pid_publisher), transitions={"next_state" : "FROM_POLE_STATE"})
         self.state_machine.add_state("FROM_POLE_STATE", FromPoleState(self.pid_publisher), transitions={"next_state" : "GATE_STATE"})
 
         self.state_machine.set_start_state("START_STATE")
