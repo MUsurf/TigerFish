@@ -5,7 +5,7 @@ import rclpy
 import yasmin
 from yasmin import State
 
-class GateState(State):
+class EndGateState(State):
     """
     State to navigate through the gate. I want to use this state going in both directions!
     """
