@@ -7,25 +7,24 @@ from yasmin import State
 
 class GateAlignment(State):
     """
-    State we boot to in the state machine.
+    Is the starting state, and aligns to the gate
     """
     def __init__(self) -> None:
         """
-        Initializes the StartState instance, setting up the outcomes.
+        Is the starting state, and aligns to the gate
 
         Outcomes:
-            outcome1: Indicates the state should continue to the Gate state.
-            outcome2: Indicates the state should finish execution and return.
+            outcome1: goes to the go through gate state
         """
-        super().__init__(["outcome1", "outcome2"])
+        super().__init__(["next_state"])
         self.set_description(
-            "Ensures proper boot, transitions to Gate state or checks fails and we quit?"
+            "Is the starting state, and aligns to the gate"
         )
         
         
     def execute(self, blackboard: Blackboard):
         """
-        Executes the logic for the Start state.
+        Executes the logic for the state
 
         Args:
 

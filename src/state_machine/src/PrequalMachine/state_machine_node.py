@@ -12,12 +12,10 @@ from yasmin_viewer import YasminViewerPub
 from std_msgs.msg import Float32MultiArray, Float32, String, Bool 
 
 from TigerFish.src.state_machine.src.PrequalMachine.gate_alignment import StartState 
-from enter_gate_state import EnterGateState
-from to_pole_state import ToPoleState
-from circle_pole_state import CirclePoleState
-from from_pole_state import FromPoleState
-from end_gate_state import EndGateState
-from complete_state import Complete
+from gate_alignment import GateAlignment
+from go_through_gate import GoThroughGate
+from pole_alignment import PoleAlignment
+from tokyo_drift import TokyoDrift
 
 # Global info node/singleton
 class Context:
