@@ -22,6 +22,8 @@ class Context:
     def __init__(self, node, pid_publisher):
         self.node = node
         self.pid_publisher = pid_publisher
+        self.desired_depth = 10
+        self.screen_center = {100,100}
 
 class StateMachineNode(Node): 
     def __init__(self):
