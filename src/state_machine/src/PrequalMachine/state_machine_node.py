@@ -24,6 +24,7 @@ class Context:
         self.pid_publisher = pid_publisher
         self.desired_depth = 10
         self.screen_center = {100,100}
+        self.pole_danced = False
 
 class StateMachineNode(Node): 
     def __init__(self):
@@ -77,6 +78,13 @@ class StateMachineNode(Node):
             "x": msg.x_pos,
             "y": msg.y_pos,
         }
+
+    def pole_cb(self, msg):
+        self.blackboard["pole_detection"] = {
+            "seen": msg.does_see,
+            "x": msg.x_pos,
+            "y": msg.y_pos,
+    }
 
     def _odom_cb(self, msg):
         self.blackboard["odom"] = msg

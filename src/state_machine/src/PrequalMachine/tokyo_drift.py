@@ -7,25 +7,24 @@ from yasmin import State
 
 class TokyoDrift(State):
     """
-    State we boot to in the state machine.
+    Move around pole
     """
     def __init__(self) -> None:
         """
-        Initializes the StartState instance, setting up the outcomes.
+        Move around pole
 
         Outcomes:
-            outcome1: Indicates the state should continue to the Gate state.
-            outcome2: Indicates the state should finish execution and return.
+            next_state: Go back to gate alignment
         """
-        super().__init__(["outcome1", "outcome2"])
+        super().__init__(["next_state"])
         self.set_description(
-            "Ensures proper boot, transitions to Gate state or checks fails and we quit?"
+            "Move around pole"
         )
         
         
     def execute(self, blackboard: Blackboard):
         """
-        Executes the logic for the Start state.
+        Executes the logic for the state.
 
         Args:
 
@@ -34,5 +33,10 @@ class TokyoDrift(State):
         Raises:
             Exception: May raise exceptions related to state execution.
         """
-        yasmin.YASMIN_LOG_INFO("Executing state START")
-        time.sleep(3)  # Simulate work by aw
+        yasmin.YASMIN_LOG_INFO("Executing state TOKYO_DRIFT")
+        gate = blackboard.get("pole_detection")
+        odom = blackboard.get("odom")
+        depth = blackboard.get("depth")
+
+        while(True):
+            
