@@ -58,3 +58,7 @@ __pycache__/
 /output_images/processed_vid/**/*.yaml
 !output_images/**/*.md
 !output_images/**/
+
+
+# Don't upload Andrew's stinky files
+.DS_Store
