@@ -3,24 +3,24 @@ import time
 import rclpy
 
 import yasmin
-from yasmin import State, Blackboard
+from yasmin import State
 
-class StartState(State):
+class GoThroughGate(State):
     """
     State we boot to in the state machine.
     """
-    def __init__(self, context) -> None:
+    def __init__(self) -> None:
         """
         Initializes the StartState instance, setting up the outcomes.
 
         Outcomes:
-            next_state: Indicates the state should continue to the Enter Gate state.
+            outcome1: Indicates the state should continue to the Gate state.
+            outcome2: Indicates the state should finish execution and return.
         """
-        super().__init__(["next_state"])
+        super().__init__(["outcome1", "outcome2"])
         self.set_description(
             "Ensures proper boot, transitions to Gate state or checks fails and we quit?"
         )
-        self.context = context
         
         
     def execute(self, blackboard: Blackboard):
@@ -35,14 +35,4 @@ class StartState(State):
             Exception: May raise exceptions related to state execution.
         """
         yasmin.YASMIN_LOG_INFO("Executing state START")
-        gate = blackboard.get("gate_detection")
-        odom = blackboard.get("odom")
-        depth = blackboard.get("depth")
-
-        msg = PIDInput()
-        # fill msg from blackboard data
-        self.context.pid_publisher.publish(msg)
-        
-        time.sleep(3)  # Simulate work by sleeping
-        
-        
+        time.sleep(3)  # Simulate work by aw

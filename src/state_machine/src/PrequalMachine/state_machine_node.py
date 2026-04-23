@@ -11,7 +11,7 @@ from yasmin_viewer import YasminViewerPub
 
 from std_msgs.msg import Float32MultiArray, Float32, String, Bool 
 
-from start_state import StartState 
+from TigerFish.src.state_machine.src.PrequalMachine.gate_alignment import StartState 
 from enter_gate_state import EnterGateState
 from to_pole_state import ToPoleState
 from circle_pole_state import CirclePoleState
