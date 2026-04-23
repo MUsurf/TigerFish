@@ -14,7 +14,7 @@ class GateAlignment(State):
         Is the starting state, and aligns to the gate
 
         Outcomes:
-            outcome1: goes to the go through gate state
+            next_state: goes to the go through gate state
         """
         super().__init__(["next_state"])
         self.set_description(
