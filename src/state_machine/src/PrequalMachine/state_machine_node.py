@@ -51,20 +51,17 @@ class StateMachineNode(Node):
         self.context = Context(pid_publisher)
 
         # Create state machine
-        self.state_machine = StateMachine(outcomes={"COMPLETE"})
+        self.state_machine = StateMachine(outcomes={"complete"})
         
         # Create states
         # Utilize blackboards for data sharing between states and state machines.
 
-        self.state_machine.add_state("START_STATE", StartState(), transitions={"next_state" : "START_GATE_STATE"})
-        self.state_machine.add_state("ENTER_GATE_STATE", EnterGateState(self.pid_publisher), transitions={"next_state" : "TO_POLE_STATE"}) # Make Gate state work in both directions --> terminate on back through
-        self.state_machine.add_state("TO_POLE_STATE", ToPoleState(self.pid_publisher), transitions={"next_state" : "CIRCLE_POLE_STATE"})
-        self.state_machine.add_state("CIRCLE_POLE_STATE", CirclePoleState(self.pid_publisher), transitions={"next_state" : "TO_POLE_STATE"})
-        self.state_machine.add_state("FROM_POLE_STATE", FromPoleState(self.pid_publisher), transitions={"next_state" : "END_GATE_STATE"})
-        self.state_machine.add_state("END_GATE_STATE", EndGateState(self.pid_publisher), transitions={"next_state" : "COMPLETE"})
-        self.state_machine.add_state("COMPLETE", Complete())
+        self.state_machine.add_state("GATE_ALIGNMENT", GateAlignment(self.pid_publisher), transitions={"next_state" : "GO_THROUGH_GATE"}) # Make Gate state work in both directions --> terminate on back through
+        self.state_machine.add_state("GO_THROUGH_GATE", GoThroughGate(self.pid_publisher), transitions={"not_pole_danced" : "POLE_ALIGNMENT", "pole_danced" : "complete"})
+        self.state_machine.add_state("POLE_ALIGNMENT", PoleAlignment(self.pid_publisher), transitions={"next_state" : "TOKYO_DRIFT"})
+        self.state_machine.add_state("TOKYO_DRIFT", TokyoDrift(self.pid_publisher), transitions={"next_state" : "GATE_ALIGNMENT"})
 
-        self.state_machine.set_start_state("START_STATE")
+        self.state_machine.set_start_state("GATE_ALIGNMENT")
     
         self.yasmin_pub = YasminViewerPub(self.state_machine, "TigerFish_SM")
 
