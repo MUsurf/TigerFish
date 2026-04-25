@@ -22,8 +22,8 @@ class Context:
     def __init__(self, node, pid_publisher):
         self.node = node
         self.pid_publisher = pid_publisher
-        self.desired_depth = 10
-        self.screen_center = {100,100}
+        self.desired_depth = 2 # meters, 6.6 ft
+        self.screen_center = {100,100} # PLEASE CONFIRM
         self.pole_danced = False
 
 class StateMachineNode(Node): 
@@ -49,19 +49,22 @@ class StateMachineNode(Node):
         
         self.pid_publisher = self.create_publisher(PIDInput, "pid_input", 10)
         
-        self.context = Context(pid_publisher)
+        # Create blackboard
+        self.blackboard = Blackboard()
+        
+        # Create context instance
+        self.context = Context(self, self.pid_publisher)
 
         # Create state machine
         self.state_machine = StateMachine(outcomes={"complete"})
         
         # Create states
-        # Utilize blackboards for data sharing between states and state machines.
-
         self.state_machine.add_state("GATE_ALIGNMENT", GateAlignment(self.pid_publisher), transitions={"next_state" : "GO_THROUGH_GATE"}) # Make Gate state work in both directions --> terminate on back through
         self.state_machine.add_state("GO_THROUGH_GATE", GoThroughGate(self.pid_publisher), transitions={"not_pole_danced" : "POLE_ALIGNMENT", "pole_danced" : "complete"})
         self.state_machine.add_state("POLE_ALIGNMENT", PoleAlignment(self.pid_publisher), transitions={"next_state" : "TOKYO_DRIFT"})
         self.state_machine.add_state("TOKYO_DRIFT", TokyoDrift(self.pid_publisher), transitions={"next_state" : "GATE_ALIGNMENT"})
 
+        # Set up state machine
         self.state_machine.set_start_state("GATE_ALIGNMENT")
     
         self.yasmin_pub = YasminViewerPub(self.state_machine, "TigerFish_SM")
@@ -71,9 +74,11 @@ class StateMachineNode(Node):
         self.get_logger().info("State machine initialized successfully!")
         
         # To run the statemachine, create a StateMachine and Blackboard, then run StateMachine(Blackboard) (?)
-        
+    
+    
+    # Call back functions keep blackboard up to date with ROS topics
     def gate_cb(self, msg):
-        self.blackboard["gate_detection"] = {
+        self.blackboard["gate_detection"] = { # Utilize blackboard for data sharing between states and state machines.
             "seen": msg.does_see,
             "x": msg.x_pos,
             "y": msg.y_pos,
