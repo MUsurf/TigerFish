@@ -38,6 +38,7 @@ class GateAlignment(State):
             msg.z_setpoint = desired_depth
             send = True
         if (self.screen_center[0] != gate["x_pos"]): #  and self.screen_center[1] != gate["y_pos"] 
+            # TODO: Figure smth out with camera vis to do pixel distances
             msg.y_measurement = odom["y"]
             msg.y_setpoint = gate["x_pos"] # Not sure this will work since it is perceived distance on a screen and not real?
             send = True
