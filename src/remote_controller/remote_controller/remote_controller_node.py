@@ -7,19 +7,15 @@ from nav_msgs.msg import Odometry
 
 from remote_controller.app import (
     make_http_rpy_get,
+    make_http_gui_box_get,
     make_http_str_post,
     make_http_controller_input_post,
 )
-from messages.msg import ControllerInput
+from messages.msg import ControllerInput, GuiBox
 
 QOS = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
 FREQUENCY = 40
-LEGAL_MODES = [
-    "idle",
-    "target_velocity",
-    "target_position",
-]
-
+NUM_GUI_BOXES = 6
 
 class RemoteControllerNode(Node):
     def __init__(self):
@@ -34,6 +30,9 @@ class RemoteControllerNode(Node):
         self.controller_input_stamp = datetime(1970, 1, 1)
 
         self.get_endpoints = {
+            "get_boxes": make_http_gui_box_get(
+                lambda: self.gui_boxes
+            ),
             "get_odometry": make_http_rpy_get(
                 lambda: self.odometry, lambda: self.odometry_stamp
             )
@@ -46,8 +45,18 @@ class RemoteControllerNode(Node):
             "command_line": make_http_str_post(self.publish_command_line),
         }
 
+        self.gui_boxes: list[GuiBox] = []
+        self.gui_box_subscribers = []
+        for i in range(NUM_GUI_BOXES):
+            curr_box = GuiBox()
+            curr_box.id = i
+            self.gui_boxes.append(curr_box)
+
         self.orientation_subscriber = self.create_subscription(
-            Odometry, "state_estimation", self._odom_cb, 10
+            Odometry, "state_estimation", self._odom_cb, QOS
+        )
+        self.gui_box_subscriber = self.create_subscription(
+            GuiBox, "gui_box", self._gui_box_cb, QOS
         )
 
         self.command_publisher = self.create_publisher(String, "command_line", QOS)
@@ -64,6 +73,12 @@ class RemoteControllerNode(Node):
 
     def _odom_cb(self, msg: Odometry):
         self.odometry = msg
+
+    def _gui_box_cb(self, msg: GuiBox):
+        if msg.id < 0 or NUM_GUI_BOXES <= msg.id:
+            return
+
+        self.gui_boxes[msg.id] = msg
 
     def publish_command_line(self, cmd: str):
 
