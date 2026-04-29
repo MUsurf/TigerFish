@@ -38,7 +38,7 @@ checkAll: format lint build test
 # runs a simple docker build and ensures it runs with build kit
 build:
 	# Force BuildKit to show color during the build process
-	DOCKER_BUILDKIT=1 docker build --network=host --progress=tty -t $(IMAGE_NAME) .
+	DOCKER_BUILDKIT=1 docker build --network=host --progress=auto -t $(IMAGE_NAME) .
 
 #Run tests: need to run build before test
 test:
