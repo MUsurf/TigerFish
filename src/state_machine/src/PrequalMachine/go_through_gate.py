@@ -7,32 +7,49 @@ from yasmin import State
 
 class GoThroughGate(State):
     """
-    State we boot to in the state machine.
+    We are already aligned to the gate
+    Stay Straight and go forward until gate is cleared
     """
     def __init__(self) -> None:
         """
-        Initializes the StartState instance, setting up the outcomes.
+        stay aligned and go forward
 
         Outcomes:
-            outcome1: Indicates the state should continue to the Gate state.
-            outcome2: Indicates the state should finish execution and return.
+            outcome1 - tokyo drift has not ran yet
+                continue to Pole Alignment
+            outcome2 - tokyo drift has ran
+                Finish program
         """
         super().__init__(["outcome1", "outcome2"])
         self.set_description(
-            "Ensures proper boot, transitions to Gate state or checks fails and we quit?"
+            "Balances going forward and maintaining direction towards the center of the gate. Continues until gate has been cleared"
         )
         
         
-    def execute(self, blackboard: Blackboard):
+    def execute(self, bb: Blackboard):
         """
-        Executes the logic for the Start state.
+        Executes the logic for the Go Through Gate state
 
-        Args:
-
-        Returns:
+        Returns: next_state
 
         Raises:
             Exception: May raise exceptions related to state execution.
         """
-        yasmin.YASMIN_LOG_INFO("Executing state START")
-        time.sleep(3)  # Simulate work by aw
+        yasmin.YASMIN_LOG_INFO("Executing state GoThroughGate")
+        gate = bb.get("gate_detection")
+        depth = bb.get("depth")
+        desired_depth = bb.get("desired_depth")
+        send = False
+        
+        msg = PIDInput()
+        
+        #cannot detect gate
+        if gate[0] == False:
+            return "next state"
+        if (depth != desired_depth):
+            msg.z_measurement = depth
+            msg.z_setpoint = desired_depth
+        #TODO: add something here for gate alignment
+        msg.x_power = 10 #go forward?
+        self.context.pid_publisher.publish(msg)
+        
