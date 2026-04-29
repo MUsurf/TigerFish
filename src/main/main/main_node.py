@@ -140,36 +140,31 @@ class MainNode(Node):
         self.servo_publisher = self.create_publisher(
             Float32, "topic_servo_angle", servo_qos
         )
-        
-        self.kill_publisher = self.create_publisher(
-            Bool,
-            "kill",
-            kill_qos
-        )
-        
-        
+
+        self.kill_publisher = self.create_publisher(Bool, "kill", kill_qos)
+
         period = 1.0 / 20.0
         self.timer = self.create_timer(period, self._timer_cb)
         self.logger_timer = self.create_timer(0.25, self.logger_cb)
         self.start_time = time.time()
         self.switch_time = 2
-        
-        self.recent_controller_input : ControllerInput = None
-        
-        self.x_pow : float = 0.0
-        self.y_pow : float = 0.0
-        self.z_pow : float = 0.0
-        
-        self.z_setpoint : float = 0.0
-        self.roll_setpoint : float = 0.0
-        self.pitch_setpoint : float = 0.0
-        self.yaw_setpoint : float = 0.0
-        
-        self.depth : float = 0.0
-        self.roll : float = 0.0
-        self.pitch : float = 0.0
-        self.yaw : float = 0.0
-        
+
+        self.recent_controller_input: ControllerInput = None
+
+        self.x_pow: float = 0.0
+        self.y_pow: float = 0.0
+        self.z_pow: float = 0.0
+
+        self.z_setpoint: float = 0.0
+        self.roll_setpoint: float = 0.0
+        self.pitch_setpoint: float = 0.0
+        self.yaw_setpoint: float = 0.0
+
+        self.depth: float = 0.0
+        self.roll: float = 0.0
+        self.pitch: float = 0.0
+        self.yaw: float = 0.0
+
         self.controller_last_time = None
 
     def depth_sensor_cb(self, msg: Float32):
@@ -184,24 +179,24 @@ class MainNode(Node):
         msg.roll_mode = True
         msg.pitch_mode = True
         msg.yaw_mode = True
-        
+
         msg.z_is_absolute = False
-        
+
         msg.x_power = self.x_pow
         msg.y_power = self.y_pow
 
         # msg.z_setpoint = self.z_setpoint
         # msg.z_measurement = max(0.0, self.depth)
-        
+
         msg.z_power = self.z_pow
-        
+
         msg.roll_setpoint = self.roll_setpoint
         msg.roll_measurement = self.roll * 180 / np.pi
         msg.pitch_setpoint = self.pitch_setpoint
         msg.pitch_setpoint = self.pitch * 180 / np.pi
         msg.yaw_setpoint = self.yaw_setpoint
         msg.yaw_measurement = self.yaw * 180 / np.pi
-                
+
         self.pid_publisher.publish(msg)
 
     def command_line_cb(self, msg: String):
@@ -211,33 +206,39 @@ class MainNode(Node):
             msg = Bool()
             msg.data = True
             self.kill_publisher.publish(msg)
-            
-        elif len(text) > 0 and text[0] == 'c':
+
+        elif len(text) > 0 and text[0] == "c":
             a = text[1]
             num = float(text[2:])
             match a:
-                case 'r':
+                case "r":
                     self.roll_setpoint = num
-                case 'p':
+                case "p":
                     self.pitch_setpoint = num
-                case 'y':
+                case "y":
                     self.yaw_setpoint = num
-        
+
         else:
             is_pid = new_controller_str(text)
-            if is_pid is not None : self.new_controller_publisher.publish(is_pid)
-        
-    def controller_cb(self, msg : ControllerInput):
-        if abs(msg.x_left_stick) < DEAD_ZONE : msg.x_left_stick = 0.0
-        if abs(msg.y_left_stick) < DEAD_ZONE : msg.y_left_stick = 0.0
-        if abs(msg.y_right_stick) < DEAD_ZONE : msg.y_right_stick = 0.0
-        if abs(msg.r_trigger) < DEAD_ZONE : msg.r_trigger = 0.0
-        if abs(msg.l_trigger) < DEAD_ZONE : msg.l_trigger = 0.0
-        
+            if is_pid is not None:
+                self.new_controller_publisher.publish(is_pid)
+
+    def controller_cb(self, msg: ControllerInput):
+        if abs(msg.x_left_stick) < DEAD_ZONE:
+            msg.x_left_stick = 0.0
+        if abs(msg.y_left_stick) < DEAD_ZONE:
+            msg.y_left_stick = 0.0
+        if abs(msg.y_right_stick) < DEAD_ZONE:
+            msg.y_right_stick = 0.0
+        if abs(msg.r_trigger) < DEAD_ZONE:
+            msg.r_trigger = 0.0
+        if abs(msg.l_trigger) < DEAD_ZONE:
+            msg.l_trigger = 0.0
+
         self.recent_controller_input = msg
         self.x_pow = -msg.y_left_stick
         self.y_pow = msg.x_left_stick
-        
+
         if self.controller_last_time is None:
             self.controller_last_time = time.time()
             return
@@ -250,16 +251,16 @@ class MainNode(Node):
 
         z_set = Z_METER_PER_SECOND * msg.y_right_stick * dt
         self.z_setpoint += z_set
-        
+
         self.z_pow = msg.y_right_stick
-        
+
         # self.get_logger().info(f'{self.recent_controller_input.x_left_stick}')
 
     def _odom_cb(self, msg: Odometry):
         r, p, y = rpy_from_quat(msg.pose.pose.orientation)
         self.roll = -r
         self.pitch = -p
-        self.yaw = - y
+        self.yaw = -y
         # self.get_logger().info(f'roll: {(r * 180 / np.pi):4f} pitch {(p * 180 / np.pi):4f} yaw: {(y * 180 / np.pi):4f}')
         # msg = PIDInput()
 
@@ -282,7 +283,7 @@ class MainNode(Node):
         # msg.yaw_measurement = y * 180 / np.pi
 
         # self.pid_publisher.publish(msg)
-        
+
     def logger_cb(self):
         self.get_logger().info(
             f"""X: {self.x_pow:7.2f}   Y: {self.y_pow:7.2f}
@@ -292,9 +293,8 @@ class MainNode(Node):
             Yaw_S:   {self.yaw_setpoint:7.2f}   Yaw:   {self.yaw * 180 / np.pi:7.2f}
             """
         )
-        
-        
-        
+
+
 def main(args=None):
     rclpy.init(args=args)
     node = MainNode()

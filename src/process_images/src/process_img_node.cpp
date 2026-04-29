@@ -11,7 +11,7 @@ class processImgNode : public rclcpp::Node
 {
 public:
   processImgNode()
-      : Node("process_img_node")
+  : Node("process_img_node")
   {
     // preprocessing setup
     cv::Size kernel = cv::Size(16, 16);
@@ -23,11 +23,11 @@ public:
 
     // create a publisher for the video feed
     publisher_ = this->create_publisher<sensor_msgs::msg::Image>(
-        "camera/image_processed", 10);
+      "camera/image_processed", 10);
     // subscriber
     subscription_ = this->create_subscription<sensor_msgs::msg::Image>(
-        "camera/image_raw", 10,
-        std::bind(&processImgNode::image_callback, this, std::placeholders::_1));
+      "camera/image_raw", 10,
+      std::bind(&processImgNode::image_callback, this, std::placeholders::_1));
 
     // logging
     RCLCPP_INFO(this->get_logger(), "processImgNode ready for images...");
@@ -36,15 +36,14 @@ public:
   // destructor
   ~processImgNode()
   {
-    if (is_writer_initialized_)
-    {
+    if (is_writer_initialized_) {
       video_writer_.release();
       RCLCPP_INFO(this->get_logger(), "Video file finalized and saved.");
     }
   }
 
 private:
-  void WriteVideo(const cv::Mat &processed_frame)
+  void WriteVideo(const cv::Mat & processed_frame)
   {
     // Visualization ////////////////////////////////
     // So there are a couple ways to do this:
@@ -75,27 +74,24 @@ private:
     ///////////////////////////////////////////////////////////////////////
 
     // c) write vid //////////////////////////////////////////////////////
-    if (!is_writer_initialized_)
-    {
+    if (!is_writer_initialized_) {
       int fourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
-      video_writer_.open("/home/ros2_ws/src/output_images/processed_vid/processed_output.mp4",
-                         fourcc, 30.0, processed_frame.size());
+      video_writer_.open(
+        "/home/ros2_ws/src/output_images/processed_vid/processed_output.mp4",
+        fourcc, 30.0, processed_frame.size());
       is_writer_initialized_ = true;
     }
     video_writer_.write(processed_frame);
   }
 
-  cv::Mat StitchImg(cv::Mat &raw_frame, cv::Mat &processed_frame)
+  cv::Mat StitchImg(cv::Mat & raw_frame, cv::Mat & processed_frame)
   {
     // stitch together original feed + raw feed
     cv::Mat combined_frame;
-    if (raw_frame.rows == processed_frame.rows && raw_frame.cols == processed_frame.cols)
-    {
+    if (raw_frame.rows == processed_frame.rows && raw_frame.cols == processed_frame.cols) {
       std::vector<cv::Mat> images = {raw_frame, processed_frame};
       cv::hconcat(images, combined_frame);
-    }
-    else
-    {
+    } else {
       combined_frame = processed_frame;
     }
 
@@ -104,8 +100,7 @@ private:
   // image callback
   void image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
   {
-    try
-    {
+    try {
       // convert ros to opencv
       cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
       cv::Mat raw_frame = cv_ptr->image;
@@ -137,9 +132,7 @@ private:
       std_msgs::msg::Header header = msg->header; // timestamp
       cv_bridge::CvImage img_bridge = cv_bridge::CvImage(header, "bgr8", processed_frame);
       publisher_->publish(*img_bridge.toImageMsg());
-    }
-    catch (cv_bridge::Exception &e)
-    {
+    } catch (cv_bridge::Exception & e) {
       RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
     }
   }
@@ -155,7 +148,7 @@ private:
   bool is_writer_initialized_ = false;
 };
 
-int main(int argc, char *argv[])
+int main(int argc, char * argv[])
 {
   // init ros
   rclcpp::init(argc, argv);

@@ -30,21 +30,21 @@ class ServoControllerNode(Node):
         super().__init__("servo_controller")
 
         # Declare parameters
-        self.declare_parameter('servo_pin', 32) 
-        self.declare_parameter('min_angle', 0.0)
-        self.declare_parameter('max_angle', 83.94)
-        self.declare_parameter('pwm_frequency', 50)
-        self.declare_parameter('min_duty_cycle', 2.5)
-        self.declare_parameter('max_duty_cycle', 12.5)
+        self.declare_parameter("servo_pin", 32)
+        self.declare_parameter("min_angle", 0.0)
+        self.declare_parameter("max_angle", 83.94)
+        self.declare_parameter("pwm_frequency", 50)
+        self.declare_parameter("min_duty_cycle", 2.5)
+        self.declare_parameter("max_duty_cycle", 12.5)
 
         # Load parameters
-        self.servo_pin = self.get_parameter('servo_pin').value
-        self.min_angle = self.get_parameter('min_angle').value
-        self.max_angle = self.get_parameter('max_angle').value
-        self.min_duty_cycle = self.get_parameter('min_duty_cycle').value
-        self.max_duty_cycle = self.get_parameter('max_duty_cycle').value
-        pwm_frequency = self.get_parameter('pwm_frequency').value
-        
+        self.servo_pin = self.get_parameter("servo_pin").value
+        self.min_angle = self.get_parameter("min_angle").value
+        self.max_angle = self.get_parameter("max_angle").value
+        self.min_duty_cycle = self.get_parameter("min_duty_cycle").value
+        self.max_duty_cycle = self.get_parameter("max_duty_cycle").value
+        pwm_frequency = self.get_parameter("pwm_frequency").value
+
         # Jetson GPIO setup (BOARD numbering)
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(self.servo_pin, GPIO.OUT)
@@ -69,7 +69,7 @@ class ServoControllerNode(Node):
         self.feedback_publisher = self.create_publisher(
             Float32,
             self.publisherTopic,
-            10  # self.queueSize
+            10,  # self.queueSize
         )
 
         self.current_angle = self.max_angle
@@ -105,8 +105,8 @@ class ServoControllerNode(Node):
         self.feedback_publisher.publish(feedback_msg)
 
     def destroy_node(self):
-        self.pwm.stop()     
-        GPIO.cleanup()       
+        self.pwm.stop()
+        GPIO.cleanup()
         super().destroy_node()
 
     def kill_cb(self, msg):

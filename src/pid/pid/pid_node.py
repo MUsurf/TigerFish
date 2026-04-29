@@ -76,14 +76,16 @@ def rotate_vector_by_quat(v, q):
 
 
 class PIDNode(Node):
-    def __init__(self,
-             x_gains=(0.1, 0.0, 0.0),
-             y_gains=(0.1, 0.0, 0.0),
-             z_gains=(0.1, 0.0, 0.0),
-             roll_gains=(0.01, 0.0, 0.0),
-             pitch_gains=(0.01, 0.0, 0.0),
-             yaw_gains=(0.01, 0.0, 0.0)):
-        super().__init__('pid_node')
+    def __init__(
+        self,
+        x_gains=(0.1, 0.0, 0.0),
+        y_gains=(0.1, 0.0, 0.0),
+        z_gains=(0.1, 0.0, 0.0),
+        roll_gains=(0.01, 0.0, 0.0),
+        pitch_gains=(0.01, 0.0, 0.0),
+        yaw_gains=(0.01, 0.0, 0.0),
+    ):
+        super().__init__("pid_node")
         self.x_kP, self.x_kI, self.x_kD = x_gains
         self.y_kP, self.y_kI, self.y_kD = y_gains
         self.z_kP, self.z_kI, self.z_kD = z_gains
@@ -127,14 +129,15 @@ class PIDNode(Node):
         self.timer = self.create_timer(period, self.timer_cb)
 
         self.locked = False
-        
-        self.get_logger().info("PID node created")
-        
-    def timer_cb(self):
-        if not self.last_od : return
-        if not self.last_msg : return
 
-        
+        self.get_logger().info("PID node created")
+
+    def timer_cb(self):
+        if not self.last_od:
+            return
+        if not self.last_msg:
+            return
+
         if self.locked:
             return
         self.locked = True
@@ -231,9 +234,9 @@ class PIDNode(Node):
         m = np.max(np.abs(motor_powers))
         if m > 1.0:
             motor_powers = motor_powers / m
-        
+
         motor_powers[4:8] = motor_powers[4:8] * -1
-            
+
         message = Float32MultiArray()
         message.data = motor_powers.tolist()
         self.motor_publisher.publish(message)
@@ -271,7 +274,8 @@ class PIDNode(Node):
         return np.array([y_power, -y_power, y_power, -y_power, 0, 0, 0, 0])
 
     def z_to_motor(self, z_power) -> np.ndarray:
-        return np.array([0, 0, 0, 0, z_power, z_power, - z_power, - z_power])
+        return np.array([0, 0, 0, 0, z_power, z_power, -z_power, -z_power])
+
     def roll_to_motor(self, roll_power) -> np.ndarray:
         return np.array([0, 0, 0, 0, -roll_power, roll_power, roll_power, -roll_power])
 

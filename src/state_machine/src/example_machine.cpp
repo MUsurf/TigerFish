@@ -15,22 +15,20 @@
 class ExampleState : public yasmin::State
 {
 public:
-    // you put the transition codes, or exit codes, here (can put as many as want, but need to be able to return it)
-    ExampleState() : State({"ExitCode1", "ExitCode2"}) {}
+  // you put the transition codes, or exit codes, here (can put as many as want, but need to be able to return it)
+  ExampleState()
+  : State({"ExitCode1", "ExitCode2"}) {}
 
-    std::string execute() override
-    {
-        // DO THINGS HERE
+  std::string execute() override
+  {
+    // DO THINGS HERE
 
-        if(1)
-        {
-            return "ExitCode1";
-        }
-        else
-        {
-            return "ExitCode2";
-        }
+    if (1) {
+      return "ExitCode1";
+    } else {
+      return "ExitCode2";
     }
+  }
 };
 
 class state_machine_node : public rclcpp::Node
@@ -47,7 +45,9 @@ public:
     // adds a state (the name of it that we make up, not tied to anythig), the actual state, and then the transitions that it can take
     // for the transitions, it is pairs of what it returns, then what to goes to, so for instance if it returns "ExitCode1", it goes back into the state ("EXAMPLE")
     // and if it returns "ExitCode2", it exits the state machine (which if it is the only one ends the program)
-    state_machine_->add_state("EXAMPLE", std::make_shared<ExampleState>(), {{"ExitCode1", "EXAMPLE"}, {"ExitCode2", "complete"}});
+    state_machine_->add_state(
+      "EXAMPLE",
+      std::make_shared<ExampleState>(), {{"ExitCode1", "EXAMPLE"}, {"ExitCode2", "complete"}});
 
     state_machine_->set_start_state("EXAMPLE");
 

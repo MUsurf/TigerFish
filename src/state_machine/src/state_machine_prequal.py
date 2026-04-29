@@ -20,7 +20,6 @@ class StartingState(State):
         msg = PIDInput()
         msgDepth = depth()
 
-
         msg.x_mode = True
         msg.y_mode = True
         msg.z_mode = True
@@ -29,8 +28,7 @@ class StartingState(State):
         msg.yaw_mode = True
         msg.z_setpoint = 3
 
-        while(msgDepth < 3):
-            
+        while msgDepth < 3:
             time.sleep(0.1)
 
         return "finished"
@@ -43,7 +41,9 @@ class StateMachineNode(Node):
         # terminal outcomes
         self.state_machine = StateMachine(outcomes={"complete"})
 
-        self.state_machine.add_state("START", StartingState(), transitions={"finished" : "IDK"})
+        self.state_machine.add_state(
+            "START", StartingState(), transitions={"finished": "IDK"}
+        )
 
         self.state_machine.set_start_state("START")
 

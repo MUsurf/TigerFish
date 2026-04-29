@@ -12,12 +12,12 @@
 // pluging it in like this allows us to visualize the color space with commonly available color pickers.
 cv::Scalar Gate_detection::hsvToOpenCV(float h_deg, float s_pct, float v_pct)
 {
-    // Convert
+  // Convert
   int h = static_cast<int>(h_deg / 2.0f);     // 0-360 -> 0-180 (OpenCV uses 0-179)
   int s = static_cast<int>(s_pct * 2.55f);    // 0-100 -> 0-255
   int v = static_cast<int>(v_pct * 2.55f);    // 0-100 -> 0-255
 
-    // Clamp to OpenCV valid ranges
+  // Clamp to OpenCV valid ranges
   h = std::clamp(h, 0, 179);
   s = std::clamp(s, 0, 255);
   v = std::clamp(v, 0, 255);
@@ -43,16 +43,17 @@ std::vector<cv::Vec4f> Gate_detection::ransacDetectLines(
   std::vector<cv::Vec4f> linesOut;
   if (points.size() < 2) {return linesOut;}
 
-        // Deterministic RNG (same as your original). Change seed if you want randomness.
+  // Deterministic RNG (same as your original). Change seed if you want randomness.
   static std::mt19937 rng(12345);
 
   for (int k = 0; k < maxLines; ++k) {
     if (points.size() < 2) {break;}
 
-    const int minInliers = std::max(minInliersFloor,
-    static_cast<int>(points.size() * minInlierRatio));
+    const int minInliers = std::max(
+      minInliersFloor,
+      static_cast<int>(points.size() * minInlierRatio));
 
-            // --- Single-line RANSAC fit (inlined) ---
+    // --- Single-line RANSAC fit (inlined) ---
     std::vector<int> bestInliers;
     bestInliers.reserve(points.size());
 
@@ -69,13 +70,13 @@ std::vector<cv::Vec4f> Gate_detection::ransacDetectLines(
       const cv::Point2f & p1 = points[i1];
       const cv::Point2f & p2 = points[i2];
 
-                // direction = normalized (p2 - p1)
+      // direction = normalized (p2 - p1)
       cv::Point2f d = p2 - p1;
       const float len = std::sqrt(d.x * d.x + d.y * d.y);
       if (len < 1e-6f) {continue;}
       d.x /= len; d.y /= len;
 
-                // collect inliers by point-to-line distance using 2D cross product magnitude
+      // collect inliers by point-to-line distance using 2D cross product magnitude
       std::vector<int> inliers;
       inliers.reserve(points.size());
 
@@ -96,10 +97,10 @@ std::vector<cv::Vec4f> Gate_detection::ransacDetectLines(
       }
     }
 
-            // If we can't get enough inliers, stop extracting more lines.
+    // If we can't get enough inliers, stop extracting more lines.
     if (bestInlierCount < minInliers) {break;}
 
-            // Refine best model with least-squares fit on inliers
+    // Refine best model with least-squares fit on inliers
     std::vector<cv::Point2f> inlierPts;
     inlierPts.reserve(bestInliers.size());
     for (int idx : bestInliers) {
@@ -111,7 +112,7 @@ std::vector<cv::Vec4f> Gate_detection::ransacDetectLines(
 
     linesOut.push_back(refined);
 
-            // --- Remove inliers from the working set for multi-line detection ---
+    // --- Remove inliers from the working set for multi-line detection ---
     std::vector<char> isInlier(points.size(), 0);
     for (int idx : bestInliers) {
       isInlier[idx] = 1;
@@ -124,7 +125,7 @@ std::vector<cv::Vec4f> Gate_detection::ransacDetectLines(
 
     points.swap(remaining);
 
-            // Optional early stop if too few points remain to form another strong line
+    // Optional early stop if too few points remain to form another strong line
     if (points.size() < (size_t)minInliersFloor) {break;}
   }
 
@@ -146,18 +147,18 @@ GateResult Gate_detection::find_gate(
   cv::Mat colorMask;
 
   cv::inRange(
-        hsv,
-        Gate_detection::hsvToOpenCV(0.0f, 30.0f, 30.0f),
-        Gate_detection::hsvToOpenCV(40.0f, 100.0f, 100.0f),
-        maskRed1
+    hsv,
+    Gate_detection::hsvToOpenCV(0.0f, 30.0f, 30.0f),
+    Gate_detection::hsvToOpenCV(40.0f, 100.0f, 100.0f),
+    maskRed1
   );
 
-    // maskRed2: 315°..360°
+  // maskRed2: 315°..360°
   cv::inRange(
-        hsv,
-        Gate_detection::hsvToOpenCV(315.0f, 30.0f, 30.0f),
-        Gate_detection::hsvToOpenCV(360.0f, 100.0f, 100.0f),
-        maskRed2
+    hsv,
+    Gate_detection::hsvToOpenCV(315.0f, 30.0f, 30.0f),
+    Gate_detection::hsvToOpenCV(360.0f, 100.0f, 100.0f),
+    maskRed2
   );
   cv::bitwise_or(maskRed1, maskRed2, colorMask);
 

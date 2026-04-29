@@ -118,7 +118,7 @@ class MotorInterface(Node):
     def log_cb(self):
         # self.get_logger().info(f'Motor goals: {self.motor_goals}')
         pass
-        
+
     def step_motors(self):
         next_motor_powers = [0.0 for _ in range(NUM_MOTORS)]
 

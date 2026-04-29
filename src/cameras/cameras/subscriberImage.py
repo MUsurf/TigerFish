@@ -28,7 +28,9 @@ class SubscriberNodeClass(Node):
         ns = self.get_namespace().strip("/")
         camera_name = ns if ns else "camera"
 
-        self.base_dir = f"/home/tigerfish/TigerFish/videos/processed_vid/{camera_name}_records"
+        self.base_dir = (
+            f"/home/tigerfish/TigerFish/videos/processed_vid/{camera_name}_records"
+        )
         os.makedirs(self.base_dir, exist_ok=True)
 
         self.bag_dir = os.path.join(self.base_dir, f"bag_{timestamp}")
@@ -40,7 +42,9 @@ class SubscriberNodeClass(Node):
             self.setup_rosbag()
             self.get_logger().info(f"recording to rosbag at {self.base_dir}")
         else:
-            self.output_path = os.path.join(self.base_dir, f"{camera_name}_raw_log_{timestamp}.mp4") #mp4
+            self.output_path = os.path.join(
+                self.base_dir, f"{camera_name}_raw_log_{timestamp}.mp4"
+            )  # mp4
             self.get_logger().info(f"recording to mp4 at {self.output_path}")
 
         # Name must match publisher node
@@ -104,10 +108,11 @@ class SubscriberNodeClass(Node):
                     25.0,  # frames
                     (width, height),  # frame size
                 )
-                
-                self.get_logger().info(f"Absolute path: {os.path.abspath(self.output_path)}")
-                self.get_logger().info(f"VideoWriter initialized at {width}x{height}")
 
+                self.get_logger().info(
+                    f"Absolute path: {os.path.abspath(self.output_path)}"
+                )
+                self.get_logger().info(f"VideoWriter initialized at {width}x{height}")
 
             self.video_writer.write(openCVImage)  # write the video
 
@@ -135,7 +140,7 @@ def main(args=None):
     except Exception:
         print("CameraSubscriber spin failure.")
     except KeyboardInterrupt:
-        subscriberNode.get_logger().info("KeyboardInterrupt received (Ctrl+C)")   
+        subscriberNode.get_logger().info("KeyboardInterrupt received (Ctrl+C)")
     finally:
         subscriberNode.destroy_node()
         if rclpy.ok():
