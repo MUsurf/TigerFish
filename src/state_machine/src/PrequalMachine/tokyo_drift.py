@@ -37,17 +37,22 @@ class TokyoDrift(State):
         odom = blackboard.get("odom")
         depth = blackboard.get("depth")
 
+        msg = PIDInput()
+
         cachedHeading = 0
         currentHeading = 0
 
         # TODO make sure the angle math is correct here
         while(currentHeading < 180 - cachedHeading):
-            self.moveSlightly()
+            self.moveSlightly(msg)
         while(currentHeading < cachedHeading):
-            self.moveSlightly()
+            self.moveSlightly(msg)
 
     
-    def moveSlightly():
-        pass
-        # TODO motorMoveRight() for only like a little
+    def moveSlightly(msg):
+        msg.y_power = 1
+
+        time.sleep(0.1)
+
+        msg.y_power = 0
         # TODO spin left until camera at center of pole
