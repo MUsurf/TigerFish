@@ -20,8 +20,7 @@ class TokyoDrift(State):
         self.set_description(
             "Move around pole"
         )
-        
-        
+
     def execute(self, blackboard: Blackboard):
         """
         Executes the logic for the state.
@@ -38,5 +37,17 @@ class TokyoDrift(State):
         odom = blackboard.get("odom")
         depth = blackboard.get("depth")
 
-        while(True):
-            
+        cachedHeading = 0
+        currentHeading = 0
+
+        # TODO make sure the angle math is correct here
+        while(currentHeading < 180 - cachedHeading):
+            self.moveSlightly()
+        while(currentHeading < cachedHeading):
+            self.moveSlightly()
+
+    
+    def moveSlightly():
+        pass
+        # TODO motorMoveRight() for only like a little
+        # TODO spin left until camera at center of pole
