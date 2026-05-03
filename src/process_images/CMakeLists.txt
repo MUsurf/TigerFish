@@ -12,18 +12,27 @@ find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 include_directories(
   include
   ${OpenCV_INCLUDE_DIRS}
+  ${cv_bridge_INCLUDE_DIRS}
 )
 
 # executable
-add_executable(process_img
-  src/process_img_node.cpp
+# add_executable(process_img
+#   src/process_img_node.cpp
+#   src/img_preprocessing.cpp
+#   src/marker_detector.cpp
+#   src/gate_detection.cpp
+# )
+
+add_executable(prequal_node
+  src/prequal_node.cpp
   src/img_preprocessing.cpp
-  src/marker_detector.cpp
-  src/gate_detection.cpp
+  src/prequal_line.cpp
+  src/prequal_helper.cpp
 )
 
 add_executable(video_pub_node
@@ -32,24 +41,43 @@ add_executable(video_pub_node
 
 # link libraries
 
-target_include_directories(process_img PRIVATE 
-  include 
-  ${OpenCV_INCLUDE_DIRS}
-)
+# target_include_directories(process_img PRIVATE 
+#   include 
+#   ${OpenCV_INCLUDE_DIRS}
+#   ${cv_bridge_INCLUDE_DIRS}
+# )
 target_include_directories(video_pub_node PRIVATE 
   include 
   ${OpenCV_INCLUDE_DIRS}
+  ${cv_bridge_INCLUDE_DIRS}
 )
 
-ament_target_dependencies(process_img rclcpp sensor_msgs cv_bridge)
-ament_target_dependencies(video_pub_node rclcpp sensor_msgs cv_bridge)
+target_include_directories(prequal_node PRIVATE 
+  include 
+  ${OpenCV_INCLUDE_DIRS}
+  ${cv_bridge_INCLUDE_DIRS}
+)
 
-target_link_libraries(process_img ${OpenCV_LIBRARIES})
+# ament_target_dependencies(process_img rclcpp sensor_msgs cv_bridge)
+ament_target_dependencies(video_pub_node rclcpp sensor_msgs cv_bridge)
+ament_target_dependencies(prequal_node rclcpp sensor_msgs cv_bridge geometry_msgs)
+
+
+# target_link_libraries(process_img ${OpenCV_LIBRARIES})
 target_link_libraries(video_pub_node ${OpenCV_LIBRARIES})
+target_link_libraries(prequal_node ${OpenCV_LIBRARIES})
+
+
+# install(TARGETS 
+#   process_img
+#   video_pub_node
+#   prequal_node
+#   DESTINATION lib/${PROJECT_NAME}
+# )
 
 install(TARGETS 
-  process_img
   video_pub_node
+  prequal_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -68,4 +96,6 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME})
 ament_package()

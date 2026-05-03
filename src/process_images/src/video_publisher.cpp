@@ -22,7 +22,7 @@ public:
     publisher_ = this->create_publisher<sensor_msgs::msg::Image>("camera/image_raw", 10);
 
     //mp4 setup - update path to follow what is on your PC
-    cap_.open("/home/ros2_ws/src/TestImages/FirstTestFeb2026.mp4");
+    cap_.open("/home/ros2_ws/src/src/TestImages/RoboSub2022CourseWalkThrough.mp4");
 
     // check that we opened the mp4 correctly
     if (!cap_.isOpened()) {
