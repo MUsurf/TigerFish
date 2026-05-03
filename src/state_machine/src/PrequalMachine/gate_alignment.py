@@ -3,7 +3,8 @@ import time
 import rclpy
 
 import yasmin
-from yasmin import State
+from yasmin import State, Blackboard
+from state_machine_node import Context
 
 class GateAlignment(State):
     """
@@ -12,11 +13,11 @@ class GateAlignment(State):
     Outcomes:
         next_state: goes to the go-through-gate state
     """
-    def __init__(self) -> None:
+    
+    def __init__(self, Context : cntxt) -> None:
         super().__init__(["next_state"])
-        self.set_description(
-            "Is the starting state. Aligns the sub level to and facing the gate"
-        )   
+        context = cntxt
+        
         
     def execute(self, bb : Blackboard):
         """
@@ -25,17 +26,27 @@ class GateAlignment(State):
         Returns: next_state
         """
         yasmin.YASMIN_LOG_INFO("Executing state Gate Alignment")
+        
+        # Get blackboard info
         gate = bb.get("gate_detection")
-        # odom = bb.get("odom")
+        odom = bb.get("odom")
         depth = bb.get("depth")
         desired_depth = bb.get("desired_depth")
-        send = False
         
+        # Construct PID message
         msg = PIDInput()
+        msg.z_measurement = depth # Always maintain depth!
+        msg.z_setpoint = desired_depth
+        
+        
+        
+        
+        
+        
+        
 
         if (depth != desired_depth):
-            msg.z_measurement = depth
-            msg.z_setpoint = desired_depth
+            
             send = True
         if (self.screen_center[0] != gate["x_pos"]): #  and self.screen_center[1] != gate["y_pos"] 
             # TODO: Figure smth out with camera vis to do pixel distances

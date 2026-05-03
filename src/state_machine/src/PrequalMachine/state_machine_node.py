@@ -1,4 +1,4 @@
-import time
+import math
 
 import rclpy
 from rclpy import Node
@@ -11,7 +11,8 @@ from yasmin_viewer import YasminViewerPub
 
 from std_msgs.msg import Float32MultiArray, Float32, String, Bool 
 
-from TigerFish.src.state_machine.src.PrequalMachine.gate_alignment import StartState 
+from tf_transformations import euler_from_quaternion
+ 
 from gate_alignment import GateAlignment
 from go_through_gate import GoThroughGate
 from pole_alignment import PoleAlignment
@@ -59,10 +60,10 @@ class StateMachineNode(Node):
         self.state_machine = StateMachine(outcomes={"complete"})
         
         # Create states
-        self.state_machine.add_state("GATE_ALIGNMENT", GateAlignment(self.pid_publisher), transitions={"next_state" : "GO_THROUGH_GATE"}) # Make Gate state work in both directions --> terminate on back through
-        self.state_machine.add_state("GO_THROUGH_GATE", GoThroughGate(self.pid_publisher), transitions={"not_pole_danced" : "POLE_ALIGNMENT", "pole_danced" : "complete"})
-        self.state_machine.add_state("POLE_ALIGNMENT", PoleAlignment(self.pid_publisher), transitions={"next_state" : "TOKYO_DRIFT"})
-        self.state_machine.add_state("TOKYO_DRIFT", TokyoDrift(self.pid_publisher), transitions={"next_state" : "GATE_ALIGNMENT"})
+        self.state_machine.add_state("GATE_ALIGNMENT", GateAlignment(self.context), transitions={"next_state" : "GO_THROUGH_GATE"}) # Make Gate state work in both directions --> terminate on back through
+        self.state_machine.add_state("GO_THROUGH_GATE", GoThroughGate(self.context), transitions={"not_pole_danced" : "POLE_ALIGNMENT", "pole_danced" : "complete"})
+        self.state_machine.add_state("POLE_ALIGNMENT", PoleAlignment(self.context), transitions={"next_state" : "TOKYO_DRIFT"})
+        self.state_machine.add_state("TOKYO_DRIFT", TokyoDrift(self.context), transitions={"next_state" : "GATE_ALIGNMENT"})
 
         # Set up state machine
         self.state_machine.set_start_state("GATE_ALIGNMENT")
@@ -92,7 +93,29 @@ class StateMachineNode(Node):
     }
 
     def _odom_cb(self, msg):
-        self.blackboard["odom"] = msg
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        
+        # Orientation Quaternion
+        qx = msg.pose.pose.orientation.x
+        qy = msg.pose.pose.orientation.y
+        qz = msg.pose.pose.orientation.z
+        qw = msg.pose.pose.orientation.w
+        
+        orientation_list = [qx, qy, qz, qw]
+        (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
+        
+        self.blackboard["odom"] = {
+            "x": x,
+            "y": y,
+            "qx": qx,
+            "qy": qy,
+            "qz": qz,
+            "qw": qw,
+            "yaw": math.degrees(yaw),
+            "pitch": math.degrees(pitch),
+            "roll": math.degrees(roll),                
+        }
 
     def depth_sensor_cb(self, msg):
         self.blackboard["depth"] = msg.data
