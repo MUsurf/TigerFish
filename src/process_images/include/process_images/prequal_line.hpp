@@ -17,6 +17,8 @@ struct PoleShapeData{
     cv::Point center;
     cv::Point centerTop;
     cv::Point centerBottom;
+    int width;
+    int height;
 
 };
 

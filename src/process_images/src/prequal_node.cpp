@@ -14,6 +14,8 @@
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "geometry_msgs/msg/vector3.hpp"
 
+#include "std_msgs/msg/int32.hpp"
+
 
 class prequal_node : public rclcpp::Node
 {
@@ -39,6 +41,9 @@ public:
         "camera/camera_info", 10,
         std::bind(&prequal_node::info_callback, this, std::placeholders::_1));
     coords_pub_ = this->create_publisher<geometry_msgs::msg::Vector3>("path/pole_coords", 10);
+
+    pole_width_pub_ = this->create_publisher<std_msgs::msg::Int32>(
+      "camera/poleWidth", 10);
     
 
     // logging
@@ -160,6 +165,9 @@ private:
       PoleShapeData pole = getPoleShape(mask);
       geometry_msgs::msg::Vector3 coord_msg;
 
+      auto width_msg = std_msgs::msg::Int32();
+      width_msg.data = pole.width;
+
       coord_msg.z = 0; //0 = no pole
       coord_msg.x = 0;
       coord_msg.y = 0;
@@ -171,6 +179,7 @@ private:
         coord_msg.x = angles.yaw;
         coord_msg.y = angles.pitch;
         coord_msg.z = 1; // 1 = pole detected
+        pole_width_pub_->publish(width_msg);
 
         //ddraw the pole detection
         cv::circle(processed_frame, pole.centerTop, 10, cv::Scalar(0,255, 0), -1);
@@ -199,6 +208,8 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
   rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr coords_pub_;
+  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr pole_width_pub_;
+
   // camera init vars
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr info_sub_;
   cv::Mat camera_matrix_;

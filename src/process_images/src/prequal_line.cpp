@@ -77,6 +77,8 @@ PoleShapeData getPoleShape(const cv::Mat& frame){
                 res.center = cv::Point(bbox.x + bbox.width/2, bbox.y+bbox.height/2);
                 res.centerTop = cv::Point(bbox.x + bbox.width/2, bbox.y);
                 res.centerBottom = cv::Point(bbox.x + bbox.width/2, bbox.y + bbox.height);
+                res.width = bbox.width;
+                res.height = bbox.height;
 
             }
 
