@@ -60,10 +60,11 @@ class StateMachineNode(Node):
         self.state_machine = StateMachine(outcomes={"complete"})
         
         # Create states
-        self.state_machine.add_state("GATE_ALIGNMENT", GateAlignment(self.context), transitions={"next_state" : "GO_THROUGH_GATE"}) # Make Gate state work in both directions --> terminate on back through
+        self.state_machine.add_state("GATE_ALIGNMENT", GateAlignment(self.context), transitions={"next_state" : "GO_THROUGH_GATE", "reset" : "RESET"}) # Make Gate state work in both directions --> terminate on back through
         self.state_machine.add_state("GO_THROUGH_GATE", GoThroughGate(self.context), transitions={"not_pole_danced" : "POLE_ALIGNMENT", "pole_danced" : "complete"})
         self.state_machine.add_state("POLE_ALIGNMENT", PoleAlignment(self.context), transitions={"next_state" : "TOKYO_DRIFT"})
         self.state_machine.add_state("TOKYO_DRIFT", TokyoDrift(self.context), transitions={"next_state" : "GATE_ALIGNMENT"})
+        self.state_machine.add_state("RESET", ResetState(self.context), transitions=("next_state" : "GATE_ALIGNMENT"))
 
         # Set up state machine
         self.state_machine.set_start_state("GATE_ALIGNMENT")
@@ -106,8 +107,8 @@ class StateMachineNode(Node):
         (roll, pitch, yaw) = euler_from_quaternion(orientation_list)
         
         self.blackboard["odom"] = {
-            "x": x,
-            "y": y,
+            # "x": x,
+            # "y": y,
             "qx": qx,
             "qy": qy,
             "qz": qz,

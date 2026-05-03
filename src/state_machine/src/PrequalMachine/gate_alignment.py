@@ -15,8 +15,11 @@ class GateAlignment(State):
     """
     
     def __init__(self, Context : cntxt) -> None:
-        super().__init__(["next_state"])
+        super().__init__(["next_state", "reset"])
         context = cntxt
+        is_in_depth = False
+        in_depth_time = 0
+        deep = True
         
         
     def execute(self, bb : Blackboard):
@@ -32,11 +35,50 @@ class GateAlignment(State):
         odom = bb.get("odom")
         depth = bb.get("depth")
         desired_depth = bb.get("desired_depth")
+
+        
         
         # Construct PID message
         msg = PIDInput()
-        msg.z_measurement = depth # Always maintain depth!
+        
+        msg.z_mode = True
+        msg.roll_mode = True
+        msg.pitch_mode = True
+        msg.yaw_mode = True
+
+        # Maintain depth and orientation
+        msg.z_measurement = depth 
         msg.z_setpoint = desired_depth
+        
+        msg.yaw_setpoint = 0
+        msg.yaw_measurement = odom["yaw"]
+        msg.pitch_setpoint = 0
+        msg.pitch_measurement = odom["pitch"]
+        msg.roll_setpoint = 0
+        msg.roll_measurement = odom["roll"]
+        
+        # Above water
+        if (depth < 0):
+            return "reset"
+        
+        # Achieve and maintain desired depth within range 
+        self.deep = False
+        if (abs(depth - desired_depth) < 0.15):
+            if not self.is_in_depth:
+                self.is_in_depth = True
+                self.in_depth_time = time.time()
+            else:
+                time_elapsed = time.time() - self.in_depth_time
+                if (time_elapsed > 3.0):
+                    self.deep = True
+        else:
+            self.is_in_depth = False
+            
+        # Align with gate
+        
+                    
+        
+        
         
         
         
