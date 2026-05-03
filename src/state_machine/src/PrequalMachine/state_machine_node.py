@@ -73,9 +73,9 @@ class StateMachineNode(Node):
     # Call back functions keep blackboard up to date with ROS topics
     def gate_cb(self, msg):
         self.blackboard["gate_detection"] = { # Utilize blackboard for data sharing between states and state machines.
-            "seen": msg.does_see,
-            "x": msg.x_pos,
-            "y": msg.y_pos,
+            "seen": msg.z,
+            "yaw_angle": msg.x,
+            "pitch_angle": msg.y,
         }
 
     def pole_cb(self, msg):
