@@ -17,15 +17,8 @@ from gate_alignment import GateAlignment
 from go_through_gate import GoThroughGate
 from pole_alignment import PoleAlignment
 from tokyo_drift import TokyoDrift
-
-# Global info node/singleton
-class Context:
-    def __init__(self, node, pid_publisher):
-        self.node = node
-        self.pid_publisher = pid_publisher
-        self.desired_depth = 2 # meters, 6.6 ft
-        self.screen_center = {100,100} # PLEASE CONFIRM
-        self.pole_danced = False
+from reset_state import ResetState
+from context import Context
 
 class StateMachineNode(Node): 
     def __init__(self):
@@ -64,7 +57,7 @@ class StateMachineNode(Node):
         self.state_machine.add_state("GO_THROUGH_GATE", GoThroughGate(self.context), transitions={"not_pole_danced" : "POLE_ALIGNMENT", "pole_danced" : "complete"})
         self.state_machine.add_state("POLE_ALIGNMENT", PoleAlignment(self.context), transitions={"next_state" : "TOKYO_DRIFT"})
         self.state_machine.add_state("TOKYO_DRIFT", TokyoDrift(self.context), transitions={"next_state" : "GATE_ALIGNMENT"})
-        self.state_machine.add_state("RESET", ResetState(self.context), transitions=("next_state" : "GATE_ALIGNMENT"))
+        self.state_machine.add_state("RESET", ResetState(self.context), transitions={"next_state" : "GATE_ALIGNMENT"})
 
         # Set up state machine
         self.state_machine.set_start_state("GATE_ALIGNMENT")
@@ -75,7 +68,6 @@ class StateMachineNode(Node):
 
         self.get_logger().info("State machine initialized successfully!")
         
-        # To run the statemachine, create a StateMachine and Blackboard, then run StateMachine(Blackboard) (?)
     
     
     # Call back functions keep blackboard up to date with ROS topics
@@ -88,9 +80,9 @@ class StateMachineNode(Node):
 
     def pole_cb(self, msg):
         self.blackboard["pole_detection"] = {
-            "seen": msg.does_see,
-            "x": msg.x_pos,
-            "y": msg.y_pos,
+            "seen": msg.z,
+            "yaw_angle": msg.x,
+            "pitch_angle": msg.y,
     }
 
     def _odom_cb(self, msg):

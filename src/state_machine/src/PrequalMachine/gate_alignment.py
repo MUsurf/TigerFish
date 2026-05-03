@@ -14,12 +14,13 @@ class GateAlignment(State):
         next_state: goes to the go-through-gate state
     """
     
-    def __init__(self, Context : cntxt) -> None:
+    def __init__(self, context : Context) -> None:
         super().__init__(["next_state", "reset"])
-        context = cntxt
+        context = context
         is_in_depth = False
         in_depth_time = 0
         deep = True
+        pause = 0
         
         
     def execute(self, bb : Blackboard):
@@ -34,9 +35,7 @@ class GateAlignment(State):
         gate = bb.get("gate_detection")
         odom = bb.get("odom")
         depth = bb.get("depth")
-        desired_depth = bb.get("desired_depth")
-
-        
+        desired_depth = self.context.desired_depth
         
         # Construct PID message
         msg = PIDInput()
@@ -61,6 +60,12 @@ class GateAlignment(State):
         if (depth < 0):
             return "reset"
         
+        # Wait to begin task
+        if (self.pause == 0):
+            self.pause = time.time()
+            while ((time.time() - self.pause_) < 5.0):
+                pass
+        
         # Achieve and maintain desired depth within range 
         self.deep = False
         if (abs(depth - desired_depth) < 0.15):
@@ -75,10 +80,12 @@ class GateAlignment(State):
             self.is_in_depth = False
             
         # Align with gate
+        # TODO: We don't have the CV for this at this time
         
-                    
+        self.context.pid_publisher.publish(msg)
         
-        
+        if(self.deep):
+            return "next_state"
         
         
         
