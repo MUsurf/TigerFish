@@ -18,9 +18,9 @@ class GateAlignment(State):
         super().__init__(["next_state", "reset"])
         context = context
         is_in_depth = False
-        in_depth_time = 0
+        in_depth_time = 0.0
         deep = True
-        pause = 0
+        pause = 0.0
         
         
     def execute(self, bb : Blackboard):
@@ -63,7 +63,7 @@ class GateAlignment(State):
         # Wait to begin task
         if (self.pause == 0):
             self.pause = time.time()
-            while ((time.time() - self.pause_) < 5.0):
+            while ((time.time() - self.pause) < 5.0):
                 pass
         
         # Achieve and maintain desired depth within range 
@@ -85,4 +85,8 @@ class GateAlignment(State):
         self.context.pid_publisher.publish(msg)
         
         if(self.deep):
+            # Reset state and go on
+            self.is_in_depth = False
+            self.deep = False
+            self.in_depth_time = 0
             return "next_state"

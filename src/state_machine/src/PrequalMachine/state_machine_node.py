@@ -54,9 +54,9 @@ class StateMachineNode(Node):
         
         # Create states
         self.state_machine.add_state("GATE_ALIGNMENT", GateAlignment(self.context), transitions={"next_state" : "GO_THROUGH_GATE", "reset" : "RESET"}) # Make Gate state work in both directions --> terminate on back through
-        self.state_machine.add_state("GO_THROUGH_GATE", GoThroughGate(self.context), transitions={"not_pole_danced" : "POLE_ALIGNMENT", "pole_danced" : "complete"})
-        self.state_machine.add_state("POLE_ALIGNMENT", PoleAlignment(self.context), transitions={"next_state" : "TOKYO_DRIFT"})
-        self.state_machine.add_state("TOKYO_DRIFT", TokyoDrift(self.context), transitions={"next_state" : "GATE_ALIGNMENT"})
+        self.state_machine.add_state("GO_THROUGH_GATE", GoThroughGate(self.context), transitions={"next_state" : "POLE_ALIGNMENT", "pole_danced" : "complete", "reset" : "RESET"})
+        self.state_machine.add_state("POLE_ALIGNMENT", PoleAlignment(self.context), transitions={"next_state" : "TOKYO_DRIFT", "reset" : "RESET"})
+        self.state_machine.add_state("TOKYO_DRIFT", TokyoDrift(self.context), transitions={"next_state" : "GATE_ALIGNMENT", "reset" : "RESET"})
         self.state_machine.add_state("RESET", ResetState(self.context), transitions={"next_state" : "GATE_ALIGNMENT"})
 
         # Set up state machine
@@ -83,11 +83,12 @@ class StateMachineNode(Node):
             "seen": msg.z,
             "yaw_angle": msg.x,
             "pitch_angle": msg.y,
+            "pixel_width": msg.width,
     }
 
     def _odom_cb(self, msg):
-        x = msg.pose.pose.position.x
-        y = msg.pose.pose.position.y
+        # x = msg.pose.pose.position.x
+        # y = msg.pose.pose.position.y
         
         # Orientation Quaternion
         qx = msg.pose.pose.orientation.x
