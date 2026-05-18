@@ -23,18 +23,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Standard ROS 2 interfaces and build tools
     ros-humble-ament-cmake \
     ros-humble-example-interfaces \
-    # RQT and GUI tools for RoboSub debugging
-    ros-humble-rqt \
-    ros-humble-rqt-common-plugins \
-    ros-humble-rqt-graph \
-    ros-humble-rqt-image-view \
-    ros-humble-rviz2 \
-    ros-humble-rviz-default-plugins \
-    # Web requirements for yasmin_viewer
-    python3-flask \
-    python3-flask-cors \
-    python3-flask-socketio \
-    python3-waitress \
     # Camera calibration packages
     ros-humble-camera-calibration \
     ros-humble-camera-info-manager-py \
@@ -48,7 +36,6 @@ RUN python3 -m pip install --no-cache \
     adafruit-blinka==8.66.0 \
     adafruit-python-shell==1.10.0 \
     rpi-lgpio==0.6 \
-    #Ruff is a formatter and linter
     ruff \
     expiringdict && \
     python3 -m pip uninstall -y RPi.GPIO 
@@ -79,30 +66,37 @@ WORKDIR /home/ros2_ws
 
 # get yasmin if it doesn't already exist
 # --- THE YASMIN SYSTEM INSTALL (VERSION 3.4.0) ---
-RUN git clone --depth 1 --branch 3.4.0 https://github.com/uleroboticsgroup/yasmin.git /tmp/yasmin && \
-    source /opt/ros/humble/setup.bash && \
-    cd /tmp/yasmin && \
-    colcon build \
-    --install-base /opt/ros/humble \
-    --merge-install \
-    --cmake-args -DCMAKE_BUILD_TYPE=Release && \
-    rm -rf /tmp/yasmin
+# RUN git clone --depth 1 --branch 3.4.0 https://github.com/uleroboticsgroup/yasmin.git /tmp/yasmin && \
+#     source /opt/ros/humble/setup.bash && \
+#     cd /tmp/yasmin && \
+#     colcon build \
+#     --install-base /opt/ros/humble \
+#     --merge-install \
+#     --cmake-args -DCMAKE_BUILD_TYPE=Release && \
+#     rm -rf /tmp/yasmin
 
-# 3. Rosdep Installation
-# RUN --mount=type=bind,source=./process_depth/package.xml,target=/home/ros2_ws/deps/process_depth/package.xml \
-#     --mount=type=bind,source=./process_imu/package.xml,target=/home/ros2_ws/deps/process_imu/package.xml \
-#     --mount=type=bind,source=./process_images/package.xml,target=/home/ros2_ws/deps/process_images/package.xml \
-#     apt-get update && \
-#     rosdep update --rosdistro $ROS_DISTRO && \
-#     rosdep install -i --from-path /home/ros2_ws/deps --rosdistro $ROS_DISTRO -y && \
-#     rm -rf /var/lib/apt/lists/*
-RUN --mount=type=bind,source=./src/motor_driver/package.xml,target=/home/ros2_ws/deps/motor_driver/package.xml \
-    # --mount=type=bind,source=./src/process_imu/package.xml,target=/home/ros2_ws/deps/process_imu/package.xml \
-    # --mount=type=bind,source=./src/state_estimator/package.xml,target=/home/ros2_ws/deps/state_estimator/package.xml \
-    --mount=type=bind,source=./src/main/package.xml,target=/home/ros2_ws/deps/main/package.xml \
+# Better yasmin install
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-humble-yasmin \
+    ros-humble-yasmin-ros \
+    ros-humble-yasmin-msgs \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN --mount=type=bind,source=./src/cameras/package.xml,target=/home/ros2_ws/deps/cameras/package.xml \
+    --mount=type=bind,source=./src/depth_sensor/package.xml,target=/home/ros2_ws/deps/depth_sensor/package.xml \
     --mount=type=bind,source=./src/grabber_servo/package.xml,target=/home/ros2_ws/deps/grabber_servo/package.xml \
+    --mount=type=bind,source=./src/imu/package.xml,target=/home/ros2_ws/deps/imu/package.xml \
+    --mount=type=bind,source=./src/main/package.xml,target=/home/ros2_ws/deps/main/package.xml \
+    --mount=type=bind,source=./src/messages/package.xml,target=/home/ros2_ws/deps/messages/package.xml \
+    --mount=type=bind,source=./src/motor_driver/package.xml,target=/home/ros2_ws/deps/motor_driver/package.xml \
+    --mount=type=bind,source=./src/pid/package.xml,target=/home/ros2_ws/deps/pid/package.xml \
+    --mount=type=bind,source=./src/process_cameras/package.xml,target=/home/ros2_ws/deps/process_cameras/package.xml \
     --mount=type=bind,source=./src/process_images/package.xml,target=/home/ros2_ws/deps/process_images/package.xml \
-    #--mount=type=bind,source=./src/motor_command/package.xml,target=/home/ros2_ws/deps/motor_command/package.xml \
+    --mount=type=bind,source=./src/process_imu/package.xml,target=/home/ros2_ws/deps/process_imu/package.xml \
+    --mount=type=bind,source=./src/remote_controller/package.xml,target=/home/ros2_ws/deps/remote_controller/package.xml \
+    --mount=type=bind,source=./src/state_estimator/package.xml,target=/home/ros2_ws/deps/state_estimator/package.xml \
+    --mount=type=bind,source=./src/state_machine/package.xml,target=/home/ros2_ws/deps/state_machine/package.xml \
+
     apt-get update && \
     rosdep update && \
     rosdep install -i --from-path ./deps --rosdistro $ROS_DISTRO -y
@@ -111,7 +105,10 @@ COPY ./ /home/ros2_ws/src/
 COPY ./makefile /home/ros2_ws/makefile
 
 RUN source /opt/ros/$ROS_DISTRO/setup.bash && \
-  colcon build --symlink-install --parallel-workers 4
+    colcon build --symlink-install --parallel-workers 4
+
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc && \
+    echo "source /your_ws/install/setup.bash" >> /root/.bashrc
 
 # 6. Automate Environment Sourcing for the User
 # This makes 'ros2' and 'colcon' commands work immediately in new terminals
