@@ -32,8 +32,8 @@ class ServoControllerNode(Node):
         # Declare parameters
         self.declare_parameter("servo_pin", 32)
         self.declare_parameter("min_angle", 0.0)
-        self.declare_parameter("max_angle", 83.94)
-        self.declare_parameter("pwm_frequency", 50)
+        self.declare_parameter("max_angle", 60)
+        self.declare_parameter("pwm_frequency", 50) #Hz
         self.declare_parameter("min_duty_cycle", 2.5)
         self.declare_parameter("max_duty_cycle", 12.5)
 
@@ -130,3 +130,13 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
+
+    """Test (open close open) in terminal
+# Open (max angle)
+ros2 topic pub --once /topic_servo_angle std_msgs/msg/Float32 "data: 55"
+
+# Close (min angle)
+ros2 topic pub --once /topic_servo_angle std_msgs/msg/Float32 "data: 0.0"
+
+ros2 topic pub --once /topic_servo_angle std_msgs/msg/Float32 "data: 60"
+    """
