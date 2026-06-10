@@ -61,11 +61,11 @@ class AlignGate(State):
         msg.z_setpoint = self.desired_depth
         
         msg.yaw_setpoint = 0.0
-        msg.m_yaw = odom["yaw"]
+        msg.measurement_yaw = odom["yaw"]
         msg.pitch_setpoint = 0.0
-        msg.m_pitch = odom["pitch"]
+        msg.measurement_pitch = odom["pitch"]
         msg.roll_setpoint = 0.0
-        msg.m_roll = odom["roll"]
+        msg.measurement_roll = odom["roll"]
         
         # Being out of the water is a reset trigger to stop all functions.
         if (depth < 0): # Does this need an offset?
