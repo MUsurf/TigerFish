@@ -21,6 +21,7 @@ class FaceGate(State):
         self.context = context
         self.facing_time = 0.0
         self.time_began_facing = 0.0
+        self.maintain_time  = 3.0  # sec
         
     def execute(self, bb : Blackboard):
         """
@@ -57,12 +58,15 @@ class FaceGate(State):
         
         # Being out of the water is a reset trigger to stop all functions.
         if (depth < 0): # Does this need an offset?
-            bb["prev_state"] = "face_gate"
+            self.facing_time = 0
+            self.time_began_facing = 0
             return "reset"
         
         # Achieve and maintain depth within desired range
         if (abs(depth - self.desired_depth) > 0.15):
             bb["prev_state"] = "face_gate"
+            self.facing_time = 0
+            self.time_began_facing = 0
             return "obtain_depth"
             
         # Center between both pictures
@@ -79,8 +83,10 @@ class FaceGate(State):
             
         self.context.pid_publisher.publish(msg)
         
-        if (self.centered):
-           return "next_state"
+        if (self.facing_time > self.maintain_time):
+            self.facing_time = 0
+            self.time_began_facing = 0
+            return "next_state"
      
         
     

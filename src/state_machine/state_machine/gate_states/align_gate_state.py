@@ -57,7 +57,7 @@ class AlignGate(State):
         msg.z_measurement = depth 
         msg.z_setpoint = self.desired_depth
         
-        msg.yaw_setpoint = 0.0
+        msg.yaw_setpoint = odom["yaw"] # Is this zero?? Or do I make it equal zero
         msg.measurement_yaw = odom["yaw"]
         msg.pitch_setpoint = 0.0
         msg.measurement_pitch = odom["pitch"]
@@ -66,7 +66,6 @@ class AlignGate(State):
         
         # Being out of the water is a reset trigger to stop all functions.
         if (depth < 0): # Does this need an offset?
-            bb["prev_state"] = "align_gate"
             return "reset"
         
         # Achieve and maintain depth within desired range
@@ -80,24 +79,9 @@ class AlignGate(State):
             msg.yaw_setpoint = 5.0
         else:
             msg.yaw_setpoint = 0
-            
-            
+            # Distance to object = (focal length * distance between camera centers) / (difference between Xr and Xl in pixels)
+            # The sub should be positioned perpendicular when Xr = Xl
             
         self.context.pid_publisher.publish(msg)
         
         return "next_state"
-        
-    
-                
-                
-                
-        
-        
-        self.context.pid_publisher.publish(msg)
-        
-        if(self.in_depth_time > 3.0):
-            # Reset state and go on
-            self.is_in_depth = False
-            self.deep = False
-            self.in_depth_time = 0
-            return "next_state"

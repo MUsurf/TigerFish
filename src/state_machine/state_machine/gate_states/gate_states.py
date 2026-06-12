@@ -15,7 +15,7 @@ def thru_gate_state(context):
 def obtain_depth_state(context):
     return "OBTAIN DEPTH STATE", ObtainDepth(context), {"face_gate" : "FACE GATE STATE", "thru_gate" : "GO THRU GATE STATE", "align_gate" : "ALIGN TO GATE STATE", "reset" : "RESET STATE"}
 def reset_state(context):
-    return "RESET STATE", ResetState(context), {"face_gate" : "FACE GATE STATE", "thru_gate" : "GO THRU GATE STATE", "align_gate" : "ALIGN TO GATE STATE", "reset" : "RESET STATE"}
+    return "RESET STATE", ResetState(context), {"next_state" : "FACE GATE STATE"}
 
 
 STATE_GETTERS : list = [face_gate_state, align_gate_state, thru_gate_state, reset_state, obtain_depth_state]
