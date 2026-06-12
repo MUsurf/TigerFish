@@ -22,8 +22,8 @@ class AlignGate(State):
         self.context = context
         self.role = context.role # Determines which side of the gate we go through/align with
         self.align_buffer = 0.15
-        self.begin_aligned_time = 0
-        self.time_aligned = 0
+        self.aligned_began_time = 0
+        self.aligned_time = 0
         
         self.depth_range = 0.15     # meters
         self.desired_depth = 0.75   # meters
@@ -43,13 +43,18 @@ class AlignGate(State):
         odom = bb.get("odom")
         depth = bb.get("depth")
         
-        x_l = pic1["X"] # TODO: Need to know what info, e.g., left cam X and right cam X, etc
+        if (self.role == 1): # placeholder, idk how we want to define this
+            role_pic = pic1
+        role_pic = pic2
+            
+        
+        x_l = pic1["X"] # TODO: Need to know what info, e.g., left cam X and right cam X for pic1 (x_1_L, x_1_R, x_2_L, x_2_R), etc
         x_r = pic2["X"]
     
         # In the event that both pictures are somehow lost, go back to spinning until seen
         if (not pic1["detected"] and not pic2["detected"]):
-            self.begin_aligned_time = 0
-            self.time_aligned = 0
+            self.aligned_began_time = 0
+            self.aligned_time = 0
             return "face_gate"
         
         # Construct PID message, i.e. motor powers
@@ -65,7 +70,7 @@ class AlignGate(State):
         msg.z_measurement = depth 
         msg.z_setpoint = self.desired_depth
         
-        msg.yaw_setpoint = 0.0 # Is this how???
+        msg.yaw_setpoint = 0.0
         msg.measurement_yaw = odom["yaw"]
         msg.pitch_setpoint = 0.0
         msg.measurement_pitch = odom["pitch"]
@@ -74,6 +79,8 @@ class AlignGate(State):
         
         # Being out of the water is a reset trigger to stop all functions.
         if (depth < 0): # Does this need an offset?
+            self.aligned_began_time = 0.0
+            self.aligned_time = 0.0
             return "reset"
         
         # Achieve and maintain depth within desired range
@@ -92,9 +99,11 @@ class AlignGate(State):
             if self.aligned_time is None: # Maintain facing for a few seconds before moving on to align to a side
                 self.aligned_began_time = time.time()
             else:
-                self.aligned_time = time.time() - self.time_began_facing
+                self.aligned_time = time.time() - self.aligned_began_time
             
         self.context.pid_publisher.publish(msg)
         
-        if ()
-        return "next_state"
+        if (self.aligned_time > self.align_buffer):
+            self.aligned_began_time = 0
+            self.aligned_time = 0
+            return "next_state"
