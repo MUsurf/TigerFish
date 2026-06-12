@@ -23,6 +23,9 @@ class FaceGate(State):
         self.time_began_facing = 0.0
         self.maintain_time  = 3.0  # sec
         
+        self.desired_depth = 0.75   # meters
+        self.depth_range = 0.15     # meters
+        
     def execute(self, bb : Blackboard):
         """
         Executes the logic for the gate alignment starting state
@@ -63,7 +66,7 @@ class FaceGate(State):
             return "reset"
         
         # Achieve and maintain depth within desired range
-        if (abs(depth - self.desired_depth) > 0.15):
+        if (abs(depth - self.desired_depth) > self.self.depth_range):
             bb["prev_state"] = "face_gate"
             self.facing_time = 0
             self.time_began_facing = 0

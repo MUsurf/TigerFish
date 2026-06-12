@@ -5,7 +5,7 @@ The gate portion of the state machine consists of two parts:
  1. Face_gate:
         Purely for aligning ourselves with the gate so that cameras can see both pictures.
  2. Align_gate:
-        Alignment state: for aligning ourselves with the side distinguished by our role. 
+        Alignment state: for aligning ourselves with the side distinguished by our role. If we ever lose sight of all pictures, restart from face_gate.
  3. Thru_gate:
         The state that actually takes the sub through the gate. It has an option to proceed "with style" (perform a 360 degree spin on the yaw axis). This option is enabled/disabled upon state initialization based information from the Blackboard.
  4. Obtain_depth:

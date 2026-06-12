@@ -11,20 +11,22 @@ class AlignGate(State):
     Aligns the sub level to and facing the gate based on the position of the role images.
 
     Outcomes:
-        next_state: goes to the thru_gate state
+        next_state: goes to the align_role state
         reset: goes to reset state
         obtain_depth: goes to the obtain_depth state
+        face_gate: goes back to the face_gate state
     """
     
     def __init__(self, context : Context) -> None:
-        super().__init__(["next_state", "reset", "obtain_depth"])
+        super().__init__(["next_state", "reset", "obtain_depth", "face_gate"])
         self.context = context
         self.role = context.role # Determines which side of the gate we go through/align with
+        self.align_buffer = 0.15
+        self.begin_aligned_time = 0
+        self.time_aligned = 0
         
-        self.gate_centered_time = 0
-        self.role_centered_time = 0
-        self.time_entered = 0
-        
+        self.depth_range = 0.15     # meters
+        self.desired_depth = 0.75   # meters
         
         
     def execute(self, bb : Blackboard):
@@ -36,19 +38,25 @@ class AlignGate(State):
         yasmin.YASMIN_LOG_INFO("Executing state Gate Alignment")
         
         # Get blackboard info
-        pic1 = bb.get("pic1_detection") # Placeholder names
+        pic1 = bb.get("pic1_detection") # TODO: Placeholder names, determine what info is actually in this topic
         pic2 = bb.get("pic2_detection")
         odom = bb.get("odom")
         depth = bb.get("depth")
         
-        if (self.role is not 1):
-            role_pic = pic2
-        role_pic = pic1
+        x_l = pic1["X"] # TODO: Need to know what info, e.g., left cam X and right cam X, etc
+        x_r = pic2["X"]
+    
+        # In the event that both pictures are somehow lost, go back to spinning until seen
+        if (not pic1["detected"] and not pic2["detected"]):
+            self.begin_aligned_time = 0
+            self.time_aligned = 0
+            return "face_gate"
         
         # Construct PID message, i.e. motor powers
         msg = PIDInput()
         
-        msg.z_mode = True
+        msg.z_mode = True # True is PID enabled
+        msg.y_mode = False # False is motor powers
         msg.roll_mode = True
         msg.pitch_mode = True
         msg.yaw_mode = True
@@ -57,7 +65,7 @@ class AlignGate(State):
         msg.z_measurement = depth 
         msg.z_setpoint = self.desired_depth
         
-        msg.yaw_setpoint = odom["yaw"] # Is this zero?? Or do I make it equal zero
+        msg.yaw_setpoint = 0.0 # Is this how???
         msg.measurement_yaw = odom["yaw"]
         msg.pitch_setpoint = 0.0
         msg.measurement_pitch = odom["pitch"]
@@ -69,19 +77,24 @@ class AlignGate(State):
             return "reset"
         
         # Achieve and maintain depth within desired range
-        if (abs(depth - self.desired_depth) > 0.15):
+        if (abs(depth - self.desired_depth) > self.depth_range):
             bb["prev_state"] = "align_gate"
             return "obtain_depth"
             
         # Center between both pictures
         # This method assumes we start with enough distance from the gate for both pictures to be seen at once. Potentially bad?
-        if (not pic1["detected"] or not pic2["detected"]): #Spin until pictures spotted
-            msg.yaw_setpoint = 5.0
-        else:
-            msg.yaw_setpoint = 0
+
             # Distance to object = (focal length * distance between camera centers) / (difference between Xr and Xl in pixels)
             # The sub should be positioned perpendicular when Xr = Xl
             
+            #TODO: Andrew will do the alignment with gate and correct side based on role
+            
+            if self.aligned_time is None: # Maintain facing for a few seconds before moving on to align to a side
+                self.aligned_began_time = time.time()
+            else:
+                self.aligned_time = time.time() - self.time_began_facing
+            
         self.context.pid_publisher.publish(msg)
         
+        if ()
         return "next_state"

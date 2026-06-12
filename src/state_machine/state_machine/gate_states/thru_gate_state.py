@@ -20,6 +20,9 @@ class ThruGate(State):
         super().__init__(["next_state", "reset", "obtain_depth"])
         self.context = context
         
+        self.depth_range = 0.15     # meters
+        self.desired_depth = 0.75   # meters
+        
         
     def execute(self, bb : Blackboard):
         """
@@ -39,7 +42,7 @@ class ThruGate(State):
             return "reset"
         
         # Achieve and maintain depth within desired range
-        if (abs(depth - self.desired_depth) > 0.15):
+        if (abs(depth - self.desired_depth) > self.depth_range):
             bb["prev_state"] = "thru_gate"
             return "obtain_depth"
         
