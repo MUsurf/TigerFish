@@ -6,12 +6,12 @@ import yasmin
 from yasmin import State, Blackboard
 from state_machine_node import Context
 
-class AlignGate(State):
+class FaceGate(State):
     """
     Aligns the sub level to and facing the gate based on the position of the role images.
 
     Outcomes:
-        next_state: goes to the thru_gate state
+        next_state: goes to the align_gate state
         reset: goes to reset state
         obtain_depth: goes to the obtain_depth state
     """
@@ -19,13 +19,8 @@ class AlignGate(State):
     def __init__(self, context : Context) -> None:
         super().__init__(["next_state", "reset", "obtain_depth"])
         self.context = context
-        self.role = context.role # Determines which side of the gate we go through/align with
-        
-        self.gate_centered_time = 0
-        self.role_centered_time = 0
-        self.time_entered = 0
-        
-        
+        self.facing_time = 0.0
+        self.time_began_facing = 0.0
         
     def execute(self, bb : Blackboard):
         """
@@ -40,10 +35,6 @@ class AlignGate(State):
         pic2 = bb.get("pic2_detection")
         odom = bb.get("odom")
         depth = bb.get("depth")
-        
-        if (self.role is not 1):
-            role_pic = pic2
-        role_pic = pic1
         
         # Construct PID message, i.e. motor powers
         msg = PIDInput()
@@ -66,38 +57,30 @@ class AlignGate(State):
         
         # Being out of the water is a reset trigger to stop all functions.
         if (depth < 0): # Does this need an offset?
-            bb["prev_state"] = "align_gate"
+            bb["prev_state"] = "face_gate"
             return "reset"
         
         # Achieve and maintain depth within desired range
         if (abs(depth - self.desired_depth) > 0.15):
-            bb["prev_state"] = "align_gate"
+            bb["prev_state"] = "face_gate"
             return "obtain_depth"
             
         # Center between both pictures
         # This method assumes we start with enough distance from the gate for both pictures to be seen at once. Potentially bad?
         if (not pic1["detected"] or not pic2["detected"]): #Spin until pictures spotted
             msg.yaw_setpoint = 5.0
+            self.facing_time = 0.0
         else:
-            msg.yaw_setpoint = 0
-            
-            
+            msg.yaw_setpoint = 0.0
+            if self.facing_time is None: # Maintain facing for a few seconds before moving on to align to a side
+                self.time_began_facing = time.time()
+            else:
+                self.facing_time = time.time() - self.time_began_facing
             
         self.context.pid_publisher.publish(msg)
         
-        return "next_state"
+        if (self.centered):
+           return "next_state"
+     
         
     
-                
-                
-                
-        
-        
-        self.context.pid_publisher.publish(msg)
-        
-        if(self.in_depth_time > 3.0):
-            # Reset state and go on
-            self.is_in_depth = False
-            self.deep = False
-            self.in_depth_time = 0
-            return "next_state"
