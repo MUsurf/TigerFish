@@ -32,7 +32,7 @@ class ServoControllerNode(Node):
         # Declare parameters
         self.declare_parameter("servo_pin", 32)
         self.declare_parameter("min_angle", 0.0) 
-        self.declare_parameter("max_angle", 60) #! Where this number from
+        self.declare_parameter("max_angle", 60) # recomended open angle (can ber tested)
         self.declare_parameter("pwm_frequency", 50) #Hz #! Where this number from
         self.declare_parameter("min_duty_cycle", 2.5) #! Where this number from
         self.declare_parameter("max_duty_cycle", 12.5) #! Where this number from
@@ -54,7 +54,7 @@ class ServoControllerNode(Node):
         self.pwm.start(0)
 
         # Subscriber
-        self.subscribedTopic = "topic_servo_angle" #! A topic doesn't need topic in the name. "servo_angle" would do. "servo_angle_input" even better.
+        self.subscribedTopic = "servo_angle_input" 
 
         self.subscription = self.create_subscription(
             Float32, self.subscribedTopic, self.angle_callbackFunction, servo_qos
@@ -65,7 +65,7 @@ class ServoControllerNode(Node):
         )
 
         # Publisher
-        self.publisherTopic = "topic_servo_angle_feedback" #! again does not need the topic. And if one is called feedback, one should be called input
+        self.publisherTopic = "servo_angle_feedback" #! again does not need the topic. And if one is called feedback, one should be called input
         self.feedback_publisher = self.create_publisher(
             Float32,
             self.publisherTopic,
@@ -80,15 +80,10 @@ class ServoControllerNode(Node):
         angle = max(self.min_angle, min(angle, self.max_angle))
 
         # Convert angle to duty cycle percentage
-        duty_percent = self.min_duty_cycle + (  # Add duty cycle offset
-            (angle - self.min_angle)
-            / (
-                self.max_angle - self.min_angle
-            )  # Normalize within our min/max angle range
-        ) * (
-            self.max_duty_cycle - self.min_duty_cycle
-        )  # Normalize within our duty cycle range
-        
+        duty_percent = self.min_duty_cycle + ( (angle - self.min_angle) / (self.max_angle - self.min_angle)) * (self.max_duty_cycle - self.min_duty_cycle)  
+        # Add duty cycle offset
+        # Normalize within our duty cycle range
+        # Normalize within our min/max angle range
         #! Wtf is this styling 
         """
         !duty_percent = self.min_duty_cycle + ((angle - self.min_angle) / (self.max_angle - self.min_angle))
@@ -154,10 +149,10 @@ if __name__ == "__main__":
 
     """Test (open close open) in terminal
 # Open (max angle)
-ros2 topic pub --once /topic_servo_angle std_msgs/msg/Float32 "data: 55"
+ros2 topic pub --once /servo_angle_input std_msgs/msg/Float32 "data: 55"
 
 # Close (min angle)
-ros2 topic pub --once /topic_servo_angle std_msgs/msg/Float32 "data: 0.0"
+ros2 topic pub --once /servo_angle_input std_msgs/msg/Float32 "data: 0.0"
 
-ros2 topic pub --once /topic_servo_angle std_msgs/msg/Float32 "data: 60"
+ros2 topic pub --once /servo_angle_input std_msgs/msg/Float32 "data: 60"
     """
