@@ -38,3 +38,28 @@ services:
     profiles:
       - no-pi
 
+# CV development service: x86-safe, no Pi hardware deps, X11 forwarding for
+# cv::imshow (calibration node GUI). Run with: docker compose --profile cv-dev up
+  cv-dev:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile.dev
+    profiles:
+      - cv-dev
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      # live source mount — colcon build inside the container picks up edits
+      - .:/home/ros2_ws/src
+      # X11 socket for OpenCV GUI windows
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      # drop test videos here; reference as /home/ros2_ws/test_videos/<file>.mp4
+      - ./test_videos:/home/ros2_ws/test_videos
+      # camera device access for ./cv_dev.sh camera and calibrate modes
+      - /dev:/dev
+    network_mode: host
+    group_add:
+      - video
+    stdin_open: true
+    tty: true
+

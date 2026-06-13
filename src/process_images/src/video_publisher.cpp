@@ -5,10 +5,6 @@
 #include "sensor_msgs/msg/image.hpp"
 #include <cv_bridge/cv_bridge.h>
 
-//NOTE: this currently is meant for testing with mp4s
-// to modify this for the actual sub, we may want to look into intra-process communication to avoid making copies of video
-// currently it makes full copies!
-
 using namespace std::chrono_literals;
 
 
@@ -18,23 +14,25 @@ public:
   VideoPublisher()
   : Node("video_publisher")
   {
-    //setup
-    publisher_ = this->create_publisher<sensor_msgs::msg::Image>("camera/image_raw", 10);
+    this->declare_parameter("video_path", "");
 
-    //mp4 setup - update path to follow what is on your PC
-    cap_.open("/home/ros2_ws/src/TestImages/FirstTestFeb2026.mp4");
-
-    // check that we opened the mp4 correctly
-    if (!cap_.isOpened()) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "MP4 video in video publisher not able to be opened. -_(-_-)_-");
+    std::string path = this->get_parameter("video_path").as_string();
+    if (path.empty()) {
+      RCLCPP_ERROR(this->get_logger(),
+        "video_path parameter is required. Pass --ros-args -p video_path:=/path/to/file.mp4");
       return;
     }
 
-    //timer setup for how often the video is published
-    timer_ = this->create_wall_timer(33ms, std::bind(&VideoPublisher::timer_callback, this));
+    publisher_ = this->create_publisher<sensor_msgs::msg::Image>("camera/image_raw", 10);
 
+    cap_.open(path);
+    if (!cap_.isOpened()) {
+      RCLCPP_ERROR(this->get_logger(), "Could not open video: %s", path.c_str());
+      return;
+    }
+
+    RCLCPP_INFO(this->get_logger(), "Opened video: %s", path.c_str());
+    timer_ = this->create_wall_timer(33ms, std::bind(&VideoPublisher::timer_callback, this));
   }
 
 private:

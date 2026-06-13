@@ -131,6 +131,52 @@ Documentation will be built with [Sphinx](https://www.sphinx-doc.org/en/master/)
 
 All code in 'Generated/' is automatically grabbed by 'Generate_docs.sh' **do not edit here all changes can be overwritten**.
 
+## CV Development & Testing
+
+### Local CV dev container
+
+The main `Dockerfile` installs Pi-specific hardware packages (GPIO, PiCamera2, Jetson.GPIO) that don't exist on x86 and has no display forwarding, making it unsuitable for testing OpenCV code on a laptop.
+
+`Dockerfile.dev` is a stripped-down x86-safe image for CV work. It installs only ROS Humble, OpenCV, `cv_bridge`, `image_transport`, and X11 support — nothing hardware-specific. Your source tree is bind-mounted so edits are reflected immediately without rebuilding the image.
+
+**First-time setup (run once on host):**
+```bash
+xhost +local:docker          # allow the container to open X11 windows
+mkdir -p test_videos          # drop .mp4 test footage here
+```
+
+**Start the container:**
+```bash
+docker compose --profile cv-dev run --rm cv-dev bash
+```
+
+**Inside the container — build and run:**
+```bash
+cd /home/ros2_ws
+colcon build --packages-select process_images --symlink-install
+source install/setup.bash
+
+# Run the main vision node (requires a camera or video_pub_node feeding topics)
+ros2 run process_images process_img
+
+# Run stereo calibration (opens an OpenCV window — needs X11 forwarding)
+ros2 run process_images stereo_calibration_node \
+  --ros-args -p square_size:=0.025 -p output_file:=config/stereo_calibration.yaml
+```
+
+### Known issue: video_pub_node is not stereo-capable
+
+`video_pub_node` publishes a single MP4 to `camera/image_raw`, but `process_img_node` subscribes to `camera/left/image_raw` and `camera/right/image_raw`. The two are currently incompatible for end-to-end stereo testing. Additionally, the video path is hardcoded inside `video_publisher.cpp` (`/home/ros2_ws/src/TestImages/FirstTestFeb2026.mp4`).
+
+**Workaround until this is fixed:** run two instances with topic remapping and separate left/right MP4s:
+```bash
+ros2 run process_images video_pub_node \
+  --ros-args --remap camera/image_raw:=camera/left/image_raw &
+ros2 run process_images video_pub_node \
+  --ros-args --remap camera/image_raw:=camera/right/image_raw
+```
+This still requires editing the hardcoded path in the source before building. The fix is to parameterize the video path and add a `side` parameter (`left`/`right`) so both topics can be served from one node type without source edits.
+
 ## History
 
 The starter code in this repository was developed for Jelly2, the sub for 23-24 SURF and 2024 Robosub.

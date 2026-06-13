@@ -1,0 +1,49 @@
+FROM ros:humble-ros-base
+
+SHELL ["/bin/bash", "-c"]
+
+# Core build tools and ROS CV packages (no Pi hardware deps)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    python3-pip \
+    python3-colcon-common-extensions \
+    python3-rosdep \
+    libopencv-dev \
+    ros-humble-cv-bridge \
+    ros-humble-vision-opencv \
+    ros-humble-image-transport \
+    ros-humble-ament-cmake \
+    ros-humble-example-interfaces \
+    ros-humble-yasmin \
+    ros-humble-yasmin-ros \
+    ros-humble-yasmin-msgs \
+    # cameras package Python dep
+    ros-humble-camera-info-manager-py \
+    # X11 forwarding support for cv::imshow and image_view
+    libx11-dev \
+    x11-apps \
+    ros-humble-image-view \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --no-cache-dir ruff
+
+WORKDIR /home/ros2_ws
+
+# Install ROS deps for vision and camera packages
+RUN --mount=type=bind,source=./src/process_images/package.xml,target=/home/ros2_ws/deps/process_images/package.xml \
+    --mount=type=bind,source=./src/cameras/package.xml,target=/home/ros2_ws/deps/cameras/package.xml \
+    apt-get update && \
+    rosdep init || true && \
+    rosdep update && \
+    rosdep install -i --from-path ./deps --rosdistro $ROS_DISTRO -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Source is bind-mounted at runtime (see docker-compose cv-dev service),
+# so we only pre-build when the image is built without a mount.
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /etc/bash.bashrc && \
+    echo "[ -f /home/ros2_ws/install/setup.bash ] && source /home/ros2_ws/install/setup.bash" >> /etc/bash.bashrc
+
+COPY --chmod=u+x ./cv_dev.sh /home/ros2_ws/cv_dev.sh
+
+CMD ["/bin/bash"]

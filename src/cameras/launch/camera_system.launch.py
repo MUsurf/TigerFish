@@ -1,61 +1,45 @@
-import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 
+
 def generate_launch_description():
-    # Declare the argument (e.g., "0" or "0,1" or "0,1,2,3")
-    camera_ids_arg = DeclareLaunchArgument(
-        'cam_ids',
-        default_value='0,1',
-        description='Comma-separated list of camera indices'
-    )
-    rec_type = DeclareLaunchArgument('record_type', default_value='mp4', description="type of recording (ie mp4)")
+    args = [
+        DeclareLaunchArgument(
+            'left_cam_id', default_value='0',
+            description='V4L2 device index for the left camera'
+        ),
+        DeclareLaunchArgument(
+            'right_cam_id', default_value='1',
+            description='V4L2 device index for the right camera'
+        ),
+        DeclareLaunchArgument(
+            'record_type', default_value='mp4',
+            description='Recording format: mp4 or rosbag'
+        ),
+    ]
 
-    cam_ids_str = LaunchConfiguration('cam_ids')
+    sides = [
+        ('camera/left',  LaunchConfiguration('left_cam_id')),
+        ('camera/right', LaunchConfiguration('right_cam_id')),
+    ]
 
-    
-    def create_camera_nodes(context):
-        # Convert the string '0,1,2' back into a list [0, 1, 2]
-        ids_str = cam_ids_str.perform(context)
-        ids = ids_str.split(',')
+    nodes = []
+    for ns, cam_id in sides:
+        nodes.append(Node(
+            package='cameras',
+            executable='camera_publisher',
+            namespace=ns,
+            parameters=[{'camera_index': cam_id}],
+            output='screen',
+        ))
+        nodes.append(Node(
+            package='cameras',
+            executable='subscriber_node',
+            namespace=ns,
+            parameters=[{'record_type': LaunchConfiguration('record_type')}],
+            output='screen',
+        ))
 
-
-        rec_type = context.launch_configurations.get('record_type', 'mp4')
-        entities = []
-        for i in ids:
-            i = i.strip()
-
-            clean_ns = i.replace('/', "_").replace('.', '_')
-            ns=f"cam_{clean_ns}"
-            ns = f"cam_{i}"
-            
-            idx= int(i) if i.isdigit() else i
-            
-            # Publisher
-            entities.append(Node(
-                package='cameras',
-                executable='camera_publisher',
-                namespace=ns,
-                parameters=[{'camera_index': idx}],
-                output='screen'
-            ))
-
-            # Subscriber (Processor)
-            entities.append(Node(
-                package='cameras',
-                executable='subscriber_node',
-                namespace=ns,
-                parameters=[{'record_type': rec_type}],
-                output='screen'
-            ))
-        return entities
-
-    # Using OpaqueFunction allows to parse the string inside the launch process
-    from launch.actions import OpaqueFunction
-    return LaunchDescription([
-        camera_ids_arg,
-        rec_type,
-        OpaqueFunction(function=create_camera_nodes)
-    ])
+    return LaunchDescription(args + nodes)

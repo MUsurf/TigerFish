@@ -1,9 +1,11 @@
 #include "rclcpp/rclcpp.hpp"
 #include <memory>
+#include <string>
 #include <opencv2/opencv.hpp>
-#include "process_images/img_preprocessing.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "geometry_msgs/msg/pose2_d.hpp"
 #include "cv_bridge/cv_bridge.h"
+#include "process_images/img_preprocessing.hpp"
 #include "process_images/marker_detector.hpp"
 #include "process_images/gate_detection.hpp"
 
@@ -13,150 +15,231 @@ public:
   processImgNode()
   : Node("process_img_node")
   {
-    // preprocessing setup
-    cv::Size kernel = cv::Size(16, 16);
-    float clipLimit = 2.0;
+    // Parameters
+    this->declare_parameter("stereo_calibration_file", "");
+    this->declare_parameter("marker_actual_width", 1.2);
+    this->declare_parameter("left_camera_topic", "camera/left/image_raw");
+    this->declare_parameter("right_camera_topic", "camera/right/image_raw");
+    this->declare_parameter("hsv_h_low", 8);
+    this->declare_parameter("hsv_h_high", 22);
+    this->declare_parameter("hsv_s_low", 110);
+    this->declare_parameter("hsv_s_high", 255);
+    this->declare_parameter("hsv_v_low", 80);
+    this->declare_parameter("hsv_v_high", 255);
+    this->declare_parameter("marker_min_area", 600.0);
+    this->declare_parameter("output_video_path", "");
 
-    preprocesser_ = std::make_unique<process_images::img_preprocesser>(clipLimit, kernel);
-    marker_detector_ = std::make_unique<MarkerDetector>(600.0, 1.2);
-    goal_detector_ = std::make_unique<Gate_detection>();
+    std::string cal_file =
+      this->get_parameter("stereo_calibration_file").as_string();
+    double marker_width =
+      this->get_parameter("marker_actual_width").as_double();
+    std::string left_topic =
+      this->get_parameter("left_camera_topic").as_string();
+    std::string right_topic =
+      this->get_parameter("right_camera_topic").as_string();
+    int h_low  = this->get_parameter("hsv_h_low").as_int();
+    int h_high = this->get_parameter("hsv_h_high").as_int();
+    int s_low  = this->get_parameter("hsv_s_low").as_int();
+    int s_high = this->get_parameter("hsv_s_high").as_int();
+    int v_low  = this->get_parameter("hsv_v_low").as_int();
+    int v_high = this->get_parameter("hsv_v_high").as_int();
+    double min_area =
+      this->get_parameter("marker_min_area").as_double();
+    output_video_path_ =
+      this->get_parameter("output_video_path").as_string();
 
-    // create a publisher for the video feed
-    publisher_ = this->create_publisher<sensor_msgs::msg::Image>(
-      "camera/image_processed", 10);
-    // subscriber
-    subscription_ = this->create_subscription<sensor_msgs::msg::Image>(
-      "camera/image_raw", 10,
-      std::bind(&processImgNode::image_callback, this, std::placeholders::_1));
+    // Load focal lengths from stereo calibration file if provided
+    double focal_left = 600.0;
+    double focal_right = 600.0;
+    if (!cal_file.empty()) {
+      cv::FileStorage fs(cal_file, cv::FileStorage::READ);
+      if (fs.isOpened()) {
+        cv::Mat K_l, K_r;
+        fs["left_camera"]["camera_matrix"] >> K_l;
+        fs["right_camera"]["camera_matrix"] >> K_r;
+        if (!K_l.empty()) {focal_left  = K_l.at<double>(0, 0);}
+        if (!K_r.empty()) {focal_right = K_r.at<double>(0, 0);}
+        RCLCPP_INFO(
+          this->get_logger(), "Loaded calibration: fx_l=%.1f fx_r=%.1f",
+          focal_left, focal_right);
+      } else {
+        RCLCPP_WARN(
+          this->get_logger(), "Cannot open calibration file: %s — using defaults",
+          cal_file.c_str());
+      }
+    }
 
-    // logging
-    RCLCPP_INFO(this->get_logger(), "processImgNode ready for images...");
+    // Preprocessing (stateless, shared between both cameras)
+    preprocesser_ = std::make_unique<process_images::img_preprocesser>(2.0, cv::Size(16, 16));
+
+    // One detector per camera so each can have its own focal length
+    left_detector_  = std::make_unique<MarkerDetector>(focal_left,  marker_width);
+    right_detector_ = std::make_unique<MarkerDetector>(focal_right, marker_width);
+    left_detector_->setHSVBounds(h_low, h_high, s_low, s_high, v_low, v_high);
+    right_detector_->setHSVBounds(h_low, h_high, s_low, s_high, v_low, v_high);
+    left_detector_->setMinArea(min_area);
+    right_detector_->setMinArea(min_area);
+
+    // Publishers
+    //   primary: best (largest) detection across both cameras
+    //   left / right: per-camera results (published only when found)
+    //   debug_image: both processed frames side by side
+    pub_primary_ = this->create_publisher<geometry_msgs::msg::Pose2D>(
+      "markers/path_marker", 10);
+    pub_left_ = this->create_publisher<geometry_msgs::msg::Pose2D>(
+      "markers/left/path_marker", 10);
+    pub_right_ = this->create_publisher<geometry_msgs::msg::Pose2D>(
+      "markers/right/path_marker", 10);
+    pub_debug_ = this->create_publisher<sensor_msgs::msg::Image>(
+      "markers/debug_image", 10);
+
+    // Subscriptions
+    sub_left_ = this->create_subscription<sensor_msgs::msg::Image>(
+      left_topic, 10,
+      std::bind(&processImgNode::left_callback, this, std::placeholders::_1));
+    sub_right_ = this->create_subscription<sensor_msgs::msg::Image>(
+      right_topic, 10,
+      std::bind(&processImgNode::right_callback, this, std::placeholders::_1));
+
+    RCLCPP_INFO(
+      this->get_logger(),
+      "processImgNode ready — left: %s  right: %s",
+      left_topic.c_str(), right_topic.c_str());
   }
 
-  // destructor
   ~processImgNode()
   {
-    if (is_writer_initialized_) {
+    if (video_writer_.isOpened()) {
       video_writer_.release();
-      RCLCPP_INFO(this->get_logger(), "Video file finalized and saved.");
+      RCLCPP_INFO(this->get_logger(), "Video writer released.");
     }
   }
 
 private:
-  void WriteVideo(const cv::Mat & processed_frame)
-  {
-    // Visualization ////////////////////////////////
-    // So there are a couple ways to do this:
-    // a) install x11 forwarding and use imshow (this is annoying)
-    // b) write every ith frame to a folder
-    // c) write the new video
-    // It should be noted that these should not be active on the real sub :)
-
-    // a) x11 forwarding option ////////////////////////////////
-    // cv::imshow("Raw Feed", raw_frame);
-    // cv::imshow("Processed Feed (CLAHE)", processed_frame);
-    // cv::waitKey(1);
-    ///////////////////////////////////////////////////////////
-
-    // b) write every ith frame /////////////////////////////////////////////
-    // static int frame_count = 0;
-    // captures every "ith" frame (ie 30th frame)
-    // const int ith_frame = 30;
-    // if (frame_count % ith_frame == 0){
-    //     std::string filename = "/home/ros2_ws/src/output_images/processed/frame_"+ std::to_string(frame_count)+ ".jpg";
-    //     cv::imwrite(filename, processed_frame);
-
-    //     std::string filename2 = "/home/ros2_ws/src/output_images/input/frame_"+ std::to_string(frame_count)+ ".jpg";
-    //     cv::imwrite(filename, raw_frame);
-
-    // }
-    // frame_count++;
-    ///////////////////////////////////////////////////////////////////////
-
-    // c) write vid //////////////////////////////////////////////////////
-    if (!is_writer_initialized_) {
-      int fourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
-      video_writer_.open(
-        "/home/ros2_ws/src/output_images/processed_vid/processed_output.mp4",
-        fourcc, 30.0, processed_frame.size());
-      is_writer_initialized_ = true;
-    }
-    video_writer_.write(processed_frame);
-  }
-
-  cv::Mat StitchImg(cv::Mat & raw_frame, cv::Mat & processed_frame)
-  {
-    // stitch together original feed + raw feed
-    cv::Mat combined_frame;
-    if (raw_frame.rows == processed_frame.rows && raw_frame.cols == processed_frame.cols) {
-      std::vector<cv::Mat> images = {raw_frame, processed_frame};
-      cv::hconcat(images, combined_frame);
-    } else {
-      combined_frame = processed_frame;
-    }
-
-    return combined_frame;
-  }
-  // image callback
-  void image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
+  // Processes one camera frame: preprocess → detect → visualize → cache → publish per-camera
+  void process_camera(
+    const sensor_msgs::msg::Image::SharedPtr & msg,
+    MarkerDetector & detector,
+    cv::Mat & cached_frame,
+    MarkerResult & cached_result,
+    rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr & per_cam_pub)
   {
     try {
-      // convert ros to opencv
       cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
       cv::Mat raw_frame = cv_ptr->image;
       cv::Mat processed_frame;
-
-      // improvements
       preprocesser_->all_preprocessing(raw_frame, processed_frame);
 
+      MarkerResult result = detector.find_markers(processed_frame);
+      detector.visualize_markers(processed_frame, result);
 
-      // Test code stuff, comment out marker detection and uncomment goal detection to test, if both are up at the same time stuff will be overwritten
+      cached_frame  = processed_frame;
+      cached_result = result;
 
-      // detect markers
-      // MarkerResult marker_detector_result = marker_detector_->find_markers(processed_frame);
-      // marker_detector_->visualize_markers(processed_frame, marker_detector_result);
-
-      // add the line detection stuff here, pull in result
-      GateResult gate_result = goal_detector_->find_gate(processed_frame);
-      goal_detector_->visualize_lines(processed_frame, gate_result);
-
-      // stitch images
-      cv::Mat combined_frame = StitchImg(raw_frame, processed_frame);
-
-      // TODO: change this to be the version of the image that will be written + broadcast
-      cv::Mat ImgToWrite = combined_frame;
-
-      WriteVideo(combined_frame);
-
-      // in addition to writing the vid it will be published (to view in realtime)
-      std_msgs::msg::Header header = msg->header; // timestamp
-      cv_bridge::CvImage img_bridge = cv_bridge::CvImage(header, "bgr8", processed_frame);
-      publisher_->publish(*img_bridge.toImageMsg());
-    } catch (cv_bridge::Exception & e) {
+      if (result.found) {
+        geometry_msgs::msg::Pose2D pose;
+        pose.x     = result.center.x;
+        pose.y     = result.center.y;
+        pose.theta = result.angle;
+        per_cam_pub->publish(pose);
+      }
+    } catch (const cv_bridge::Exception & e) {
       RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
     }
   }
 
-  // variables  ///////////////////////////////////////////////
+  void left_callback(const sensor_msgs::msg::Image::SharedPtr msg)
+  {
+    process_camera(msg, *left_detector_, left_frame_, left_result_, pub_left_);
+    publish_best();
+    publish_debug(msg->header);
+  }
+
+  void right_callback(const sensor_msgs::msg::Image::SharedPtr msg)
+  {
+    process_camera(msg, *right_detector_, right_frame_, right_result_, pub_right_);
+    publish_best();
+    publish_debug(msg->header);
+  }
+
+  // Publish the detection with the larger contour area as the primary result
+  void publish_best()
+  {
+    const MarkerResult * best = nullptr;
+    if (left_result_.found && right_result_.found) {
+      best = (left_result_.area >= right_result_.area) ? &left_result_ : &right_result_;
+    } else if (left_result_.found) {
+      best = &left_result_;
+    } else if (right_result_.found) {
+      best = &right_result_;
+    }
+
+    if (best) {
+      geometry_msgs::msg::Pose2D pose;
+      pose.x     = best->center.x;
+      pose.y     = best->center.y;
+      pose.theta = best->angle;
+      pub_primary_->publish(pose);
+    }
+  }
+
+  // Publish side-by-side debug visualization and optionally write to video file
+  void publish_debug(const std_msgs::msg::Header & header)
+  {
+    if (left_frame_.empty() && right_frame_.empty()) {return;}
+
+    cv::Mat debug_frame;
+    if (!left_frame_.empty() && !right_frame_.empty() &&
+      left_frame_.rows == right_frame_.rows)
+    {
+      cv::hconcat(left_frame_, right_frame_, debug_frame);
+    } else if (!left_frame_.empty()) {
+      debug_frame = left_frame_;
+    } else {
+      debug_frame = right_frame_;
+    }
+
+    if (!output_video_path_.empty()) {
+      if (!video_writer_.isOpened()) {
+        int fourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
+        video_writer_.open(output_video_path_, fourcc, 30.0, debug_frame.size());
+      }
+      video_writer_.write(debug_frame);
+    }
+
+    cv_bridge::CvImage img_bridge(header, "bgr8", debug_frame);
+    pub_debug_->publish(*img_bridge.toImageMsg());
+  }
+
+  // Components
   std::unique_ptr<process_images::img_preprocesser> preprocesser_;
-  rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
-  std::unique_ptr<MarkerDetector> marker_detector_;
-  std::unique_ptr<Gate_detection> goal_detector_;
-  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
+  std::unique_ptr<MarkerDetector> left_detector_;
+  std::unique_ptr<MarkerDetector> right_detector_;
+
+  // Subscriptions
+  rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr sub_left_;
+  rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr sub_right_;
+
+  // Publishers
+  rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr pub_primary_;
+  rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr pub_left_;
+  rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr pub_right_;
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub_debug_;
+
+  // Latest processed frames and results from each camera
+  cv::Mat left_frame_;
+  cv::Mat right_frame_;
+  MarkerResult left_result_;
+  MarkerResult right_result_;
 
   cv::VideoWriter video_writer_;
-  bool is_writer_initialized_ = false;
+  std::string output_video_path_;
 };
 
 int main(int argc, char * argv[])
 {
-  // init ros
   rclcpp::init(argc, argv);
-
-  // spin - keep the node active
   rclcpp::spin(std::make_shared<processImgNode>());
-
-  // shutdown
   rclcpp::shutdown();
   return 0;
 }
