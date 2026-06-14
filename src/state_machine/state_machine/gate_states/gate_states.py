@@ -5,7 +5,6 @@ from state_machine.state_machine.gate_states.face_gate_state import FaceGate
 from state_machine.state_machine.gate_states.reset_state import ResetState
 
 
-
 def face_gate_state(context):
     return "FACE GATE STATE", FaceGate(context), {"next_state" : "ALIGN TO GATE STATE", "obtain_depth" : "OBTAIN DEPTH STATE", "reset" : "RESET STATE"}
 def align_gate_state(context):

@@ -15,10 +15,15 @@ import numpy as np
 
 # All states
 import state_machine.init_states as init_states
+from init_states.init_states import STATE_GETTERS as INIT_STATE_GETTERS
 import state_machine.gate_states as gate_states
+from gate_states.gate_states import STATE_GETTERS as GATE_STATE_GETTERS
 import state_machine.slalom_states as slalom_states
+from slalom_states.slalom_states import STATE_GETTERS as SLALOM_STATE_GETTERS
 import state_machine.bins_states as bins_states
+from bins_states.bins_states import STATE_GETTERS as BINS_STATE_GETTERS
 import state_machine.octagon_states as octagon_states
+from octagon_states.octagon_states import STATE_GETTERS as OCTAGON_STATE_GETTERS
 # Prob won't use
 from state_machine.torpedo_states import *
 
@@ -90,11 +95,11 @@ class StateMachineNode(Node):
         
         # This is for ease of individual development
         state_getter_lists = [
-            init_states.STATE_GETTERS,
-            gate_states.STATE_GETTERS,
-            slalom_states.STATE_GETTERS,
-            bins_states.STATE_GETTERS,
-            octagon_states.STATE_GETTERS
+            INIT_STATE_GETTERS,
+            GATE_STATE_GETTERS,
+            SLALOM_STATE_GETTERS,
+            BINS_STATE_GETTERS,
+            OCTAGON_STATE_GETTERS
         ]
         for state_getter_list in state_getter_lists:
             for state_getter in state_getter_list:
@@ -108,7 +113,7 @@ class StateMachineNode(Node):
 
         self.get_logger().info("State machine initialized successfully!")
         
-    
+        
     
     # Call back functions keep blackboard up to date with ROS topics
 
@@ -144,7 +149,3 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
-
-            
-
-
