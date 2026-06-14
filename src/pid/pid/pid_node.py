@@ -80,9 +80,9 @@ class PIDNode(Node):
              x_gains=(0.1, 0.0, 0.0),
              y_gains=(0.1, 0.0, 0.0),
              z_gains=(0.1, 0.0, 0.0),
-             roll_gains=(0.01, 0.0, 0.0),
-             pitch_gains=(0.01, 0.0, 0.0),
-             yaw_gains=(0.01, 0.0, 0.0)):
+             roll_gains=(0.015, 0.001, 0.01),
+             pitch_gains=(0.03, 0.03, 0.01),
+             yaw_gains=(0.006, 0.001, 0.002)):
         super().__init__('pid_node')
         self.x_kP, self.x_kI, self.x_kD = x_gains
         self.y_kP, self.y_kI, self.y_kD = y_gains
@@ -127,7 +127,7 @@ class PIDNode(Node):
         self.timer = self.create_timer(period, self.timer_cb)
 
         self.locked = False
-        
+                
         self.get_logger().info("PID node created")
         
     def timer_cb(self):
@@ -178,11 +178,24 @@ class PIDNode(Node):
             )
         )
 
+        yaw_setpoint = self.last_msg.yaw_setpoint % 360
+        yaw_measurement = self.last_msg.yaw_measurement % 360
+        if yaw_setpoint > 180 : yaw_setpoint -= 360
+        if yaw_setpoint < -180 : yaw_setpoint += 360
+        
+        if yaw_measurement > 180 : yaw_measurement -= 360
+        if yaw_measurement < -180 : yaw_measurement += 360
+        
+        if abs(yaw_setpoint - yaw_measurement) > 180:
+            if yaw_setpoint > 0:
+                yaw_measurement += 360
+            else:
+                yaw_measurement -=360
         yaw_pow = (
             self.last_msg.yaw_power
             if not self.last_msg.yaw_mode
             else self.yaw_pid(
-                self.last_msg.yaw_setpoint - self.last_msg.yaw_measurement, dt
+                yaw_setpoint - yaw_measurement, dt
             )
         )
 
@@ -273,11 +286,11 @@ class PIDNode(Node):
     def z_to_motor(self, z_power) -> np.ndarray:
         return np.array([0, 0, 0, 0, z_power, z_power, - z_power, - z_power])
     def roll_to_motor(self, roll_power) -> np.ndarray:
-        return np.array([0, 0, 0, 0, -roll_power, roll_power, roll_power, -roll_power])
+        return np.array([0, 0, 0, 0, -roll_power, roll_power, -roll_power, roll_power])
 
     def pitch_to_motor(self, pitch_power) -> np.ndarray:
         return np.array(
-            [0, 0, 0, 0, pitch_power, pitch_power, -pitch_power, -pitch_power]
+            [0, 0, 0, 0, pitch_power, pitch_power, pitch_power, pitch_power]
         )
 
     def yaw_to_motor(self, yaw_power) -> np.ndarray:

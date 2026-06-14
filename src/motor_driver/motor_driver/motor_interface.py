@@ -143,7 +143,8 @@ class MotorInterface(Node):
         # self.get_logger().info(f'{converted_powers[0]}')
 
     def power_cb(self, msg):
-        self.set_motor_goals(msg.data)
+        l = [msg.data[4], msg.data[5], msg.data[6], msg.data[7], msg.data[0], msg.data[1], msg.data[2], msg.data[3]]
+        self.set_motor_goals(l)
 
     def set_motor_goals(self, powers: list) -> bool:
         if not self.listening or len(powers) != NUM_MOTORS:
