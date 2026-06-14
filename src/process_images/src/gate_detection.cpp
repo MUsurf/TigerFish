@@ -9,7 +9,7 @@
 // Put this near the top of your file (needs <algorithm> for std::clamp)
 
 // This is a helper that I am using to abstract away openCV's weird HSV scaling. which goes from 0-179 for H, 0-255 for S and V
-// pluging it in like this allows us to visualize the color space with commonly available color pickers.
+// plugging it in like this allows us to visualize the color space with commonly available color pickers.
 cv::Scalar Gate_detection::hsvToOpenCV(float h_deg, float s_pct, float v_pct)
 {
   // Convert

@@ -32,7 +32,7 @@ class ServoControllerNode(Node):
         # Declare parameters
         self.declare_parameter("servo_pin", 32)
         self.declare_parameter("min_angle", 0.0) 
-        self.declare_parameter("max_angle", 60) # recomended open angle (can ber tested)
+        self.declare_parameter("max_angle", 60) # recomended open angle (can be tested)
         self.declare_parameter("pwm_frequency", 50) #Hz #! Where this number from
         self.declare_parameter("min_duty_cycle", 2.5) #! Where this number from
         self.declare_parameter("max_duty_cycle", 12.5) #! Where this number from
