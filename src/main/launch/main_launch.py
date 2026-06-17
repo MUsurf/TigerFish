@@ -21,11 +21,19 @@ def generate_launch_description():
 
     args = [
         DeclareLaunchArgument(
-            'left_cam_id', default_value='0',
+            'front_left_camera_id', default_value='0',
             description='V4L2 device index for the left camera'
         ),
         DeclareLaunchArgument(
-            'right_cam_id', default_value='1',
+            'front_right_camera_id', default_value='1',
+            description='V4L2 device index for the right camera'
+        ),
+        DeclareLaunchArgument(
+            'bottom_left_camera_id', default_value='2',
+            description='V4L2 device index for the left camera'
+        ),
+        DeclareLaunchArgument(
+            'bottom_right_camera_id', default_value='3',
             description='V4L2 device index for the right camera'
         ),
         DeclareLaunchArgument(
@@ -78,8 +86,8 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(camera_launch),
             launch_arguments={
-                'left_cam_id':  LaunchConfiguration('left_cam_id'),
-                'right_cam_id': LaunchConfiguration('right_cam_id'),
+                'front_left_camera_id':  LaunchConfiguration('front_left_camera_id'),
+                'front_right_camera_id': LaunchConfiguration('front_right_camera_id'),
                 'record_type':  LaunchConfiguration('record_type'),
             }.items()
         ),
@@ -87,8 +95,8 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(vision_launch),
             launch_arguments={
                 'use_test_video':      'false',
-                'left_camera_topic':   'camera/left/image_raw',
-                'right_camera_topic':  'camera/right/image_raw',
+                'left_camera_topic':   'front_left_camera',
+                'right_camera_topic':  'front_right_camera',
             }.items()
         ),
     ])

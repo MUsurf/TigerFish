@@ -7,11 +7,19 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     args = [
         DeclareLaunchArgument(
-            'left_cam_id', default_value='0',
+            'front_left_camera_id', default_value='0',
             description='V4L2 device index for the left camera'
         ),
         DeclareLaunchArgument(
-            'right_cam_id', default_value='1',
+            'front_right_camera_id', default_value='1',
+            description='V4L2 device index for the right camera'
+        ),
+        DeclareLaunchArgument(
+            'bottom_left_camera_id', default_value='2',
+            description='V4L2 device index for the left camera'
+        ),
+        DeclareLaunchArgument(
+            'bottom_right_camera_id', default_value='3',
             description='V4L2 device index for the right camera'
         ),
         DeclareLaunchArgument(
@@ -21,8 +29,8 @@ def generate_launch_description():
     ]
 
     sides = [
-        ('camera/left',  LaunchConfiguration('left_cam_id')),
-        ('camera/right', LaunchConfiguration('right_cam_id')),
+        ('front_left_camera',  LaunchConfiguration('front_left_camera_id')),
+        ('front_right_camera', LaunchConfiguration('front_right_camera_id')),
     ]
 
     nodes = []
