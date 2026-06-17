@@ -11,8 +11,8 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 
-FRONT_LEFT_CAMERA_TOPIC = "?"
-FRONT_RIGHT_CAMERA_TOPIC = "?"
+FRONT_LEFT_CAMERA_TOPIC = "front_left_camera/image_raw"
+FRONT_RIGHT_CAMERA_TOPIC = "front_right_camera/image_raw"
 
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -53,8 +53,8 @@ def run_inference(model, image, conf_threshold = 0.25):
 
         x1, y1, x2, y2 = box
 
-        cx = int(round((x1 + x2) / 2))
-        cy = int(round((y1 + y2) / 2))
+        cx = float(round((x1 + x2) / 2))
+        cy = float(round((y1 + y2) / 2))
 
         if best[cls_id] is None or conf > best[cls_id][0]:
             best[cls_id] = (conf, (cx, cy))
@@ -76,8 +76,8 @@ class GateImageDetectionNode(Node):
         self.search_and_rescue_left_publisher = self.create_publisher(VisionMessage, "search_and_rescue_gate_image_left", 10)
         self.search_and_rescue_right_publisher = self.create_publisher(VisionMessage, "search_and_rescue_gate_image_right", 10)
         
-        self.left_camera_subscriber = self.create_subscription(RosImage, FRONT_LEFT_CAMERA_TOPIC, self.left_camera_cb)
-        self.right_camera_subscriber = self.create_subscription(RosImage, FRONT_RIGHT_CAMERA_TOPIC, self.right_camera_cb)
+        self.left_camera_subscriber = self.create_subscription(RosImage, FRONT_LEFT_CAMERA_TOPIC, self.left_camera_cb, 20)
+        self.right_camera_subscriber = self.create_subscription(RosImage, FRONT_RIGHT_CAMERA_TOPIC, self.right_camera_cb, 20)
         
         self.last_image_left : RosImage | None = None
         self.last_image_right : RosImage | None = None
@@ -95,41 +95,42 @@ class GateImageDetectionNode(Node):
         
 
     def timer_cb(self):
-        if self.last_image_left is None or self.last_image_right is None : return
-        if self.last_image_left_np is None : self.last_image_left_np = ros2_image_to_np_array(self.last_image_left, self.cv_bridge)
-        if self.last_image_right_np is None : self.last_image_right_np = ros2_image_to_np_array(self.last_image_right, self.cv_bridge)
-        survey_and_repair_center_left, search_and_rescue_center_left = run_inference(self.model, self.last_image_left_np)
-        survey_and_repair_center_right, search_and_rescue_center_right = run_inference(self.model, self.last_image_right_np)
-        
         survey_and_repair_left_msg = VisionMessage()
         survey_and_repair_right_msg = VisionMessage()
         search_and_rescue_left_msg = VisionMessage()
         search_and_rescue_right_msg = VisionMessage()
-        
-        if survey_and_repair_center_left is not None :
-            survey_and_repair_left_msg.x_position = survey_and_repair_center_left[0]
-            survey_and_repair_left_msg.y_position = survey_and_repair_center_left[1]
-            survey_and_repair_left_msg.is_detected = True
-            # Not using confidence rn
-        self.survey_and_repair_left_publisher.publish(survey_and_repair_left_msg)
+        if self.last_image_left is not None:
+            if self.last_image_left_np is None : self.last_image_left_np = ros2_image_to_np_array(self.last_image_left, self.cv_bridge)
+            survey_and_repair_center_left, search_and_rescue_center_left = run_inference(self.model, self.last_image_left_np)
 
-        if survey_and_repair_center_right is not None :
-            survey_and_repair_right_msg.x_position = survey_and_repair_center_right[0]
-            survey_and_repair_right_msg.y_position = survey_and_repair_center_right[1]
-            survey_and_repair_right_msg.is_detected = True
-        self.survey_and_repair_right_publisher.publish(survey_and_repair_right_msg)
+            if survey_and_repair_center_left is not None :
+                survey_and_repair_left_msg.x_position = survey_and_repair_center_left[0]
+                survey_and_repair_left_msg.y_position = survey_and_repair_center_left[1]
+                survey_and_repair_left_msg.is_detected = True
+                # Not using confidence rn
+            self.survey_and_repair_left_publisher.publish(survey_and_repair_left_msg)
+            
+            if search_and_rescue_center_left is not None :
+                search_and_rescue_left_msg.x_position = search_and_rescue_center_left[0]
+                search_and_rescue_left_msg.y_position = search_and_rescue_center_left[1]
+                search_and_rescue_left_msg.is_detected = True
+            self.search_and_rescue_left_publisher.publish(search_and_rescue_left_msg)
 
-        if search_and_rescue_center_left is not None :
-            search_and_rescue_left_msg.x_position = search_and_rescue_center_left[0]
-            search_and_rescue_left_msg.y_position = search_and_rescue_center_left[1]
-            search_and_rescue_left_msg.is_detected = True
-        self.search_and_rescue_left_publisher.publish(search_and_rescue_left_msg)
+        if self.last_image_right is not None:
+            if self.last_image_right_np is None : self.last_image_right_np = ros2_image_to_np_array(self.last_image_right, self.cv_bridge)
+            survey_and_repair_center_right, search_and_rescue_center_right = run_inference(self.model, self.last_image_right_np)
 
-        if search_and_rescue_center_right is not None :
-            search_and_rescue_right_msg.x_position = search_and_rescue_center_right[0]
-            search_and_rescue_right_msg.y_position = search_and_rescue_center_right[1]
-            search_and_rescue_right_msg.is_detected = True
-        self.search_and_rescue_right_publisher.publish(search_and_rescue_right_msg)
+            if survey_and_repair_center_right is not None :
+                survey_and_repair_right_msg.x_position = survey_and_repair_center_right[0]
+                survey_and_repair_right_msg.y_position = survey_and_repair_center_right[1]
+                survey_and_repair_right_msg.is_detected = True
+            self.survey_and_repair_right_publisher.publish(survey_and_repair_right_msg)
+
+            if search_and_rescue_center_right is not None :
+                search_and_rescue_right_msg.x_position = search_and_rescue_center_right[0]
+                search_and_rescue_right_msg.y_position = search_and_rescue_center_right[1]
+                search_and_rescue_right_msg.is_detected = True
+            self.search_and_rescue_right_publisher.publish(search_and_rescue_right_msg)
             
             
 

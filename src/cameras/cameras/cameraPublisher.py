@@ -27,7 +27,7 @@ class PublisherNodeClass(Node):
         self.get_logger().info("Attempting to open camera...")
         # self.camera = cv2.VideoCapture(pi_pipeline, cv2.CAP_GSTREAMER)
         self.get_logger().info("Opening camera via standard V4L2...")
-        self.camera = cv2.VideoCapture(idx) 
+        self.camera = cv2.VideoCapture(idx)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
@@ -59,10 +59,10 @@ class PublisherNodeClass(Node):
             )
             self.cinfo_manager.loadCameraInfo()
         except Exception as e:
-            self.get_logger().warn(f"Could not load tiger_fish config: {e}. Using default info.")
-            self.cinfo_manager = CameraInfoManager(
-                self, cname=self.camera_name, url=""
+            self.get_logger().warn(
+                f"Could not load tiger_fish config: {e}. Using default info."
             )
+            self.cinfo_manager = CameraInfoManager(self, cname=self.camera_name, url="")
             self.cinfo_manager.loadCameraInfo()
         self.info_publisher = self.create_publisher(
             CameraInfo, "camera_info", self.queueSize
@@ -128,11 +128,15 @@ def main(args=None):
     except Exception:
         print("CameraPublisher spin failure.")
         import traceback
-        publisherObject.get_logger().error(f"Node crashed! Traceback:\n{traceback.format_exc()}")
+
+        publisherObject.get_logger().error(
+            f"Node crashed! Traceback:\n{traceback.format_exc()}"
+        )
     finally:
         if rclpy.ok():
             publisherObject.destroy_node()
             rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()

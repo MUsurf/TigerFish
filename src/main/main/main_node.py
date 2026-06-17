@@ -1,7 +1,7 @@
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32, String, Bool  # pyright: ignore[reportMissingImports]
-from messages.msg import PIDInput, ControllerInput
+from messages.msg import PIDInput, ControllerInput, VisionMessage
 
 import rclpy
 import time
@@ -148,6 +148,13 @@ class MainNode(Node):
             kill_qos
         )
         
+        self.left_cam_subscriber = self.create_subscription(
+            VisionMessage,
+            "survey_and_repair_gate_image_left",
+            self.left_cam_cb,
+            10
+        )
+        
         
         period = 1.0 / 20.0
         self.timer = self.create_timer(period, self._timer_cb)
@@ -178,6 +185,8 @@ class MainNode(Node):
         self.last_a : bool = False
         
         self.state_timer_start_time = 0.0
+        
+        self.is_seen = False
 
 
     def depth_sensor_cb(self, msg: Float32):
@@ -256,6 +265,8 @@ class MainNode(Node):
     def start_state(self):
         self.state_timer_start_time = time.time()
 
+    def left_cam_cb(self, msg : VisionMessage):
+        self.is_seen = msg.is_detected
 
     def command_line_cb(self, msg: String):
         text = msg.data.strip()
@@ -350,7 +361,7 @@ class MainNode(Node):
         
     def logger_cb(self):
         self.get_logger().info(
-            f"""X: {self.x_pow:7.2f}   Y: {self.y_pow:7.2f}
+            f"""X: {self.x_pow:7.2f}   Y: {self.y_pow:7.2f}.  ?: {"Yes" if self.is_seen else "No"}
             Z: {self.z_setpoint:7.2f}   D: {self.depth:7.2f}
             Roll_S:  {self.roll_setpoint:7.2f}   Roll:  {self.roll * 180 / np.pi:7.2f}
             Pitch_S: {self.pitch_setpoint:7.2f}   Pitch: {self.pitch * 180 / np.pi:7.2f}
