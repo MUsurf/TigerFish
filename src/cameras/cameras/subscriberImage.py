@@ -99,7 +99,8 @@ class SubscriberNodeClass(Node):
             # in mp4v format! UwU
             if self.video_writer is None:
                 os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
-                fourcc = cv2.VideoWriter_fourcc(*"avc1")  # mp4v format initialization
+                # Use a software encoder that is more likely to work inside container
+                fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # software mp4v codec
                 height, width = openCVImage.shape[:2]
 
                 self.video_writer = cv2.VideoWriter(

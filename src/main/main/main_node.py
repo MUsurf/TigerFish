@@ -1,7 +1,7 @@
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Float32, String, Bool  # pyright: ignore[reportMissingImports]
-from messages.msg import PIDInput, ControllerInput
+from messages.msg import PIDInput, ControllerInput, VisionMessage
 
 import rclpy
 import time
@@ -29,8 +29,9 @@ new_controller_qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE
 
 qos_controller = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
 
-YAW_DEGREE_PER_SECOND = 10
+YAW_DEGREE_PER_SECOND = 90
 Z_METER_PER_SECOND = 0.5
+ROLL_PER_SECOND = 7.5
 DEAD_ZONE = 0.1
 
 
@@ -102,7 +103,7 @@ def rpy_from_quat(q):
     cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
     yaw = np.arctan2(siny_cosp, cosy_cosp)
 
-    return roll, pitch, yaw
+    return pitch, roll, yaw
 
 
 class MainNode(Node):
@@ -140,9 +141,21 @@ class MainNode(Node):
         self.servo_publisher = self.create_publisher(
             Float32, "topic_servo_angle", servo_qos
         )
-
-        self.kill_publisher = self.create_publisher(Bool, "kill", kill_qos)
-
+        
+        self.kill_publisher = self.create_publisher(
+            Bool,
+            "kill",
+            kill_qos
+        )
+        
+        self.left_cam_subscriber = self.create_subscription(
+            VisionMessage,
+            "survey_and_repair_gate_image_left",
+            self.left_cam_cb,
+            10
+        )
+        
+        
         period = 1.0 / 20.0
         self.timer = self.create_timer(period, self._timer_cb)
         self.logger_timer = self.create_timer(0.25, self.logger_cb)
@@ -166,6 +179,15 @@ class MainNode(Node):
         self.yaw: float = 0.0
 
         self.controller_last_time = None
+        
+                
+        self.a_is_toggled : bool = False
+        self.last_a : bool = False
+        
+        self.state_timer_start_time = 0.0
+        
+        self.is_seen = False
+
 
     def depth_sensor_cb(self, msg: Float32):
         self.get_logger().info(f"{msg.data}")
@@ -177,13 +199,18 @@ class MainNode(Node):
         msg.y_mode = False
         msg.z_mode = False
         msg.roll_mode = True
+        
         msg.pitch_mode = True
+        
         msg.yaw_mode = True
 
         msg.z_is_absolute = False
 
         msg.x_power = self.x_pow
         msg.y_power = self.y_pow
+        
+        self.get_logger().info(str(msg.x_power))
+    
 
         # msg.z_setpoint = self.z_setpoint
         # msg.z_measurement = max(0.0, self.depth)
@@ -198,6 +225,13 @@ class MainNode(Node):
         msg.yaw_measurement = self.yaw * 180 / np.pi
 
         self.pid_publisher.publish(msg)
+
+                
+    def start_state(self):
+        self.state_timer_start_time = time.time()
+
+    def left_cam_cb(self, msg : VisionMessage):
+        self.is_seen = msg.is_detected
 
     def command_line_cb(self, msg: String):
         text = msg.data.strip()
@@ -220,25 +254,28 @@ class MainNode(Node):
 
         else:
             is_pid = new_controller_str(text)
-            if is_pid is not None:
-                self.new_controller_publisher.publish(is_pid)
-
-    def controller_cb(self, msg: ControllerInput):
-        if abs(msg.x_left_stick) < DEAD_ZONE:
-            msg.x_left_stick = 0.0
-        if abs(msg.y_left_stick) < DEAD_ZONE:
-            msg.y_left_stick = 0.0
-        if abs(msg.y_right_stick) < DEAD_ZONE:
-            msg.y_right_stick = 0.0
-        if abs(msg.r_trigger) < DEAD_ZONE:
-            msg.r_trigger = 0.0
-        if abs(msg.l_trigger) < DEAD_ZONE:
-            msg.l_trigger = 0.0
-
+            if is_pid is not None : self.new_controller_publisher.publish(is_pid)
+        
+    def controller_cb(self, msg : ControllerInput):
+        if abs(msg.x_left_stick) < DEAD_ZONE : msg.x_left_stick = 0.0
+        if abs(msg.y_left_stick) < DEAD_ZONE : msg.y_left_stick = 0.0
+        if abs(msg.y_right_stick) < DEAD_ZONE : msg.y_right_stick = 0.0
+        if abs(msg.r_trigger) < DEAD_ZONE : msg.r_trigger = 0.0
+        if abs(msg.l_trigger) < DEAD_ZONE : msg.l_trigger = 0.0
+        
+                    
+        a = msg.a_button
+        if a and a != self.last_a :
+            self.a_is_toggled = not self.a_is_toggled
+            if self.a_is_toggled:
+                self.start_state()
+                print(self.a_is_toggled)
+        a = self.last_a
+        
         self.recent_controller_input = msg
         self.x_pow = -msg.y_left_stick
-        self.y_pow = msg.x_left_stick
-
+        self.y_pow = -msg.x_left_stick
+        
         if self.controller_last_time is None:
             self.controller_last_time = time.time()
             return
@@ -248,6 +285,9 @@ class MainNode(Node):
         yaw_power = max(msg.r_trigger, msg.l_trigger)
         yaw_power *= -1 if msg.l_trigger > msg.r_trigger else 1
         self.yaw_setpoint += YAW_DEGREE_PER_SECOND * yaw_power * dt
+        
+        roll_power = 1 if msg.x_button else -1 if msg.b_button else 0
+        self.roll_setpoint += ROLL_PER_SECOND * roll_power * dt
 
         z_set = Z_METER_PER_SECOND * msg.y_right_stick * dt
         self.z_setpoint += z_set
@@ -258,9 +298,9 @@ class MainNode(Node):
 
     def _odom_cb(self, msg: Odometry):
         r, p, y = rpy_from_quat(msg.pose.pose.orientation)
-        self.roll = -r
-        self.pitch = -p
-        self.yaw = -y
+        self.roll = -p
+        self.pitch = r # ?
+        self.yaw = y
         # self.get_logger().info(f'roll: {(r * 180 / np.pi):4f} pitch {(p * 180 / np.pi):4f} yaw: {(y * 180 / np.pi):4f}')
         # msg = PIDInput()
 
@@ -286,7 +326,7 @@ class MainNode(Node):
 
     def logger_cb(self):
         self.get_logger().info(
-            f"""X: {self.x_pow:7.2f}   Y: {self.y_pow:7.2f}
+            f"""X: {self.x_pow:7.2f}   Y: {self.y_pow:7.2f}.  ?: {"Yes" if self.is_seen else "No"}
             Z: {self.z_setpoint:7.2f}   D: {self.depth:7.2f}
             Roll_S:  {self.roll_setpoint:7.2f}   Roll:  {self.roll * 180 / np.pi:7.2f}
             Pitch_S: {self.pitch_setpoint:7.2f}   Pitch: {self.pitch * 180 / np.pi:7.2f}
