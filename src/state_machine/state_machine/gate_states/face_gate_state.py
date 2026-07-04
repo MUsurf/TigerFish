@@ -1,10 +1,7 @@
 import time
-
-import rclpy
-
 import yasmin
 from yasmin import State, Blackboard
-from state_machine_node import Context
+from messages.msg import PIDInput, VisionMessage
 
 class FaceGate(State):
     """
@@ -16,15 +13,26 @@ class FaceGate(State):
         obtain_depth: goes to the obtain_depth state
     """
     
-    def __init__(self, context : Context) -> None:
-        super().__init__(["next_state", "reset", "obtain_depth"])
-        self.context = context
-        self.facing_time = 0.0
-        self.time_began_facing = 0.0
-        self.maintain_time  = 3.0  # sec
+    def __init__(self, context : dict) -> None:
+        super().__init__(["align_gate", "end"])
+        self.context : dict = context
         
+        self.detection_threshold : float = 0.8 # 80% of past 10 frames must contain all. 
+        self.past_detections : list[tuple[bool, bool, bool, bool]] = [(False, False) for _ in range(10)]
         self.desired_depth = 0.75   # meters
-        self.depth_range = 0.15     # meters
+        self.above_water_threshold = -0.05
+        
+        self.frequency = 10.0 # Hz
+        
+    def get_detection_amount(self) -> float:
+        seen = 0
+        for t in self.past_detections:
+            seen += 1 if (t[0] and t[1] and t[2] and t[3]) else 0
+        return seen / len(self.past_detections)
+    
+    def push_detection(self, detected : tuple[bool, bool, bool, bool]) -> None:
+        self.past_detections.insert(0, detected)
+        self.past_detections.pop()
         
     def execute(self, bb : Blackboard):
         """
@@ -34,62 +42,50 @@ class FaceGate(State):
         """
         yasmin.YASMIN_LOG_INFO("Executing state Gate Alignment")
         
-        # Get blackboard info
-        pic1 = bb.get("pic1_detection") # Placeholder names
-        pic2 = bb.get("pic2_detection")
-        odom = bb.get("odom")
-        depth = bb.get("depth")
-        
-        # Construct PID message, i.e. motor powers
-        msg = PIDInput()
-        
-        msg.z_mode = True
-        msg.roll_mode = True
-        msg.pitch_mode = True
-        msg.yaw_mode = True
+        self.past_detections = [(False, False) for _ in range(10)]
 
-        # Maintain depth and orientation
-        msg.z_measurement = depth 
-        msg.z_setpoint = self.desired_depth
-        
-        msg.yaw_setpoint = 0.0
-        msg.measurement_yaw = odom["yaw"]
-        msg.pitch_setpoint = 0.0
-        msg.measurement_pitch = odom["pitch"]
-        msg.roll_setpoint = 0.0
-        msg.measurement_roll = odom["roll"]
-        
-        # Being out of the water is a reset trigger to stop all functions.
-        if (depth < 0): # Does this need an offset?
-            self.facing_time = 0
-            self.time_began_facing = 0
-            return "reset"
-        
-        # Achieve and maintain depth within desired range
-        if (abs(depth - self.desired_depth) > self.self.depth_range):
-            bb["prev_state"] = "face_gate"
-            self.facing_time = 0
-            self.time_began_facing = 0
-            return "obtain_depth"
+        while True:
+            st_t = time.time()
+            # Get blackboard info
+            left_detection_survey = bb.get("survey_and_repair_gate_image_left")
+            right_detection_survey = bb.get("survey_and_repair_gate_image_right")
+            left_detection_search = bb.get("search_and_rescue_gate_image_left")
+            right_detection_search = bb.get("search_and_rescue_gate_image_right")
+            odom = bb.get("odom")
+            depth = bb.get("depth")        
             
-        # Center between both pictures
-        # This method assumes we start with enough distance from the gate for both pictures to be seen at once. Potentially bad?
-        if (not pic1["detected"] or not pic2["detected"]): #Spin until pictures spotted
-            msg.yaw_setpoint = 5.0
-            self.facing_time = 0.0
-        else:
-            msg.yaw_setpoint = 0.0
-            if self.facing_time is None: # Maintain facing for a few seconds before moving on to align to a side
-                self.time_began_facing = time.time()
-            else:
-                self.facing_time = time.time() - self.time_began_facing
+            if (depth <= self.above_water_threshold):
+                return "end"
+                
+            detections = (
+                left_detection_survey['is_detected'], 
+                right_detection_survey['is_detected'], 
+                left_detection_search['is_detected'], 
+                right_detection_search['is_detected'])
+            detected = detections[0] and detections[1] and detections[2] and detections[3]
+            self.push_detection(detections)
+            if self.get_detection_amount >= self.detection_threshold:
+                return 'align_gate'
             
-        self.context.pid_publisher.publish(msg)
+            yaw_power = 0.0 if detected else 0.1
+                        
+            msg = PIDInput()
+            msg.z_mode = True
+            msg.roll_mode = True
+            msg.pitch_mode = True
+            msg.yaw_mode = False
+            msg.yaw_power = yaw_power
+            msg.z_measurement = depth 
+            msg.z_setpoint = self.desired_depth
+            msg.pitch_setpoint = 0.0
+            msg.measurement_pitch = odom["pitch"]
+            msg.roll_setpoint = 0.0
+            msg.measurement_roll = odom["roll"]
+            self.context.pid_publisher.publish(msg)
+
+            time.sleep(max(0.0, (1.0 / self.frequency) - (time.time() - st_t)))
         
-        if (self.facing_time > self.maintain_time):
-            self.facing_time = 0
-            self.time_began_facing = 0
-            return "next_state"
+
      
         
     

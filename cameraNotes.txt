@@ -1,1 +1,0 @@
-use the command "rpicam-hello --list-cameras" to list the currently connected cameras

@@ -4,21 +4,21 @@ import rclpy
 from rclpy import Node
 
 from nav_msgs.msg import Odometry
-from messages.msg import PIDInput
+from messages.msg import PIDInput, VisionMessage
 from std_msgs.msg import Float32
 
 from yasmin import State, StateMachine, Blackboard
 from yasmin_viewer import YasminViewerPub
-from context import Context
 
 import numpy as np
 
 # All states
-import state_machine.init_states as init_states
-from init_states.init_states import STATE_GETTERS as INIT_STATE_GETTERS
+import state_machine.start_states as init_states
+from start_states.start_states import STATE_GETTERS as START_STATE_GETTERS
 import state_machine.gate_states as gate_states
 from gate_states.gate_states import STATE_GETTERS as GATE_STATE_GETTERS
 import state_machine.slalom_states as slalom_states
+
 from slalom_states.slalom_states import STATE_GETTERS as SLALOM_STATE_GETTERS
 import state_machine.bins_states as bins_states
 from bins_states.bins_states import STATE_GETTERS as BINS_STATE_GETTERS
@@ -66,28 +66,35 @@ class StateMachineNode(Node):
         super().__init__("state_machine_node")
         
         self.blackboard = Blackboard()
+        # blackboard defaults:
+        self.blackboard["survey_and_repair_gate_image_left"] = VisionMessage()
+        self.blackboard["survey_and_repair_gate_image_right"] = VisionMessage()
+        self.blackboard["search_and_rescue_gate_image_left"] = VisionMessage()
+        self.blackboard["search_and_rescue_gate_image_right"] = VisionMessage()
+        self.blackboard["odom"] = {"roll" : 0.0, "pitch" : 0.0, "yaw" : 0.0}
+        self.blackboard["depth"] = -1.0
         
-        self.orientation_subscriber = self.create_subscription( # IMU?
-            Odometry, "state_estimation", self._odom_cb, 10
+        
+        self.orientation_subscriber = self.create_subscription(Odometry, "state_estimation", self._odom_cb, 10)
+        self.depth_sensor_subscriber = self.create_subscription(Float32, "depth", self.depth_sensor_cb, 10)
+        self.survey_and_repair_gate_image_left_subscriber = self.create_subscription(
+            VisionMessage, "survey_and_repair_gate_image_left", self.survey_and_repair_gate_image_left_cb, 10
         )
-        
-        self.depth_sensor_subscriber = self.create_subscription(
-            Float32, "depth", self.depth_sensor_cb, 10
+        self.survey_and_repair_gate_image_right_subscriber = self.create_subscription(
+            VisionMessage, "survey_and_repair_gate_image_right", self.survey_and_repair_gate_image_right_cb, 10
         )
-                
-        # ADD ALL VISION SUBSCRIBERS HERE
-        
-        # -----
-        
+        self.search_and_rescue_gate_image_left_subscriber = self.create_subscription(
+            VisionMessage, "search_and_rescue_gate_image_left", self.search_and_rescue_gate_image_left_cb, 10
+        )
+        self.search_and_rescue_gate_image_right_subscriber = self.create_subscription(
+            VisionMessage, "search_and_rescue_gate_image_right", self.search_and_rescue_gate_image_right_cb, 10
+        )
+
         self.pid_publisher = self.create_publisher(PIDInput, "pid_input", 10)
         
-        # ADD ALL VISION PUBLISHERS HERE
-        
-        self.context = Context(
-            self, 
-            self.pid_publisher,
-            # VISION PUBLISHERS * NOT SUBSCRIBERS
-        )
+        self.context = dict({
+            "pid_publisher" : self.pid_publisher,
+        })
 
         # Create state machine
         self.state_machine = StateMachine(outcomes={"complete"})
@@ -95,7 +102,7 @@ class StateMachineNode(Node):
         
         # This is for ease of individual development
         state_getter_lists = [
-            INIT_STATE_GETTERS,
+            START_STATE_GETTERS,
             GATE_STATE_GETTERS,
             SLALOM_STATE_GETTERS,
             BINS_STATE_GETTERS,
@@ -131,9 +138,16 @@ class StateMachineNode(Node):
             "pitch" : pitch,
             "yaw" : yaw             
         }
-
     def depth_sensor_cb(self, msg):
         self.blackboard["depth"] = msg.data
+    def survey_and_repair_gate_image_left_cb(self, msg):
+        self.blackboard["survey_and_repair_gate_image_left"] = msg
+    def survey_and_repair_gate_image_right_cb(self, msg):
+        self.blackboard["survey_and_repair_gate_image_right"] = msg
+    def search_and_rescue_gate_image_left_cb(self, msg):
+        self.blackboard["search_and_rescue_gate_image_left"] = msg
+    def search_and_rescue_gate_image_right_cb(self, msg):
+        self.blackboard["search_and_rescue_gate_image_right"] = msg
         
         
 def main(args=None):

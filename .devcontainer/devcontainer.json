@@ -20,5 +20,5 @@
       ]
     }
   },
-  "postCreateCommand": "apt-get update && apt-get install -y python3-pip python3-venv python3-colcon-common-extensions python3-rosdep && rosdep init || true && rosdep update"
+  "postCreateCommand": "apt-get update && apt-get install -y python3-pip python3-venv python3-colcon-common-extensions python3-rosdep ros-humble-yasmin ros-humble-yasmin-ros ros-humble-yasmin-viewer && rosdep init || true && rosdep update"
 }
