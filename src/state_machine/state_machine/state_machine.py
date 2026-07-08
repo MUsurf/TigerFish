@@ -27,19 +27,19 @@ from octagon_states.octagon_states import STATE_GETTERS as OCTAGON_STATE_GETTERS
 # Prob won't use
 from state_machine.torpedo_states import *
 
-def rpy_from_quat(q):
+def roll_pitch_yaw_from_quaternion(quaternion):
     """
     Convert geometry_msgs.msg.Quaternion to roll, pitch, yaw (radians).
 
     Assumes quaternion fields:
-        q.x, q.y, q.z, q.w
+        quaternion.x, quaternion.y, quaternion.z, quaternion.w
     Uses XYZ (roll, pitch, yaw) convention.
     """
 
-    x = q.x
-    y = q.y
-    z = q.z
-    w = q.w
+    x = quaternion.x
+    y = quaternion.y
+    z = quaternion.z
+    w = quaternion.w
 
     # Roll (x-axis rotation)
     sinr_cosp = 2.0 * (w * x + y * z)
@@ -125,15 +125,15 @@ class StateMachineNode(Node):
     # Call back functions keep blackboard up to date with ROS topics
 
     def _odom_cb(self, msg):
-        qx = msg.pose.pose.orientation.x
-        qy = msg.pose.pose.orientation.y
-        qz = msg.pose.pose.orientation.z
-        qw = msg.pose.pose.orientation.w
-        
-        orientation_list = [qx, qy, qz, qw]
-        roll, pitch, yaw = rpy_from_quat(orientation_list)
-        
-        self.blackboard["odom"] = { # Do we need more than rpy?
+        quaternion_x = msg.pose.pose.orientation.x
+        quaternion_y = msg.pose.pose.orientation.y
+        quaternion_z = msg.pose.pose.orientation.z
+        quaternion_w = msg.pose.pose.orientation.w
+
+        orientation_list = [quaternion_x, quaternion_y, quaternion_z, quaternion_w]
+        roll, pitch, yaw = roll_pitch_yaw_from_quaternion(orientation_list)
+
+        self.blackboard["odom"] = { # Do we need more than roll, pitch, yaw?
             "roll" : roll,
             "pitch" : pitch,
             "yaw" : yaw             
