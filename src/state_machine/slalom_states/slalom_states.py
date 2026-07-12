@@ -1,5 +1,6 @@
 import time
 import yasmin
+import math
 from yasmin import State, Blackboard
 from messages.msg import PIDInput, VisionMessage
 
@@ -7,61 +8,71 @@ class SlalomState(State):
     def __init__(self):
         super().__init__(outcomes=["next", "done"])
 
-        self.frequency = 10.0 # Hz
-
     def execute(self, blackboard: Blackboard):
 
-        Gates_Gone_Through = 0
+        # TODO - align to gate using henry cv
 
-        # TODO: this has to be a safe while loop, so make sure there is a timer on how long it can run, and do some thread.sleep so you are not taking all execution time
+        init_depth = blackboard.get("depth")
 
-        # TODO: make sure this handles depth (aka the pid or whatever)
+        while True:
 
-        while Gates_Gone_Through != 3:
+            msg = PIDInput()
 
-            # all steps should prob be their own while loop
+            odom = blackboard.get("odom")
 
-            # Find the red
+            msg.x_mode = True
+            msg.y_mode = True
+            msg.z_mode = True
+            msg.roll_mode = True
+            msg.pitch_mode = True
+            msg.yaw_mode = True
+            msg.pitch_setpoint = 0.0
+            msg.measurement_pitch = odom["pitch"]
+            msg.roll_setpoint = 0.0
+            msg.measurement_roll = odom["roll"]
 
-            # center yourself with it (aka put it in the middle of the camera by spinning) and optionally all of them (this would take more movement)
+            msg.z_setpoint = init_depth + 2
+            msg.z_measurement = blackboard.get("depth")
 
-            while percent_of_vision < 50:
-                msg = PIDInput()
-                msg.z_mode = True
-                msg.roll_mode = True
-                msg.pitch_mode = True
-                msg.yaw_mode = False
-                msg.yaw_power = yaw_power
-                msg.z_measurement = depth 
-                msg.z_setpoint = self.desired_depth
-                msg.pitch_setpoint = 0.0
-                msg.measurement_pitch = odom["pitch"]
-                msg.roll_setpoint = 0.0
-                msg.measurement_roll = odom["roll"]
-                self.context.pid_publisher.publish(msg)
-
-                time.sleep(max(0.0, (1.0 / self.frequency) - (time.time() - st_t)))
-
-            # inch forward until it takes up a percentage of vision
-
-            # back up slightly, move left/right, move forward a set distance
-
-            Gates_Gone_Through += 1
-
-            # TODO - obviously remove this, but you also should have a timer condition on how long the task should be aloower to run before just killing it and calling it a day
-            if True:
+            self.context.pid_publisher.publish(msg)
+            
+            if(math.abs(msg.z_setpoint - msg.z_measurement) < 0.2):
                 break
 
+            time.sleep(0.05)
 
+        msg = PIDInput()
 
+        odom = blackboard.get("odom")
 
+        msg.x_mode = False
+        msg.y_mode = True
+        msg.z_mode = True
+        msg.roll_mode = True
+        msg.pitch_mode = True
+        msg.yaw_mode = True
+        msg.pitch_setpoint = 0.0
+        msg.measurement_pitch = odom["pitch"]
+        msg.roll_setpoint = 0.0
+        msg.measurement_roll = odom["roll"]
 
-        # use blackboard["odom"], blackboard["depth"], etc.
+        msg.x_power = .5
+
+        self.context.pid_publisher.publish(msg)
+            
+        while True:
+                
+            # TODO break after something andrew was saying something about how you can find distance
+                break
+
+            time.sleep(0.05)
+
         return "next"
 
 def get_slalom_state(context):
     state = SlalomState()
     transitions = {
+    # TODO - fix this transition and like evreything else frfr
         "next": "NEXT_STATE_NAME",
         "done": "complete",
     }
