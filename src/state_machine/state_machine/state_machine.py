@@ -14,6 +14,9 @@ from state_machine.state_machine.gate_go_to_depth import GateGoToDepthState
 from state_machine.state_machine.gate_set_role import GateSetRoleState
 from state_machine.state_machine.go_through_gate import GoThroughGateState
 
+from state_machine.state_machine.slalom_shift import SlalomShiftState
+from state_machine.state_machine.go_through_slalom import GoThroughSlalomState
+
 from state_machine.state_machine.end_state import EndState
 
 
@@ -142,6 +145,9 @@ class StateMachineNode(Node):
             'gate_go_to_depth' : GateGoToDepthState(),
             'gate_set_role': GateSetRoleState(),
             'go_through_gate' : GoThroughGateState(),
+            
+            'slalom_shift' : SlalomShiftState(),
+            'go_through_slalom' : GoThroughSlalomState(),
             
             'end' : EndState(),
         }
