@@ -7,25 +7,10 @@ from nav_msgs.msg import Odometry
 from messages.msg import PIDInput, VisionMessage
 from std_msgs.msg import Float32
 
-from yasmin import State, StateMachine, Blackboard
-from yasmin_viewer import YasminViewerPub
+from state_machine.state_machine.state import State
+from state_machine.state_machine import *
 
 import numpy as np
-
-# All states
-import state_machine.start_states as init_states
-from start_states.start_states import STATE_GETTERS as START_STATE_GETTERS
-import state_machine.gate_states as gate_states
-from gate_states.gate_states import STATE_GETTERS as GATE_STATE_GETTERS
-import state_machine.slalom_states as slalom_states
-
-from slalom_states.slalom_states import STATE_GETTERS as SLALOM_STATE_GETTERS
-import state_machine.bins_states as bins_states
-from bins_states.bins_states import STATE_GETTERS as BINS_STATE_GETTERS
-import state_machine.octagon_states as octagon_states
-from octagon_states.octagon_states import STATE_GETTERS as OCTAGON_STATE_GETTERS
-# Prob won't use
-from state_machine.torpedo_states import *
 
 def roll_pitch_yaw_from_quaternion(quaternion):
     """
@@ -65,89 +50,124 @@ class StateMachineNode(Node):
     def __init__(self):
         super().__init__("state_machine_node")
         
-        self.blackboard = Blackboard()
-        # blackboard defaults:
-        self.blackboard["survey_and_repair_gate_image_left"] = VisionMessage()
-        self.blackboard["survey_and_repair_gate_image_right"] = VisionMessage()
-        self.blackboard["search_and_rescue_gate_image_left"] = VisionMessage()
-        self.blackboard["search_and_rescue_gate_image_right"] = VisionMessage()
-        self.blackboard["odom"] = {"roll" : 0.0, "pitch" : 0.0, "yaw" : 0.0}
-        self.blackboard["depth"] = -1.0
-        
-        
-        self.orientation_subscriber = self.create_subscription(Odometry, "state_estimation", self._odom_cb, 10)
-        self.depth_sensor_subscriber = self.create_subscription(Float32, "depth", self.depth_sensor_cb, 10)
-        self.survey_and_repair_gate_image_left_subscriber = self.create_subscription(
-            VisionMessage, "survey_and_repair_gate_image_left", self.survey_and_repair_gate_image_left_cb, 10
-        )
-        self.survey_and_repair_gate_image_right_subscriber = self.create_subscription(
-            VisionMessage, "survey_and_repair_gate_image_right", self.survey_and_repair_gate_image_right_cb, 10
-        )
-        self.search_and_rescue_gate_image_left_subscriber = self.create_subscription(
-            VisionMessage, "search_and_rescue_gate_image_left", self.search_and_rescue_gate_image_left_cb, 10
-        )
-        self.search_and_rescue_gate_image_right_subscriber = self.create_subscription(
-            VisionMessage, "search_and_rescue_gate_image_right", self.search_and_rescue_gate_image_right_cb, 10
-        )
-
-        self.pid_publisher = self.create_publisher(PIDInput, "pid_input", 10)
-        
-        self.context = dict({
-            "pid_publisher" : self.pid_publisher,
-        })
-
-        # Create state machine
-        self.state_machine = StateMachine(outcomes={"complete"})
-        
-        
-        # This is for ease of individual development
-        state_getter_lists = [
-            START_STATE_GETTERS,
-            GATE_STATE_GETTERS,
-            SLALOM_STATE_GETTERS,
-            BINS_STATE_GETTERS,
-            OCTAGON_STATE_GETTERS
-        ]
-        for state_getter_list in state_getter_lists:
-            for state_getter in state_getter_list:
-                name, state, transitions = state_getter(self.context)
-                self.state_machine.add_state(name, state, transitions)
-
-        # Set up state machine
-        self.state_machine.set_start_state("...?") # Whatever we put in init_states
+        self.context = {}
     
-        self.timer = self.create_timer(0.05, self.state_machine)
+        # context defaults:
+        self.context["survey_and_repair_gate_image_left_gate"] = VisionMessage()
+        self.context["survey_and_repair_gate_image_right_gate"] = VisionMessage()
+        self.context["search_and_rescue_gate_image_left_gate"] = VisionMessage()
+        self.context["search_and_rescue_gate_image_right_gate"] = VisionMessage()
+        self.context["survey_and_repair_gate_image_left_bin"] = VisionMessage()
+        self.context["survey_and_repair_gate_image_right_bin"] = VisionMessage()
+        self.context["search_and_rescue_gate_image_left_bin"] = VisionMessage()
+        self.context["search_and_rescue_gate_image_right_bin"] = VisionMessage()
+        self.context["octagon_image_1_left"] = VisionMessage()
+        self.context["octagon_image_1_right"] = VisionMessage()
+        self.context["octagon_image_2_left"] = VisionMessage()
+        self.context["octagon_image_2_right"] = VisionMessage()
+        self.context["table_left"] = VisionMessage()
+        self.context["table_right"] = VisionMessage()
 
+
+        self.context["odom"] = {"roll" : 0.0, "pitch" : 0.0, "yaw" : 0.0}
+        self.context["depth"] = -1.0
+        
+        
+        # Subscriptions
+        self.orientation_subscriber = self.create_subscription(
+            Odometry, "state_estimation", self._odom_cb, 10)
+        self.depth_sensor_subscriber = self.create_subscription(
+            Float32, "depth", self.depth_sensor_cb, 10)
+        self.survey_and_repair_gate_left_gate_subscriber = self.create_subscription(
+            VisionMessage, "survey_and_repair_gate_image_left_gate", self.survey_and_repair_gate_image_left_gate_cb, 10)
+        self.survey_and_repair_gate_right_gate_subscriber = self.create_subscription(
+            VisionMessage, "survey_and_repair_gate_image_right_gate", self.survey_and_repair_gate_image_right_gate_cb, 10)
+        self.search_and_rescue_gate_left_gate_subscriber = self.create_subscription(
+            VisionMessage, "search_and_rescue_gate_image_left_gate", self.search_and_rescue_gate_image_left_gate_cb, 10)
+        self.search_and_rescue_gate_right_gate_subscriber = self.create_subscription(
+            VisionMessage, "search_and_rescue_gate_image_right_gate", self.search_and_rescue_gate_image_right_gate_cb, 10)
+        self.survey_and_repair_gate_left_bin_subscriber = self.create_subscription(
+            VisionMessage, "survey_and_repair_gate_image_left_bin", self.survey_and_repair_gate_image_left_bin_cb, 10)
+        self.survey_and_repair_gate_right_bin_subscriber = self.create_subscription(
+            VisionMessage, "survey_and_repair_gate_image_right_bin", self.survey_and_repair_gate_image_right_bin_cb, 10)
+        self.search_and_rescue_gate_left_bin_subscriber = self.create_subscription(
+            VisionMessage, "search_and_rescue_gate_image_left_bin", self.search_and_rescue_gate_image_left_bin_cb, 10)
+        self.search_and_rescue_gate_right_bin_subscriber = self.create_subscription(
+            VisionMessage, "search_and_rescue_gate_image_right_bin", self.search_and_rescue_gate_image_right_bin_cb, 10)
+        self.octagon_image_1_left_subscriber = self.create_subscription(
+            VisionMessage, "octagon_image_1_left", self.octagon_image_1_left_cb, 10)
+        self.octagon_image_1_right_subscriber = self.create_subscription(
+            VisionMessage, "octagon_image_1_right", self.octagon_image_1_right_cb, 10)
+        self.octagon_image_2_left_subscriber = self.create_subscription(
+            VisionMessage, "octagon_image_2_left", self.octagon_image_2_left_cb, 10)
+        self.octagon_image_2_right_subscriber = self.create_subscription(
+            VisionMessage, "octagon_image_2_right", self.octagon_image_2_right_cb, 10)
+        self.table_left_subscriber = self.create_subscription(
+            VisionMessage, "table_left", self.table_left_cb, 10)
+        self.table_right_subscriber = self.create_subscription(
+            VisionMessage, "table_right", self.table_right_cb, 10)
+
+        # Publishers
+        self.pid_publisher = self.create_publisher(
+            PIDInput, "pid_input", 10)
+
+        self.context['pid_publisher'] = self.pid_publisher
+        
+        self.states = {
+            'start_state' : State()
+        }
+        
+        self.current_state : State = self.states['start_state']
+        
+        self.timer = self.create_timer(0.05, self.timer_cb)
         self.get_logger().info("State machine initialized successfully!")
         
+    def timer_cb(self):
+        next_state : State | None = self.current_state.execute(self.context)
+        if next_state is not None:
+            self.current_state = self.states[next_state]
         
-    
-    # Call back functions keep blackboard up to date with ROS topics
-
+        self.get_logger().info(f'Current state: {self.current_state.name}')
+        
     def _odom_cb(self, msg):
-        quaternion_x = msg.pose.pose.orientation.x
-        quaternion_y = msg.pose.pose.orientation.y
-        quaternion_z = msg.pose.pose.orientation.z
-        quaternion_w = msg.pose.pose.orientation.w
+        roll, pitch, yaw = roll_pitch_yaw_from_quaternion(msg.pose.pose.orientation)
 
-        orientation_list = [quaternion_x, quaternion_y, quaternion_z, quaternion_w]
-        roll, pitch, yaw = roll_pitch_yaw_from_quaternion(orientation_list)
-
-        self.blackboard["odom"] = { # Do we need more than roll, pitch, yaw?
+        self.context["odom"] = { # Do we need more than roll, pitch, yaw?
             "roll" : roll,
             "pitch" : pitch,
             "yaw" : yaw             
         }
     def depth_sensor_cb(self, msg):
-        self.blackboard["depth"] = msg.data
-    def survey_and_repair_gate_image_left_cb(self, msg):
-        self.blackboard["survey_and_repair_gate_image_left"] = msg
-    def survey_and_repair_gate_image_right_cb(self, msg):
-        self.blackboard["survey_and_repair_gate_image_right"] = msg
-    def search_and_rescue_gate_image_left_cb(self, msg):
-        self.blackboard["search_and_rescue_gate_image_left"] = msg
-    def search_and_rescue_gate_image_right_cb(self, msg):
-        self.blackboard["search_and_rescue_gate_image_right"] = msg
+        self.context["depth"] = msg.data
+    def survey_and_repair_gate_image_left_gate_cb(self, msg):
+        self.context["survey_and_repair_gate_image_left_gate"] = msg
+    def survey_and_repair_gate_image_right_gate_cb(self, msg):
+        self.context["survey_and_repair_gate_image_right_gate"] = msg
+    def search_and_rescue_gate_image_left_gate_cb(self, msg):
+        self.context["search_and_rescue_gate_image_left_gate"] = msg
+    def search_and_rescue_gate_image_right_gate_cb(self, msg):
+        self.context["search_and_rescue_gate_image_right_gate"] = msg
+    def survey_and_repair_gate_image_left_bin_cb(self, msg):
+        self.context["survey_and_repair_gate_image_left_bin"] = msg
+    def survey_and_repair_gate_image_right_bin_cb(self, msg):
+        self.context["survey_and_repair_gate_image_right_bin"] = msg
+    def search_and_rescue_gate_image_left_bin_cb(self, msg):
+        self.context["search_and_rescue_gate_image_left_bin"] = msg
+    def search_and_rescue_gate_image_right_bin_cb(self, msg):
+        self.context["search_and_rescue_gate_image_right_bin"] = msg
+    def octagon_image_1_left_cb(self, msg):
+        self.context["octagon_image_1_left"] = msg
+    def octagon_image_1_right_cb(self, msg):
+        self.context["octagon_image_1_right"] = msg
+    def octagon_image_2_left_cb(self, msg):
+        self.context["octagon_image_2_left"] = msg
+    def octagon_image_2_right_cb(self, msg):
+        self.context["octagon_image_2_right"] = msg 
+    def table_left_cb(self, msg):
+        self.context["table_left"] = msg
+    def table_right_cb(self, msg):
+        self.context["table_right"] = msg 
+    
         
         
 def main(args=None):

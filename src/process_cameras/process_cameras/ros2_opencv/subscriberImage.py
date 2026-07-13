@@ -53,7 +53,7 @@ class SubscriberNodeClass(Node):
         if self.video_writer is None:
             os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
             fourcc = cv2.VideoWriter_fourcc(
-                *"MJPG"
+                *"MKV"
             )  # MJPG format initialization (more crash resistant than mp4)
 
             height, width = openCVImage.shape[:2]

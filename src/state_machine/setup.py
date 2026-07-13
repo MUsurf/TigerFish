@@ -23,7 +23,6 @@ setup(
         ],
     },
     entry_points={
-        'console_scripts': [
-        ],
+        "console_scripts": ["state_machine = state_machine.state_machine:main"],
     },
 )
