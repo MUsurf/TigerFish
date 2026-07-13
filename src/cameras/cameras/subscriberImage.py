@@ -44,7 +44,7 @@ class SubscriberNodeClass(Node):
             self.get_logger().info(f"recording to rosbag at {self.base_dir}")
         else:
             self.output_path = os.path.join(
-                self.base_dir, f"{camera_name}_raw_log_{timestamp}.mjpg"
+                self.base_dir, f"{camera_name}_raw_log_{timestamp}.mkv"
             )  # mjpg
             self.get_logger().info(f"recording at {self.output_path}")
 
