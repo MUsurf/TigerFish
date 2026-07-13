@@ -22,6 +22,7 @@ class SubscriberNodeClass(Node):
         # Convert OpenCV images to ROS2 msgs
         self.bridgeObject = CvBridge()
 
+        # TODO Henry comp: switch mp4 to opaqe type to prevent external dependencies`` 
         self.declare_parameter("record_type", "mp4")  # options: "mp4", "rosbag"
         self.record_type = self.get_parameter("record_type").value
 
@@ -43,9 +44,9 @@ class SubscriberNodeClass(Node):
             self.get_logger().info(f"recording to rosbag at {self.base_dir}")
         else:
             self.output_path = os.path.join(
-                self.base_dir, f"{camera_name}_raw_log_{timestamp}.mp4"
-            )  # mp4
-            self.get_logger().info(f"recording to mp4 at {self.output_path}")
+                self.base_dir, f"{camera_name}_raw_log_{timestamp}.mjpg"
+            )  # mjpg
+            self.get_logger().info(f"recording at {self.output_path}")
 
         # Name must match publisher node
         self.topicNameFrames = "image_raw"
@@ -96,11 +97,11 @@ class SubscriberNodeClass(Node):
             # cv2.waitKey(1)
 
             # this is initialization of a video writer to write video at 30 frames
-            # in mp4v format! UwU
+            # in mjpg format! UwU
             if self.video_writer is None:
                 os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
                 # Use a software encoder that is more likely to work inside container
-                fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # software mp4v codec
+                fourcc = cv2.VideoWriter_fourcc(*"MJPG")  # software MJPG codec
                 height, width = openCVImage.shape[:2]
 
                 self.video_writer = cv2.VideoWriter(

@@ -94,10 +94,10 @@ class SubscriberNodeClass(Node):
             # cv2.waitKey(1)
 
             # this is initialization of a video writer to write video at 30 frames
-            # in mp4v format! UwU
             if self.video_writer is None:
                 os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
-                fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # mpv4 format initialization
+                # TODO Henry comp: switch to shared constant for definition
+                fourcc = cv2.VideoWriter_fourcc(*"MJPG")  # MJPEG format initialization
                 height, width = openCVImage.shape[:2]
 
                 self.video_writer = cv2.VideoWriter(

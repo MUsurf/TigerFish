@@ -49,8 +49,7 @@ class SubscriberNodeClass(Node):
         # cv2.imshow("Camera video", openCVImage)
         # cv2.waitKey(1)
 
-        # this is initialization of a video writer to write video at 30 frames
-        # in mp4v format! UwU
+        # this is initialization of a video writer to write video at 30 frames per second with motion jpeg
         if self.video_writer is None:
             os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
             fourcc = cv2.VideoWriter_fourcc(
