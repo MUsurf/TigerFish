@@ -2,30 +2,33 @@ from state_machine.state_machine.state import State
 from messages.msg import PIDInput
 import time
 
-class GateSetRoleState(State):
+class GoThroughSlalomState(State):
     def __init__(self):
-        super().__init__('gate_set_role')
+        super().__init__('go_through_slalom')
         
         self.start_yaw : float | None = None
+        self.start_time : float | None = None
+
         self.desired_depth : float | None = None
         
     def start(self, context : dict):
-        self.start_yaw = 0.0
+        self.start_yaw = 0.0 # context['odom']['yaw']
+        self.start_time = time.time()
         self.desired_depth = context['gate_state_depth']
-        return None
+        self.x_power = context['slalom_forward_power']
+        self.total_time = context['slalom_forward_time']
         
     def execute(self, context : dict):
-        survey_and_repair = context['survey_and_repair_gate_image_left_gate']
-        search_and_rescue = context['search_and_rescue_gate_image_left_gate']
-        if survey_and_repair.is_detected and search_and_rescue.is_detected:
-            context['role'] = 'survey_and_repair' if abs(survey_and_repair.x_position) < abs(search_and_rescue.x_position) else 'search_and_rescue'
-            return 'go_through_gate'
+        if time.time() - self.start_time >= self.total_time:
+            return 'end_state'
         
         msg = PIDInput()
         msg.z_mode = True
         msg.roll_mode = True
         msg.pitch_mode = True
         msg.yaw_mode = True
+        
+        msg.x_power = self.x_power
         
         msg.z_setpoint = self.desired_depth
         msg.roll_setpoint = 0.0

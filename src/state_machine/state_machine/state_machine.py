@@ -8,7 +8,14 @@ from messages.msg import PIDInput, VisionMessage
 from std_msgs.msg import Float32
 
 from state_machine.state_machine.state import State
-from state_machine.state_machine import *
+
+from state_machine.state_machine.start_state import StartState
+from state_machine.state_machine.gate_go_to_depth import GateGoToDepthState
+from state_machine.state_machine.gate_set_role import GateSetRoleState
+from state_machine.state_machine.go_through_gate import GoThroughGateState
+
+from state_machine.state_machine.end_state import EndState
+
 
 import numpy as np
 
@@ -53,9 +60,21 @@ class StateMachineNode(Node):
         self.context = {}
         
         # configs
+        self.context["start_depth_threshold"] = 0.03 # meters
+        self.context["start_time"] = 3.0 # seconds
         self.context["gate_state_depth"] = 1.0 # meters
         self.context["depth_error_tolerance"] = 0.075 # meters
         self.context["time_in_depth_requirement"] = 10.0 # seconds
+        self.context["gate_forward_time"] = 10.0 # seconds
+        self.context["gate_forward_power"] = 0.5 # power
+        
+        self.context["slalom_shift_time"] = 6.0 # seconds
+        self.context["slalom_shift_power"] = 0.5 # power
+        self.context["slalom_shift_direction"] = -1.0 # direction, -1 for left and 1 for right
+        self.context["do_shift"] = True
+        
+        self.context["slalom_forward_time"] = 15.0 # seconds
+        self.context["slalom_forward_power"] = 0.5
     
         # context defaults:
         self.context["survey_and_repair_gate_image_left_gate"] = VisionMessage()
@@ -119,10 +138,15 @@ class StateMachineNode(Node):
         self.context['pid_publisher'] = self.pid_publisher
         
         self.states = {
-            'start_state' : State()
+            'start' : StartState(),
+            'gate_go_to_depth' : GateGoToDepthState(),
+            'gate_set_role': GateSetRoleState(),
+            'go_through_gate' : GoThroughGateState(),
+            
+            'end' : EndState(),
         }
         
-        self.current_state : State = self.states['start_state']
+        self.current_state : State = self.states['start']
         
         self.timer = self.create_timer(0.05, self.timer_cb)
         self.get_logger().info("State machine initialized successfully!")
@@ -131,6 +155,7 @@ class StateMachineNode(Node):
         next_state : State | None = self.current_state.execute(self.context)
         if next_state is not None:
             self.current_state = self.states[next_state]
+            self.current_state.start(self.context)
         
         self.get_logger().info(f'Current state: {self.current_state.name}')
         

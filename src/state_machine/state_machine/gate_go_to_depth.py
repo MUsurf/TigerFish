@@ -4,7 +4,7 @@ import time
 
 class GateGoToDepthState(State):
     def __init__(self):
-        super().__init__('go_to_depth_state')
+        super().__init__('gate_go_to_depth')
         
         self.start_yaw : float | None = None
         self.start_time : float | None = None
