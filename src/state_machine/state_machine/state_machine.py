@@ -19,7 +19,7 @@ import state_machine.gate_states as gate_states
 from gate_states.gate_states import STATE_GETTERS as GATE_STATE_GETTERS
 import state_machine.slalom_states as slalom_states
 
-from slalom_states.slalom_states import STATE_GETTERS as SLALOM_STATE_GETTERS
+from TigerFish.src.state_machine.state_machine.slalom_states.slalom_states import STATE_GETTERS as SLALOM_STATE_GETTERS
 import state_machine.bins_states as bins_states
 from bins_states.bins_states import STATE_GETTERS as BINS_STATE_GETTERS
 import state_machine.octagon_states as octagon_states
