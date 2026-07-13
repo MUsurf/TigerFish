@@ -51,6 +51,11 @@ class StateMachineNode(Node):
         super().__init__("state_machine_node")
         
         self.context = {}
+        
+        # configs
+        self.context["gate_state_depth"] = 1.0 # meters
+        self.context["depth_error_tolerance"] = 0.075 # meters
+        self.context["time_in_depth_requirement"] = 10.0 # seconds
     
         # context defaults:
         self.context["survey_and_repair_gate_image_left_gate"] = VisionMessage()

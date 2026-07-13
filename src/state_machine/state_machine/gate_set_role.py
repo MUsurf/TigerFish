@@ -2,34 +2,24 @@ from state_machine.state_machine.state import State
 from messages.msg import PIDInput
 import time
 
-class GateGoToDepthState(State):
+class GetRoleState(State):
     def __init__(self):
-        super().__init__('go_to_depth_state')
+        super().__init__('get_role_state')
         
         self.start_yaw : float | None = None
-        self.start_time : float | None = None
-
         self.desired_depth : float | None = None
-        self.tolerance : float | None = None
-        self.time_in_depth_requirement : float | None = None
         
     def start(self, context : dict):
-        self.start_yaw = 0.0 # context['odom']['yaw']
-        self.start_time = None
-        
+        self.start_yaw = 0.0
         self.desired_depth = context['gate_state_depth']
-        self.tolerance = context['depth_error_tolerance']
-        self.time_in_depth_requirement = context['time_in_depth_requirement']
+        return None
         
     def execute(self, context : dict):
-        if self.start_time is not None and time.time() - self.start_time >= self.time_in_depth_requirement:
+        survey_and_repair = context['survey_and_repair_gate_image_left_gate']
+        search_and_rescue = context['search_and_rescue_gate_image_left_gate']
+        if survey_and_repair.is_detected and search_and_rescue.is_detected:
+            context['role'] = 'survey_and_repair' if abs(survey_and_repair.x_position) < abs(search_and_rescue.x_position) else 'search_and_rescue'
             return 'go_through_gate'
-        
-        if abs(context['depth'] - self.desired_depth) <= self.tolerance:
-            if self.start_time is not None:
-                self.start_time = time.time()
-        else:
-            self.start_time = None
         
         msg = PIDInput()
         msg.z_mode = True
