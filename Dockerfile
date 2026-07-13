@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-camera-info-manager-py \
     && rm -rf /var/lib/apt/lists/*
 
+RUN python3 -m pip install --upgrade "packaging>=22"
 
 # 2. Install hardware-specific Python packages
 RUN python3 -m pip install --no-cache \

@@ -75,13 +75,17 @@ def rotate_vector_by_quat(v, q):
     return v_prime
 
 
+def wrap_angle_difference(angle: float) -> float:
+    return ((angle + 180.0) % 360.0) - 180.0
+
+
 class PIDNode(Node):
     def __init__(self,
              x_gains=(0.1, 0.0, 0.0),
              y_gains=(0.1, 0.0, 0.0),
-             z_gains=(0.1, 0.0, 0.0),
-             roll_gains=(0.015, 0.001, 0.01),
-             pitch_gains=(0.03, 0.03, 0.01),
+             z_gains=(0.4, 0.0000, 4.0),
+             roll_gains=(0.001, 0.0005, 0.005),
+             pitch_gains=(0.02, 0.02, 0.02),
              yaw_gains=(0.006, 0.001, 0.002)):
         super().__init__('pid_node')
         self.x_kP, self.x_kI, self.x_kD = x_gains
@@ -163,41 +167,31 @@ class PIDNode(Node):
             else self.z_pid(self.last_msg.z_setpoint - self.last_msg.z_measurement, dt)
         )
 
+        roll_error = wrap_angle_difference(
+            self.last_msg.roll_setpoint - self.last_msg.roll_measurement
+        )
         roll_pow = (
             self.last_msg.roll_power
             if not self.last_msg.roll_mode
-            else self.roll_pid(
-                self.last_msg.roll_setpoint - self.last_msg.roll_measurement, dt
-            )
+            else self.roll_pid(roll_error, dt)
         )
 
+        pitch_error = wrap_angle_difference(
+            self.last_msg.pitch_setpoint - self.last_msg.pitch_measurement
+        )
         pitch_pow = (
             self.last_msg.pitch_power
             if not self.last_msg.pitch_mode
-            else self.pitch_pid(
-                self.last_msg.pitch_setpoint - self.last_msg.pitch_measurement, dt
-            )
+            else self.pitch_pid(pitch_error, dt)
         )
 
-        yaw_setpoint = self.last_msg.yaw_setpoint % 360
-        yaw_measurement = self.last_msg.yaw_measurement % 360
-        if yaw_setpoint > 180 : yaw_setpoint -= 360
-        if yaw_setpoint < -180 : yaw_setpoint += 360
-        
-        if yaw_measurement > 180 : yaw_measurement -= 360
-        if yaw_measurement < -180 : yaw_measurement += 360
-        
-        if abs(yaw_setpoint - yaw_measurement) > 180:
-            if yaw_setpoint > 0:
-                yaw_measurement += 360
-            else:
-                yaw_measurement -=360
+        yaw_error = wrap_angle_difference(
+            self.last_msg.yaw_setpoint - self.last_msg.yaw_measurement
+        )
         yaw_pow = (
             self.last_msg.yaw_power
             if not self.last_msg.yaw_mode
-            else self.yaw_pid(
-                yaw_setpoint - yaw_measurement, dt
-            )
+            else self.yaw_pid(yaw_error, dt)
         )
 
         q = self.last_od.pose.pose.orientation

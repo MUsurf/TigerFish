@@ -21,6 +21,7 @@ main node <- your node <- computer
 
 main node -> pid node -> motor node
 
-docker compose --profile pi run --rm --build --service-ports --entrypoint /home/ros2_ws/run.sh pi
+to build: docker compose --profile pi run --rm --build --service-ports --entrypoint /home/ros2_ws/run.sh pi
+to run: docker compose --profile pi run --rm --service-ports --entrypoint /home/ros2_ws/run.sh pi
 
 run to get internet: sudo dhclient -v eth0

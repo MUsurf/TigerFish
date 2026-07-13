@@ -136,9 +136,11 @@ class MotorInterface(Node):
         for i, p in enumerate(next_motor_powers):
             next_motor_powers[i] = p if abs(p) > DEADBAND else 0.0
 
-        converted_powers = [
-            self.power_converter.convert_power(p) for p in next_motor_powers
-        ]
+        # converted_powers = [
+        #     self.power_converter.convert_power(p) for p in next_motor_powers
+        # ]
+        converted_powers = next_motor_powers
+        
         self.motor_commander.set_motor_powers(converted_powers, 0.0)
         # self.get_logger().info(f'{converted_powers[0]}')
 

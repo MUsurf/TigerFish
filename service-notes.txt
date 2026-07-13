@@ -1,0 +1,29 @@
+Reload after edit: 
+sudo systemctl daemon-reload
+
+Start service:
+sudo systemctl start run-tigerfish.service
+
+Stop Service:
+sudo systemctl stop run-tigerfish.service
+
+Restart Service: 
+sudo systemctl restart run-tigerfish.service
+
+Service Status: 
+sudo systemctl status run-tigerfish.service
+
+Enable automatic startup at boot: 
+sudo systemctl enable run-tigerfish.service
+
+Disable automatic startup at boot: 
+sudo systemctl disable run-tigerfish.service
+
+View recent logs: 
+sudo journalctl -u run-tigerfish.service -n 100
+
+Follow logs live: 
+sudo journalctl -u run-tigerfish.service -f
+
+Edit the service: 
+sudo nano /etc/systemd/system/run-tigerfish.service

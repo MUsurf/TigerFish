@@ -7,7 +7,7 @@ import rclpy
 import time
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 import numpy as np
-
+import time
 
 qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
@@ -33,6 +33,8 @@ YAW_DEGREE_PER_SECOND = 90
 Z_METER_PER_SECOND = 0.5
 ROLL_PER_SECOND = 7.5
 DEAD_ZONE = 0.1
+
+MODE = 'AUTO'
 
 
 def new_controller_str(text: str) -> Float32MultiArray:
@@ -69,6 +71,7 @@ def new_controller_str(text: str) -> Float32MultiArray:
 
     msg = Float32MultiArray()
     msg.data = [axis, v1, v2, v3]
+    
     return msg
 
 
@@ -180,9 +183,10 @@ class MainNode(Node):
 
         self.controller_last_time = None
         
-                
-        self.a_is_toggled : bool = False
-        self.last_a : bool = False
+        self.a_held : bool = False
+        self.b_held : bool = False
+        self.x_held : bool = False
+        self.y_held : bool = False
         
         self.state_timer_start_time = 0.0
         
@@ -190,42 +194,89 @@ class MainNode(Node):
 
 
     def depth_sensor_cb(self, msg: Float32):
-        self.get_logger().info(f"{msg.data}")
+        self.depth = float(msg.data)
 
     def _timer_cb(self):
         msg = PIDInput()
-
-        msg.x_mode = False
-        msg.y_mode = False
-        msg.z_mode = False
-        msg.roll_mode = True
+        mode = 'A' if self.a_held else 'B' if self.b_held else 'X' if self.x_held else 'Y' if self.y_held else 'None'
         
-        msg.pitch_mode = True
-        
-        msg.yaw_mode = True
+        match mode:
+            case 'A':
+                msg.roll_mode = False
+                msg.pitch_mode = True
+                msg.yaw_mode = True
+                
+                msg.roll_power = 0.5
+            case 'B':
+                msg.x_mode = False
+                msg.y_mode = False
+                msg.z_mode = True
+                msg.roll_mode = True
+                msg.pitch_mode = True
+                msg.yaw_mode = True
+                
+                msg.z_is_absolute = True
+                
+                msg.x_power = self.x_pow
+                msg.y_power = self.y_pow                
+                msg.z_power = self.z_pow
 
-        msg.z_is_absolute = False
+                msg.roll_setpoint = 180
+                msg.roll_measurement = self.roll * 180 / np.pi
+                msg.pitch_setpoint = 0.0
+                msg.pitch_setpoint = self.pitch * 180 / np.pi
+                msg.yaw_setpoint = self.yaw_setpoint
+                msg.yaw_measurement = self.yaw * 180 / np.pi
+            case 'X':
+                msg.roll_mode = False
+                msg.pitch_mode = True
+                msg.yaw_mode = True
+                
+                msg.roll_power = 0.9
+            case 'Y':
+                msg.x_mode = False
+                msg.y_mode = False
+                msg.z_mode = True
+                msg.roll_mode = True
+                msg.pitch_mode = True
+                msg.yaw_mode = True
 
-        msg.x_power = self.x_pow
-        msg.y_power = self.y_pow
-        
-        self.get_logger().info(str(msg.x_power))
-    
+                msg.z_is_absolute = False
 
-        # msg.z_setpoint = self.z_setpoint
-        # msg.z_measurement = max(0.0, self.depth)
+                msg.x_power = self.x_pow
+                msg.y_power = self.y_pow
+                
+                msg.z_setpoint = 1.0
+                msg.z_measurement = self.depth
 
-        msg.z_power = self.z_pow
+                msg.roll_setpoint = 0.0
+                msg.roll_measurement = self.roll * 180 / np.pi
+                msg.pitch_setpoint = 0.0
+                msg.pitch_setpoint = self.pitch * 180 / np.pi
+                msg.yaw_setpoint = self.yaw_setpoint
+                msg.yaw_measurement = self.yaw * 180 / np.pi
+            case _:
+                msg.x_mode = False
+                msg.y_mode = False
+                msg.z_mode = False
+                msg.roll_mode = True
+                msg.pitch_mode = True
+                msg.yaw_mode = True
+                
+                msg.x_power = self.x_pow
+                msg.y_power = self.y_pow                
+                msg.z_power = self.z_pow
 
-        msg.roll_setpoint = self.roll_setpoint
-        msg.roll_measurement = self.roll * 180 / np.pi
-        msg.pitch_setpoint = self.pitch_setpoint
-        msg.pitch_setpoint = self.pitch * 180 / np.pi
-        msg.yaw_setpoint = self.yaw_setpoint
-        msg.yaw_measurement = self.yaw * 180 / np.pi
+                msg.roll_setpoint = 0.0
+                msg.roll_measurement = self.roll * 180 / np.pi
+                msg.pitch_setpoint = 0.0
+                msg.pitch_setpoint = self.pitch * 180 / np.pi
+                msg.yaw_setpoint = self.yaw_setpoint
+                msg.yaw_measurement = self.yaw * 180 / np.pi
 
         self.pid_publisher.publish(msg)
-
+                
+        
                 
     def start_state(self):
         self.state_timer_start_time = time.time()
@@ -282,44 +333,23 @@ class MainNode(Node):
         yaw_power = max(msg.r_trigger, msg.l_trigger)
         yaw_power *= -1 if msg.l_trigger > msg.r_trigger else 1
         self.yaw_setpoint += YAW_DEGREE_PER_SECOND * yaw_power * dt
-        
-        roll_power = 1 if msg.x_button else -1 if msg.b_button else 0
-        self.roll_setpoint += ROLL_PER_SECOND * roll_power * dt
 
         z_set = Z_METER_PER_SECOND * msg.y_right_stick * dt
         self.z_setpoint += z_set
-
         self.z_pow = msg.y_right_stick
 
         # self.get_logger().info(f'{self.recent_controller_input.x_left_stick}')
+        
+        self.a_held = msg.a_button
+        self.b_held = msg.b_button
+        self.x_held = msg.x_button
+        self.y_held = msg.y_button
 
     def _odom_cb(self, msg: Odometry):
         r, p, y = rpy_from_quat(msg.pose.pose.orientation)
         self.roll = -p
         self.pitch = r # ?
         self.yaw = y
-        # self.get_logger().info(f'roll: {(r * 180 / np.pi):4f} pitch {(p * 180 / np.pi):4f} yaw: {(y * 180 / np.pi):4f}')
-        # msg = PIDInput()
-
-        # msg.x_mode = False
-        # msg.y_mode = False
-        # msg.z_mode = False
-        # msg.roll_mode = True
-        # msg.pitch_mode = True
-        # msg.yaw_mode = True
-
-        # msg.x_power = 0 if self.recent_controller_input is None else self.recent_controller_input.x_left_stick
-        # msg.y_power = 0.0
-        # msg.z_power = 0.0
-
-        # msg.roll_setpoint = 0.0
-        # msg.roll_measurement = r * 180 / np.pi
-        # msg.pitch_setpoint = 0.0
-        # msg.pitch_setpoint = p * 180 / np.pi
-        # msg.yaw_setpoint = 0.0
-        # msg.yaw_measurement = y * 180 / np.pi
-
-        # self.pid_publisher.publish(msg)
 
     def logger_cb(self):
         self.get_logger().info(

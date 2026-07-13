@@ -16,7 +16,18 @@ class PublisherNodeClass(Node):
         super().__init__("publisher_node")
 
         self.declare_parameter("camera_index", 0)
-        idx = self.get_parameter("camera_index").value
+        raw_idx = self.get_parameter("camera_index").value
+        try:
+            idx = int(raw_idx)
+        except (TypeError, ValueError):
+            self.get_logger().error(
+                f"Invalid camera index '{raw_idx}'. Expected an integer; defaulting to 0."
+            )
+            idx = 0
+
+        self.get_logger().info(
+            f"Using camera index {idx} (parameter value was {raw_idx!r})"
+        )
 
         # pi_pipeline = (
         #     f"libcamerasrc camera-name={idx} autofocus-mode=1 ! "
@@ -27,19 +38,48 @@ class PublisherNodeClass(Node):
         self.get_logger().info("Attempting to open camera...")
         # self.camera = cv2.VideoCapture(pi_pipeline, cv2.CAP_GSTREAMER)
         self.get_logger().info("Opening camera via standard V4L2...")
-        self.camera = cv2.VideoCapture(idx)
+        self.get_logger().info("Attempting to open camera...")
+        self.get_logger().info("Opening camera via V4L2...")
+
+        self.camera = cv2.VideoCapture(idx, cv2.CAP_V4L2)
+
+        # Set compressed MJPEG before resolution and frame rate.
+        self.camera.set(
+            cv2.CAP_PROP_FOURCC,
+            cv2.VideoWriter_fourcc(*"MJPG"),
+        )
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
+        self.camera.set(cv2.CAP_PROP_FPS, 15)
 
         if not self.camera.isOpened():
-            self.get_logger().warn(
-                "Pi (3) camera does not work :'( Initiating a backup option :)"
+            self.get_logger().error(f"Camera index {idx} failed to open.")
+            raise RuntimeError(f"Could not open camera {idx}")
+
+        # Read back the actual settings. set() succeeding does not guarantee
+        # that the camera accepted the requested format.
+        actual_fourcc_int = int(self.camera.get(cv2.CAP_PROP_FOURCC))
+        actual_fourcc = "".join(
+            chr((actual_fourcc_int >> (8 * i)) & 0xFF)
+            for i in range(4)
+        )
+
+        actual_width = int(self.camera.get(cv2.CAP_PROP_FRAME_WIDTH))
+        actual_height = int(self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        actual_fps = self.camera.get(cv2.CAP_PROP_FPS)
+
+        self.get_logger().info(
+            f"Camera {idx} configured as "
+            f"{actual_width}x{actual_height} "
+            f"{actual_fps:.1f} FPS, format={actual_fourcc!r}"
+        )
+
+        if actual_fourcc != "MJPG":
+            self.camera.release()
+            raise RuntimeError(
+                f"Camera {idx} did not accept MJPEG. "
+                f"Actual format was {actual_fourcc!r}."
             )
-            self.camera = cv2.VideoCapture(idx)
-            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
-            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
-        else:
-            self.get_logger().info("Pi camera is set up!!")
 
         # CvBridge --> convert OpenCV images to publishable ROS2 messages
         self.bridgeObject = CvBridge()

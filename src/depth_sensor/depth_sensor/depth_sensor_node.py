@@ -46,6 +46,8 @@ UNITS_Centigrade = 1
 UNITS_Farenheit = 2
 UNITS_Kelvin = 3
 
+DEPTH_OFFSET = None
+
 
 class MS5837(object):
     # Registers
@@ -299,7 +301,7 @@ class DepthSensorNode(Node):
         super().__init__("depth_sensor_node")
 
         self.publisher_ = self.create_publisher(Float32, "depth", 10)
-        self.sensor = MS5837_02BA()
+        self.sensor = MS5837_02BA(bus=7)
 
         if not self.sensor.init():
             self.get_logger().error("Sensor could not be initialized")
@@ -307,15 +309,31 @@ class DepthSensorNode(Node):
 
         self.timer = self.create_timer(1.0 / FREQ, self.timer_cb)
         self.get_logger().info("Depth sensor node started")
+        
+        self.depth_offset = None
+        
+        self.depth_to_wait = 5
+        self.depth_count = 0
 
     def timer_cb(self):
-        if not self.sensor.read():
-            self.get_logger().warning("Depth sensor read failed")
-            return
+        try:
+            if not self.sensor.read():
+                self.get_logger().warning("Depth sensor read failed")
+                return
+            
+            depth = self.sensor.depth()
+            
+            self.depth_count += 1
+            if self.depth_to_wait == self.depth_count:
+                self.depth_offset = depth
+            elif self.depth_offset is None : return None
 
-        msg = Float32()
-        msg.data = float(self.sensor.depth())  # meters
-        self.publisher_.publish(msg)
+            msg = Float32()
+            msg.data = float(depth - self.depth_offset)  # meters
+            self.publisher_.publish(msg)
+        except:
+            self.get_logger().info("Depth sensor failed to read")
+            
 
 
 def main(args=None):

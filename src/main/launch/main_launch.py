@@ -29,11 +29,11 @@ def generate_launch_description():
             description='V4L2 device index for the right camera'
         ),
         DeclareLaunchArgument(
-            'bottom_left_camera_id', default_value='1',
+            'bottom_left_camera_id', default_value='8',
             description='V4L2 device index for the left camera'
         ),
         DeclareLaunchArgument(
-            'bottom_right_camera_id', default_value='3',
+            'bottom_right_camera_id', default_value='12',
             description='V4L2 device index for the right camera'
         ),
         DeclareLaunchArgument(
@@ -93,6 +93,8 @@ def generate_launch_description():
             launch_arguments={
                 'front_left_camera_id':  LaunchConfiguration('front_left_camera_id'),
                 'front_right_camera_id': LaunchConfiguration('front_right_camera_id'),
+                'bottom_left_camera_id': LaunchConfiguration('bottom_left_camera_id'),
+                'bottom_right_camera_id': LaunchConfiguration('bottom_right_camera_id'),
                 'record_type':  LaunchConfiguration('record_type'),
             }.items()
         ),
