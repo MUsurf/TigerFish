@@ -1,9 +1,39 @@
-FROM ros:humble-ros-base
+# L4T JetPack 6.0 (Orin Nano) base — ships CUDA/cuDNN/TensorRT for the Jetson's
+# GPU. Must match the JetPack version flashed on the device (r36.3.0 = JetPack 6.0).
+FROM nvcr.io/nvidia/l4t-jetpack:r36.3.0
 
 # Set Docker's default shell to bash instead of sh.
 SHELL ["/bin/bash", "-c"]
 
-# 1. Install System Dependencies, Build Tools, and YASMIN Web Requirements
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_DISTRO=humble
+
+ARG TORCH_WHEEL
+
+# 0. Install ROS 2 Humble — the l4t-jetpack base doesn't ship it like ros:humble-ros-base did.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    locales \
+    curl \
+    gnupg2 \
+    lsb-release \
+    software-properties-common \
+    && locale-gen en_US en_US.UTF-8 \
+    && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
+    && add-apt-repository universe \
+    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+       -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo ${UBUNTU_CODENAME}) main" \
+       > /etc/apt/sources.list.d/ros2.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+       ros-humble-ros-base \
+       python3-rosdep \
+       python3-colcon-common-extensions \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN rosdep init || true
+
+# 1. Install System Dependencies, Build Tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
