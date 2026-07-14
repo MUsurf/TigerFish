@@ -1,23 +1,23 @@
 import math
 
 import rclpy
-from rclpy import Node
+from rclpy.node import Node
 
 from nav_msgs.msg import Odometry
 from messages.msg import PIDInput, VisionMessage
 from std_msgs.msg import Float32
 
-from state_machine.state_machine.state import State
+from state_machine.state import State
 
-from state_machine.state_machine.start_state import StartState
-from state_machine.state_machine.gate_go_to_depth import GateGoToDepthState
-from state_machine.state_machine.gate_set_role import GateSetRoleState
-from state_machine.state_machine.go_through_gate import GoThroughGateState
+from state_machine.start_state import StartState
+from state_machine.gate_go_to_depth import GateGoToDepthState
+from state_machine.gate_set_role import GateSetRoleState
+from state_machine.go_through_gate import GoThroughGateState
 
-from state_machine.state_machine.slalom_shift import SlalomShiftState
-from state_machine.state_machine.go_through_slalom import GoThroughSlalomState
+from state_machine.slalom_shift import SlalomShiftState
+from state_machine.go_through_slalom import GoThroughSlalomState
 
-from state_machine.state_machine.end_state import EndState
+from state_machine.end_state import EndState
 
 
 import numpy as np
@@ -60,44 +60,45 @@ class StateMachineNode(Node):
     def __init__(self):
         super().__init__("state_machine_node")
         
-        self.context = {}
+        self.state_context = {}
         
         # configs
-        self.context["start_depth_threshold"] = 0.03 # meters
-        self.context["start_time"] = 3.0 # seconds
-        self.context["gate_state_depth"] = 1.0 # meters
-        self.context["depth_error_tolerance"] = 0.075 # meters
-        self.context["time_in_depth_requirement"] = 10.0 # seconds
-        self.context["gate_forward_time"] = 10.0 # seconds
-        self.context["gate_forward_power"] = 0.5 # power
+        self.state_context["start_wait_time"] = 2.0 # seconds
+        self.state_context["start_depth_threshold"] = 0.03 # meters
+        self.state_context["start_time"] = 2 # seconds
+        self.state_context["gate_state_depth"] = 1.0 # meters
+        self.state_context["depth_error_tolerance"] = 0.075 # meters
+        self.state_context["time_in_depth_requirement"] = 5.0 # seconds
+        self.state_context["gate_forward_time"] = 30.0 # seconds
+        self.state_context["gate_forward_power"] = 0.5 # power
         
-        self.context["slalom_shift_time"] = 6.0 # seconds
-        self.context["slalom_shift_power"] = 0.5 # power
-        self.context["slalom_shift_direction"] = -1.0 # direction, -1 for left and 1 for right
-        self.context["do_shift"] = True
+        self.state_context["slalom_shift_time"] = 6.0 # seconds
+        self.state_context["slalom_shift_power"] = 0.5 # power
+        self.state_context["slalom_shift_direction"] = -1.0 # direction, -1 for left and 1 for right
+        self.state_context["do_shift"] = True
         
-        self.context["slalom_forward_time"] = 15.0 # seconds
-        self.context["slalom_forward_power"] = 0.5
+        self.state_context["slalom_forward_time"] = 15.0 # seconds
+        self.state_context["slalom_forward_power"] = 0.5
     
         # context defaults:
-        self.context["survey_and_repair_gate_image_left_gate"] = VisionMessage()
-        self.context["survey_and_repair_gate_image_right_gate"] = VisionMessage()
-        self.context["search_and_rescue_gate_image_left_gate"] = VisionMessage()
-        self.context["search_and_rescue_gate_image_right_gate"] = VisionMessage()
-        self.context["survey_and_repair_gate_image_left_bin"] = VisionMessage()
-        self.context["survey_and_repair_gate_image_right_bin"] = VisionMessage()
-        self.context["search_and_rescue_gate_image_left_bin"] = VisionMessage()
-        self.context["search_and_rescue_gate_image_right_bin"] = VisionMessage()
-        self.context["octagon_image_1_left"] = VisionMessage()
-        self.context["octagon_image_1_right"] = VisionMessage()
-        self.context["octagon_image_2_left"] = VisionMessage()
-        self.context["octagon_image_2_right"] = VisionMessage()
-        self.context["table_left"] = VisionMessage()
-        self.context["table_right"] = VisionMessage()
+        self.state_context["survey_and_repair_gate_image_left_gate"] = VisionMessage()
+        self.state_context["survey_and_repair_gate_image_right_gate"] = VisionMessage()
+        self.state_context["search_and_rescue_gate_image_left_gate"] = VisionMessage()
+        self.state_context["search_and_rescue_gate_image_right_gate"] = VisionMessage()
+        self.state_context["survey_and_repair_gate_image_left_bin"] = VisionMessage()
+        self.state_context["survey_and_repair_gate_image_right_bin"] = VisionMessage()
+        self.state_context["search_and_rescue_gate_image_left_bin"] = VisionMessage()
+        self.state_context["search_and_rescue_gate_image_right_bin"] = VisionMessage()
+        self.state_context["octagon_image_1_left"] = VisionMessage()
+        self.state_context["octagon_image_1_right"] = VisionMessage()
+        self.state_context["octagon_image_2_left"] = VisionMessage()
+        self.state_context["octagon_image_2_right"] = VisionMessage()
+        self.state_context["table_left"] = VisionMessage()
+        self.state_context["table_right"] = VisionMessage()
 
 
-        self.context["odom"] = {"roll" : 0.0, "pitch" : 0.0, "yaw" : 0.0}
-        self.context["depth"] = -1.0
+        self.state_context["odom"] = {"roll" : 0.0, "pitch" : 0.0, "yaw" : 0.0}
+        self.state_context["depth"] = -1.0
         
         
         # Subscriptions
@@ -138,7 +139,7 @@ class StateMachineNode(Node):
         self.pid_publisher = self.create_publisher(
             PIDInput, "pid_input", 10)
 
-        self.context['pid_publisher'] = self.pid_publisher
+        self.state_context['pid_publisher'] = self.pid_publisher
         
         self.states = {
             'start' : StartState(),
@@ -157,52 +158,60 @@ class StateMachineNode(Node):
         self.timer = self.create_timer(0.05, self.timer_cb)
         self.get_logger().info("State machine initialized successfully!")
         
+        self.current_state.start(self.state_context)
+        
     def timer_cb(self):
-        next_state : State | None = self.current_state.execute(self.context)
+        next_state : State | None = self.current_state.execute(self.state_context)
         if next_state is not None:
             self.current_state = self.states[next_state]
-            self.current_state.start(self.context)
+            self.current_state.start(self.state_context)
         
         self.get_logger().info(f'Current state: {self.current_state.name}')
+        self.get_logger().info(f'Odom: {self.state_context["odom"]["roll"]}')
+        self.get_logger().info(f'Odom: {self.state_context["odom"]["pitch"]}')
+        self.get_logger().info(f'Odom: {self.state_context["odom"]["yaw"]}')
+        self.get_logger().info(f'Depth: {self.state_context["depth"]}')
+
+
         
     def _odom_cb(self, msg):
         roll, pitch, yaw = roll_pitch_yaw_from_quaternion(msg.pose.pose.orientation)
 
-        self.context["odom"] = { # Do we need more than roll, pitch, yaw?
-            "roll" : roll,
-            "pitch" : pitch,
-            "yaw" : yaw             
+        self.state_context["odom"] = { # Do we need more than roll, pitch, yaw?
+            "roll" : -roll * 180.0 / math.pi,
+            "pitch" : -pitch * 180.0 / math.pi,
+            "yaw" : yaw * 180.0 / math.pi            
         }
     def depth_sensor_cb(self, msg):
-        self.context["depth"] = msg.data
+        self.state_context["depth"] = msg.data
     def survey_and_repair_gate_image_left_gate_cb(self, msg):
-        self.context["survey_and_repair_gate_image_left_gate"] = msg
+        self.state_context["survey_and_repair_gate_image_left_gate"] = msg
     def survey_and_repair_gate_image_right_gate_cb(self, msg):
-        self.context["survey_and_repair_gate_image_right_gate"] = msg
+        self.state_context["survey_and_repair_gate_image_right_gate"] = msg
     def search_and_rescue_gate_image_left_gate_cb(self, msg):
-        self.context["search_and_rescue_gate_image_left_gate"] = msg
+        self.state_context["search_and_rescue_gate_image_left_gate"] = msg
     def search_and_rescue_gate_image_right_gate_cb(self, msg):
-        self.context["search_and_rescue_gate_image_right_gate"] = msg
+        self.state_context["search_and_rescue_gate_image_right_gate"] = msg
     def survey_and_repair_gate_image_left_bin_cb(self, msg):
-        self.context["survey_and_repair_gate_image_left_bin"] = msg
+        self.state_context["survey_and_repair_gate_image_left_bin"] = msg
     def survey_and_repair_gate_image_right_bin_cb(self, msg):
-        self.context["survey_and_repair_gate_image_right_bin"] = msg
+        self.state_context["survey_and_repair_gate_image_right_bin"] = msg
     def search_and_rescue_gate_image_left_bin_cb(self, msg):
-        self.context["search_and_rescue_gate_image_left_bin"] = msg
+        self.state_context["search_and_rescue_gate_image_left_bin"] = msg
     def search_and_rescue_gate_image_right_bin_cb(self, msg):
-        self.context["search_and_rescue_gate_image_right_bin"] = msg
+        self.state_context["search_and_rescue_gate_image_right_bin"] = msg
     def octagon_image_1_left_cb(self, msg):
-        self.context["octagon_image_1_left"] = msg
+        self.state_context["octagon_image_1_left"] = msg
     def octagon_image_1_right_cb(self, msg):
-        self.context["octagon_image_1_right"] = msg
+        self.state_context["octagon_image_1_right"] = msg
     def octagon_image_2_left_cb(self, msg):
-        self.context["octagon_image_2_left"] = msg
+        self.state_context["octagon_image_2_left"] = msg
     def octagon_image_2_right_cb(self, msg):
-        self.context["octagon_image_2_right"] = msg 
+        self.state_context["octagon_image_2_right"] = msg 
     def table_left_cb(self, msg):
-        self.context["table_left"] = msg
+        self.state_context["table_left"] = msg
     def table_right_cb(self, msg):
-        self.context["table_right"] = msg 
+        self.state_context["table_right"] = msg 
     
         
         

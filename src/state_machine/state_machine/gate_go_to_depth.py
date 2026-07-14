@@ -1,4 +1,4 @@
-from state_machine.state_machine.state import State
+from state_machine.state import State
 from messages.msg import PIDInput
 import time
 
@@ -40,7 +40,7 @@ class GateGoToDepthState(State):
         msg.z_setpoint = self.desired_depth
         msg.roll_setpoint = 0.0
         msg.pitch_setpoint = 0.0
-        msg.yaw_setpoint = self.start_yaw
+        msg.yaw_setpoint = 0.0
         
         msg.z_measurement = context['depth']
         msg.roll_measurement = context['odom']['roll']

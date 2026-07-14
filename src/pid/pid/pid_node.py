@@ -83,10 +83,10 @@ class PIDNode(Node):
     def __init__(self,
              x_gains=(0.1, 0.0, 0.0),
              y_gains=(0.1, 0.0, 0.0),
-             z_gains=(0.4, 0.0000, 4.0),
-             roll_gains=(0.001, 0.0005, 0.005),
-             pitch_gains=(0.02, 0.02, 0.02),
-             yaw_gains=(0.006, 0.001, 0.002)):
+             z_gains=(0.9, 0.0000, 6.0),
+             roll_gains=(0.001, 0.0005, 0.0075),
+             pitch_gains=(0.011, 0.02, 0.05),
+             yaw_gains=(0.0016, 0.0001, 0.01)):
         super().__init__('pid_node')
         self.x_kP, self.x_kI, self.x_kD = x_gains
         self.y_kP, self.y_kI, self.y_kD = y_gains
@@ -164,7 +164,7 @@ class PIDNode(Node):
         z_pow = (
             self.last_msg.z_power
             if not self.last_msg.z_mode
-            else self.z_pid(self.last_msg.z_setpoint - self.last_msg.z_measurement, dt)
+            else self.z_pid(self.last_msg.z_setpoint - self.last_msg.z_measurement, dt) + 0.35
         )
 
         roll_error = wrap_angle_difference(

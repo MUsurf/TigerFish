@@ -1,158 +1,140 @@
-# Begin imports
+import threading
+import time
+
 import rclpy
-
-# End imports
 from rclpy.node import Node
-from std_msgs.msg import Float32, Bool
-# from gpiozero import PWMOutputDevice  # not for Jetson
+from std_msgs.msg import String
 
-import Jetson.GPIO as GPIO  # for Jetson
+import Jetson.GPIO as GPIO
 
-from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 
-kill_qos = QoSProfile(
-    reliability=ReliabilityPolicy.RELIABLE,
-    durability=DurabilityPolicy.TRANSIENT_LOCAL,
-    history=HistoryPolicy.KEEP_LAST,
-    depth=1,
-)
+PIN = 33
+FREQ = 50.0
+PERIOD_S = 1.0 / FREQ
 
-servo_qos = QoSProfile(
-    reliability=ReliabilityPolicy.RELIABLE,
-    durability=DurabilityPolicy.TRANSIENT_LOCAL,
-    history=HistoryPolicy.KEEP_LAST,
-    depth=10,
-)
+MAX_ANGLE = 25.0
 
 
 class ServoControllerNode(Node):
     def __init__(self):
         super().__init__("servo_controller")
 
-        # Declare parameters
-        self.declare_parameter("servo_pin", 32)
-        self.declare_parameter("min_angle", 0.0) 
-        self.declare_parameter("max_angle", 60) # recomended open angle (can be tested)
-        self.declare_parameter("pwm_frequency", 50) #Hz #! Where this number from
-        self.declare_parameter("min_duty_cycle", 2.5) #! Where this number from
-        self.declare_parameter("max_duty_cycle", 12.5) #! Where this number from
-
-        # Load parameters
-        self.servo_pin = self.get_parameter("servo_pin").value
-        self.min_angle = self.get_parameter("min_angle").value
-        self.max_angle = self.get_parameter("max_angle").value
-        self.min_duty_cycle = self.get_parameter("min_duty_cycle").value
-        self.max_duty_cycle = self.get_parameter("max_duty_cycle").value
-        pwm_frequency = self.get_parameter("pwm_frequency").value
-
-        # Jetson GPIO setup (BOARD numbering)
+        GPIO.setwarnings(True)
         GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(self.servo_pin, GPIO.OUT)
+        GPIO.setup(PIN, GPIO.OUT, initial=GPIO.LOW)
 
-        # PWM device (duty cycle is 0–100) 
-        self.pwm = GPIO.PWM(self.servo_pin, pwm_frequency) 
-        self.pwm.start(0)
+        self.pulse_width_us = 1500
+        self.running = True
+        self.lock = threading.Lock()
 
-        # Subscriber
-        self.subscribedTopic = "servo_angle_input" 
+        self.pwm_thread = threading.Thread(
+            target=self.software_pwm_loop,
+            daemon=True,
+        )
+        self.pwm_thread.start()
 
-        self.subscription = self.create_subscription(
-            Float32, self.subscribedTopic, self.angle_callbackFunction, servo_qos
+        self.mode_subscriber = self.create_subscription(
+            String,
+            "servo_mode",
+            self.servo_mode_cb,
+            10,
         )
 
-        self.kill_subscriber = self.create_subscription(
-            Bool, "kill", self.kill_cb, kill_qos
+        self.get_logger().info("Servo software PWM started on BOARD pin 33")
+
+    def angle_to_pulse_us(self, angle: float) -> int:
+        angle = max(-90.0, min(90.0, angle))
+
+        # -90 degrees = 500 us
+        #   0 degrees = 1500 us
+        # +90 degrees = 2500 us
+        return int(1500.0 + angle * (1000.0 / 90.0))
+
+    def software_pwm_loop(self):
+        while self.running:
+            cycle_start = time.monotonic_ns()
+
+            with self.lock:
+                pulse_width_us = self.pulse_width_us
+
+            GPIO.output(PIN, GPIO.HIGH)
+            self.precise_sleep_us(pulse_width_us)
+            GPIO.output(PIN, GPIO.LOW)
+
+            next_cycle = cycle_start + int(PERIOD_S * 1_000_000_000)
+
+            while self.running:
+                remaining_ns = next_cycle - time.monotonic_ns()
+
+                if remaining_ns <= 0:
+                    break
+
+                # Sleep normally until close to the next pulse.
+                if remaining_ns > 300_000:
+                    time.sleep((remaining_ns - 200_000) / 1_000_000_000)
+
+    def precise_sleep_us(self, duration_us: int):
+        end_ns = time.monotonic_ns() + duration_us * 1000
+
+        while True:
+            remaining_ns = end_ns - time.monotonic_ns()
+
+            if remaining_ns <= 0:
+                return
+
+            if remaining_ns > 300_000:
+                time.sleep((remaining_ns - 200_000) / 1_000_000_000)
+
+    def servo_mode_cb(self, message: String):
+        angles = {
+            "neutral": 0.0,
+            "left": MAX_ANGLE,
+            "right": -MAX_ANGLE,
+        }
+
+        angle = angles.get(message.data)
+
+        if angle is None:
+            self.get_logger().warning(
+                f"Unknown servo mode: {message.data!r}"
+            )
+            return
+
+        pulse_width_us = self.angle_to_pulse_us(angle)
+
+        with self.lock:
+            self.pulse_width_us = pulse_width_us
+
+        self.get_logger().info(
+            f"Mode={message.data}, angle={angle}, "
+            f"pulse={pulse_width_us} us"
         )
 
-        # Publisher
-        self.publisherTopic = "servo_angle_feedback" #! again does not need the topic. And if one is called feedback, one should be called input
-        self.feedback_publisher = self.create_publisher(
-            Float32,
-            self.publisherTopic,
-            10,  # self.queueSize
-        )
+    def shutdown_servo(self):
+        self.running = False
 
-        self.current_angle = self.max_angle 
-        initial_duty = self.angle_to_duty_cycle(self.max_angle)
-        self.pwm.ChangeDutyCycle(initial_duty)
+        if self.pwm_thread.is_alive():
+            self.pwm_thread.join(timeout=1.0)
 
-    def angle_to_duty_cycle(self, angle):
-        angle = max(self.min_angle, min(angle, self.max_angle))
-
-        # Convert angle to duty cycle percentage
-        duty_percent = self.min_duty_cycle + ( (angle - self.min_angle) / (self.max_angle - self.min_angle)) * (self.max_duty_cycle - self.min_duty_cycle)  
-        # Add duty cycle offset
-        # Normalize within our duty cycle range
-        # Normalize within our min/max angle range
-        #! Wtf is this styling 
-        """
-        !duty_percent = self.min_duty_cycle + ((angle - self.min_angle) / (self.max_angle - self.min_angle))
-        !duty_percent = duty_percent * (self.max_duty_cycle - self.min_duty_cycle)
-        !
-        !is a lot better.
-        !"""
-        
-        #! Now i can flame it. What is the point of this whole thing?
-        #! Why is there a duty cycle offset? Why is there a duty cycle range?
-        #! The only part obvious is the min max angle range.
-        #! Why everything else though? It might not be wrong, but i cannot see why or what function it serves.
-        
-
-        return duty_percent  # Jetson expects 0–100 duty cycle #! correct
-
-    def angle_callbackFunction(self, msg_angle):
-        angle = msg_angle.data
-        self.get_logger().info(f"Received angle command: {angle}") #! Don't need this unless we are debugging. Adds a lot of clutter
-
-        duty = self.angle_to_duty_cycle(angle)
-        self.pwm.ChangeDutyCycle(duty)
-
-        self.current_angle = max(self.min_angle, min(angle, self.max_angle))
-
-        feedback_msg = Float32()
-        feedback_msg.data = self.current_angle
-        self.feedback_publisher.publish(feedback_msg) 
-        #! This "feedback_msg" has no purpose. It immediately returns the angle we just passed in, it isn't actually feedback.
-        #! And also it only happens once, immediately in this callback after setting the angle
-        #! Why did you keep this?
-
-    def destroy_node(self):
-        self.pwm.stop()
+        GPIO.output(PIN, GPIO.LOW)
         GPIO.cleanup()
-        super().destroy_node()
-        #! Looks fine
-
-    def kill_cb(self, msg):
-        if msg.data:
-            self.get_logger().warn("Servo kill received — shutting down.")
-            rclpy.shutdown()
-        #! Looks fine
 
 
 def main(args=None):
     rclpy.init(args=args)
-    servo_controller = ServoControllerNode()
+    node = ServoControllerNode()
 
     try:
-        rclpy.spin(servo_controller)
+        rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
-        servo_controller.destroy_node()
-        rclpy.shutdown()
-        
-    #! This looks fine
+        node.shutdown_servo()
+        node.destroy_node()
+
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
     main()
-
-    """Test (open close open) in terminal
-# Open (max angle)
-ros2 topic pub --once /servo_angle_input std_msgs/msg/Float32 "data: 55"
-
-# Close (min angle)
-ros2 topic pub --once /servo_angle_input std_msgs/msg/Float32 "data: 0.0"
-
-ros2 topic pub --once /servo_angle_input std_msgs/msg/Float32 "data: 60"
-    """

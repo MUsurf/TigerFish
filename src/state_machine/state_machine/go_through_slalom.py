@@ -1,4 +1,4 @@
-from state_machine.state_machine.state import State
+from state_machine.state import State
 from messages.msg import PIDInput
 import time
 
@@ -10,6 +10,9 @@ class GoThroughSlalomState(State):
         self.start_time : float | None = None
 
         self.desired_depth : float | None = None
+        
+        self.x_power = None
+        self.total_time = None
         
     def start(self, context : dict):
         self.start_yaw = 0.0 # context['odom']['yaw']
