@@ -3,7 +3,9 @@ FROM ros:humble-ros-base
 # Set Docker's default shell to bash instead of sh.
 SHELL ["/bin/bash", "-c"]
 
-# 1. Install System Dependencies, Build Tools, and YASMIN Web Requirements
+ARG TORCH_WHEEL
+
+# 1. Install System Dependencies, Build Tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
@@ -26,6 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Camera calibration packages
     ros-humble-camera-calibration \
     ros-humble-camera-info-manager-py \
+    libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m pip install --upgrade "packaging>=22"
@@ -59,10 +62,10 @@ RUN apt-get update && apt-get install -y \
   rm -rf /var/lib/apt/lists/* && \
   apt-get clean
 
-RUN python3 -m pip install \
-    --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio \
-    && python3 -m pip install --no-deps ultralytics
-
+RUN test -n "${TORCH_WHEEL}" && \
+    python3 -m pip install "numpy<2" && \
+    python3 -m pip install --no-cache-dir "${TORCH_WHEEL}" && \
+    python3 -m pip install --no-deps ultralytics
 
 # Install packages not availble through system
 RUN python3 -m pip install gpiozero adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 flask "numpy<2" smbus2 opencv-python Jetson.GPIO && \
@@ -71,25 +74,6 @@ RUN python3 -m pip install gpiozero adafruit-circuitpython-bno055 adafruit-circu
 
   
 WORKDIR /home/ros2_ws
-
-
-# get yasmin if it doesn't already exist
-# --- THE YASMIN SYSTEM INSTALL (VERSION 3.4.0) ---
-# RUN git clone --depth 1 --branch 3.4.0 https://github.com/uleroboticsgroup/yasmin.git /tmp/yasmin && \
-#     source /opt/ros/humble/setup.bash && \
-#     cd /tmp/yasmin && \
-#     colcon build \
-#     --install-base /opt/ros/humble \
-#     --merge-install \
-#     --cmake-args -DCMAKE_BUILD_TYPE=Release && \
-#     rm -rf /tmp/yasmin
-
-# Better yasmin install
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ros-humble-yasmin \
-    ros-humble-yasmin-ros \
-    ros-humble-yasmin-msgs \
-    && rm -rf /var/lib/apt/lists/*
 
 RUN --mount=type=bind,source=./src/cameras/package.xml,target=/home/ros2_ws/deps/cameras/package.xml \
     --mount=type=bind,source=./src/depth_sensor/package.xml,target=/home/ros2_ws/deps/depth_sensor/package.xml \
@@ -122,8 +106,8 @@ RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc && \
 # 6. Automate Environment Sourcing for the User
 # This makes 'ros2' and 'colcon' commands work immediately in new terminals
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /etc/bash.bashrc && \
-    echo "source /home/ros2_ws/install/setup.bash" >> /etc/bash.bashrc
-
+    echo "source /home/ros2_ws/install/setup.bash" >> /root/.bashrc
+    
 # 7. Startup scripts
 COPY --chmod=u+x ./run.sh /home/ros2_ws/run.sh
 
