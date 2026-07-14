@@ -9,6 +9,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV ROS_DISTRO=humble
 
 ARG TORCH_WHEEL
+RUN if [ -z "${TORCH_WHEEL}" ]; then \
+      echo "ERROR: TORCH_WHEEL build arg is required." >&2; \
+      echo "Build with: docker build --build-arg TORCH_WHEEL=<url-or-path-to-torch-wheel> ." >&2; \
+      exit 1; \
+    fi
 
 # 0. Install ROS 2 Humble — the l4t-jetpack base doesn't ship it like ros:humble-ros-base did.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -89,10 +94,9 @@ RUN apt-get update && apt-get install -y \
   rm -rf /var/lib/apt/lists/* && \
   apt-get clean
 
-RUN python3 -m pip install \
-    --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio \
-    && python3 -m pip install --no-deps ultralytics
-
+RUN python3 -m pip install "numpy<2" && \
+    python3 -m pip install --no-cache-dir "${TORCH_WHEEL}" && \
+    python3 -m pip install --no-deps ultralytics
 
 # Install packages not availble through system
 RUN python3 -m pip install gpiozero adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 flask "numpy<2" smbus2 opencv-python Jetson.GPIO && \
