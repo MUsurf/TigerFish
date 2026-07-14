@@ -142,7 +142,7 @@ The main `Dockerfile` installs Pi-specific hardware packages (GPIO, PiCamera2, J
 **First-time setup (run once on host):**
 ```bash
 xhost +local:docker          # allow the container to open X11 windows
-mkdir -p test_videos          # drop .mp4 test footage here
+mkdir -p test_videos          # drop test footage here
 ```
 
 **Start the container:**
@@ -166,7 +166,7 @@ ros2 run process_images stereo_calibration_node \
 
 ### Known issue: video_pub_node is not stereo-capable
 
-`video_pub_node` publishes a single MP4 to `camera/image_raw`, but `process_img_node` subscribes to `camera/left/image_raw` and `camera/right/image_raw`. The two are currently incompatible for end-to-end stereo testing. Additionally, the video path is hardcoded inside `video_publisher.cpp` (`/home/ros2_ws/src/TestImages/FirstTestFeb2026.mp4`).
+`video_pub_node` publishes a single video to `camera/image_raw`, but `process_img_node` subscribes to `camera/left/image_raw` and `camera/right/image_raw`. The two are currently incompatible for end-to-end stereo testing. Additionally, the video path is hardcoded inside `video_publisher.cpp` (`/home/ros2_ws/src/TestImages/FirstTestFeb2026.mp4`).
 
 **Workaround until this is fixed:** run two instances with topic remapping and separate left/right MP4s:
 ```bash

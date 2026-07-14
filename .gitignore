@@ -59,6 +59,9 @@ __pycache__/
 !output_images/**/*.md
 !output_images/**/
 
+# Ignore image file types
+*.mkv
+
 
 # Don't upload Andrew's stinky files
 .DS_Store

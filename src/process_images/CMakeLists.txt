@@ -26,6 +26,7 @@ add_executable(process_img
   src/img_preprocessing.cpp
   src/marker_detector.cpp
   src/gate_detection.cpp
+  src/triangulation.cpp
 )
 target_include_directories(process_img PRIVATE include ${OpenCV_INCLUDE_DIRS})
 ament_target_dependencies(process_img
@@ -42,6 +43,15 @@ ament_target_dependencies(stereo_calibration_node
   rclcpp sensor_msgs cv_bridge)
 target_link_libraries(stereo_calibration_node ${OpenCV_LIBRARIES})
 
+# ── mono_calibration_node ──────────────────────────────────────────────────────
+# Interactive mono calibration off a video file; toggle checkerboard/ChArUco with 'B'
+add_executable(mono_calibration_node
+  src/mono_calibration_node.cpp
+)
+target_include_directories(mono_calibration_node PRIVATE include ${OpenCV_INCLUDE_DIRS})
+ament_target_dependencies(mono_calibration_node rclcpp)
+target_link_libraries(mono_calibration_node ${OpenCV_LIBRARIES})
+
 # ── video_pub_node ─────────────────────────────────────────────────────────────
 # Test helper: publishes an MP4 file as camera/image_raw
 add_executable(video_pub_node
@@ -55,6 +65,7 @@ target_link_libraries(video_pub_node ${OpenCV_LIBRARIES})
 install(TARGETS
   process_img
   stereo_calibration_node
+  mono_calibration_node
   video_pub_node
   DESTINATION lib/${PROJECT_NAME}
 )
