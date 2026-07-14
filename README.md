@@ -12,6 +12,8 @@ Place desired commands to run the code in run.sh. catkin_ws is located in the ~ 
 
 To run you must have the Docker Engine installed an NVIDIA Jetson. This can run on any device so long as the path to the GPIO is changed for RUN_OPTS in build.sh
 
+The main `Dockerfile` is built on NVIDIA's `l4t-jetpack:r36.3.0` base (JetPack 6.0), which is what gives the container access to the Jetson's CUDA/cuDNN/TensorRT libraries. It only builds on the Jetson itself (arm64) with a matching JetPack version flashed. Before building, copy `.env.example` to `.env` and set `TORCH_WHEEL` to a JetPack 6.0 / Python 3.10 / aarch64 PyTorch wheel URL or path — the build fails without it.
+
 To run you must use a bash terminal. For Windows you can use GitBash.
 
 ### Build the Docker Container
