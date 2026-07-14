@@ -38,7 +38,7 @@ class ServoControllerNode(Node):
 
         # PWM device (duty cycle is 0–100) 
         self.pwm = GPIO.PWM(self.servo_pin, self.pwm_frequency) 
-        self.pwm.start(0)
+        self.pwm.start(50)
 
         # Subscriber
         self.subscribedTopic = "servo_angle_input" 
