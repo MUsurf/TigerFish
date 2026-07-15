@@ -29,11 +29,11 @@ class OctagonTurn(ABC):
         msg.measurement_pitch = odom["pitch"]
         msg.roll_setpoint = 0.0
         msg.measurement_roll = odom["roll"]
-        msg.yaw_setpoint = self.start_yaw - 90
+        msg.yaw_setpoint = -50.0
         msg.measurement_yaw = odom["yaw"]
         self.context.pid_publisher.publish(msg)
 
-        if math.abs(odom["yaw"] - (self.start_yaw - 90)) < 5:
+        if math.abs(odom["yaw"] - (-50.0)) < 5:
             return OctagonGoTo
         
 class OctagonGoTo(ABC):

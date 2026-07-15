@@ -71,7 +71,7 @@ class FrontImageDetectionNode(Node):
         
         pkg_share = get_package_share_directory('python_cv')
         DEFAULT_MODEL = os.path.join(pkg_share, 'models', 'gate_yolo.pt')
-        TABLE_MODEL = os.path.join(pkg_share, 'models', 'table_yolo.pt')
+        TABLE_MODEL = os.path.join(pkg_share, 'models', 'bin_task_model.pt')
 
         self.survey_and_repair_left_publisher_gate = self.create_publisher(VisionMessage, "survey_and_repair_gate_image_left_gate", 10)
         self.survey_and_repair_right_publisher_gate = self.create_publisher(VisionMessage, "survey_and_repair_gate_image_right_gate", 10)
@@ -86,7 +86,7 @@ class FrontImageDetectionNode(Node):
         self.table_task_active_subscriber = self.create_subscription(Bool, 'table_task_active', self.table_task_active_subscriber_cb, 10)
 
         
-        self.gate_task_active = True
+        self.gate_task_active = False
         self.table_task_active = True
         self.last_image_left : RosImage | None = None
         self.last_image_right : RosImage | None = None

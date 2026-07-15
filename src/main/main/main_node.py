@@ -8,6 +8,7 @@ import time
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 import numpy as np
 import time
+import cv2
 
 qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
@@ -35,7 +36,6 @@ ROLL_PER_SECOND = 7.5
 DEAD_ZONE = 0.1
 
 MODE = 'AUTO'
-
 
 def new_controller_str(text: str) -> Float32MultiArray:
     parts = text.split(":")
@@ -153,7 +153,7 @@ class MainNode(Node):
         
         self.left_cam_subscriber = self.create_subscription(
             VisionMessage,
-            "survey_and_repair_gate_image_left",
+            "table_left",
             self.left_cam_cb,
             10
         )

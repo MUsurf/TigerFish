@@ -12,6 +12,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/models', ['resource/models/gate_yolo.pt']),
         ('share/' + package_name + '/models', ['resource/models/bin_yolo.pt']),
+        ('share/' + package_name + '/models', ['resource/models/bin_task_model.pt']),
+
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,6 +27,6 @@ setup(
         ],
     },
     entry_points={
-        "console_scripts": ["gate_cv = python_cv.gate_cv:main"],
+        "console_scripts": ["gate_cv = python_cv.front_cv:main"],
     },
 )

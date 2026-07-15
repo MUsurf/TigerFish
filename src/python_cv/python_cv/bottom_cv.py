@@ -72,6 +72,7 @@ class BottomImageDetectionNode(Node):
         pkg_share = get_package_share_directory('python_cv')
         DEFAULT_MODEL = os.path.join(pkg_share, 'models', 'bin_yolo.pt')
         OCTAGON_MODEL = os.path.join(pkg_share, 'models', 'octagon_yolo.pt')
+        PATH_MARKER_MODEL = os.path.join(pkg_share, 'models', 'path_marker_yolo.pt')
 
         self.survey_and_repair_left_publisher_bin = self.create_publisher(VisionMessage, "survey_and_repair_bin_image_left_bin", 10)
         self.survey_and_repair_right_publisher_bin = self.create_publisher(VisionMessage, "survey_and_repair_bin_image_right_bin", 10)
