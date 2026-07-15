@@ -11,6 +11,7 @@ import time
 import math
 import torch
 
+
 qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
 kill_qos = QoSProfile(
@@ -116,7 +117,7 @@ class MainNode(Node):
         super().__init__("main_node")
         
         self.get_logger().info(f"{torch.cuda.is_available()}")
-
+        
         self.orientation_subscriber = self.create_subscription(
             Odometry, "state_estimation", self._odom_cb, 10
         )
@@ -237,8 +238,9 @@ class MainNode(Node):
                     if self.temp_time is None:
                         self.temp_time = time.time()
                     else:
-                        if time.time() - self.temp_time() > 1:
-                            msg.z_setpoint = 1.0
+                        if time.time() - self.temp_time > 2.5:
+                            msg.z_mode = True
+                            msg.z_setpoint = 0.5
                             msg.z_measurement = self.depth
                 
                 
@@ -265,7 +267,7 @@ class MainNode(Node):
                 msg.x_power = self.x_pow
                 msg.y_power = self.y_pow
                 
-                msg.z_setpoint = 1.0
+                msg.z_setpoint = 0.5
                 msg.z_measurement = self.depth
 
                 msg.roll_setpoint = 0.0
@@ -277,7 +279,7 @@ class MainNode(Node):
             case _:
                 msg.x_mode = False
                 msg.y_mode = False
-                msg.z_mode = False
+                msg.z_mode = True
                 msg.roll_mode = True
                 msg.pitch_mode = True
                 msg.yaw_mode = True
@@ -285,7 +287,8 @@ class MainNode(Node):
                 msg.x_power = self.x_pow
                 msg.y_power = self.y_pow                
                 msg.z_power = self.z_pow
-
+                msg.z_setpoint = 0.25
+                msg.z_measurement = self.depth
                 msg.roll_setpoint = 0.0
                 msg.roll_measurement = self.roll * 180 / np.pi
                 msg.pitch_setpoint = 0.0

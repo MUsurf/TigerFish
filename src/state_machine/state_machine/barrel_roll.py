@@ -28,23 +28,21 @@ class BarrelRollState(State):
         
     def execute(self, context : dict):
         msg = PIDInput()
-        msg.yaw_mode = True
-        msg.yaw_setpoint = 0.0
-        msg.yaw_measurement = context['odom']['yaw']
+        msg.pitch_mode = True
+        msg.pitch_setpoint = 0.0
+        msg.pitch_measurement = context['odom']['pitch']
+        msg.roll_mode = True
+        msg.roll_setpoint = 0.0
+        msg.roll_measurement = context['odom']['roll']
+        msg.z_setpoint = context['gate_state_depth']
+        msg.z_measurement = context['depth']
+        msg.z_mode = True
         if self.accumulated_roll > 570:
-            if self.temp_time is None:
-                self.temp_time = time.time()
-            if time.time() - self.temp_time >= 2.0:
-                return 'gate_go_to_depth'
-            msg.roll_mode = True
-            msg.roll_setpoint = 0.0
-            msg.roll_measurement = context['odom']['roll']
-            
-            msg.pitch_mode = True
-            msg.pitch_setpoint = 0.0
-            msg.pitch_measurement = context['odom']['pitch']
+            msg.yaw_mode = True
+            msg.yaw_setpoint = 0.0
+            msg.yaw_measurement = context['odom']['yaw']
 
-            if abs(context['odom']['roll']) <= self.threshold:
+            if abs(context['odom']['yaw']) <= self.threshold:
                 
                 if self.start_time is None:
                     self.start_time = time.time()
@@ -53,14 +51,14 @@ class BarrelRollState(State):
             else:
                 self.start_time = None
         else:
-            msg.roll_mode = False
-            msg.roll_power = self.roll_power
+            msg.yaw_mode = False
+            msg.yaw_power = self.roll_power
         
         if self.last_roll is None:
-            self.last_roll = context['odom']['roll']
+            self.last_roll = context['odom']['yaw']
         else:
-            self.accumulated_roll += abs(abs(self.last_roll) - abs(context['odom']['roll']))
-            self.last_roll = context['odom']['roll']
+            self.accumulated_roll += abs(abs(self.last_roll) - abs(context['odom']['yaw']))
+            self.last_roll = context['odom']['yaw']
         
         context['pid_publisher'].publish(msg)
         

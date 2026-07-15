@@ -29,7 +29,7 @@ STEP_SIZE = DELTA / FREQ
 
 MAX_CURRENT = 10  # amps
 
-DEADBAND = 0.01
+DEADBAND = 0.00
 
 
 class PowerConverter:

@@ -69,12 +69,12 @@ class StateMachineNode(Node):
         self.state_context["start_wait_time"] = 2.0 # seconds
         self.state_context["start_depth_threshold"] = 0.03 # meters
         self.state_context["start_time"] = 5 # seconds
-        self.state_context["gate_state_depth"] = 1.0 # meters
+        self.state_context["gate_state_depth"] = 0.75 # meters
         self.state_context["depth_error_tolerance"] = 0.075 # meters
         self.state_context["time_in_depth_requirement"] = 5.0 # seconds
-        self.state_context["gate_forward_time"] = 13.0 # seconds
-        self.state_context["gate_forward_power"] = 0.7 # power
-        self.state_context["slight_forward_time"] = 3.0 # seconds
+        self.state_context["gate_forward_time"] = 35.0 # seconds
+        self.state_context["gate_forward_power"] = 0.5 # power
+        self.state_context["slight_forward_time"] = 1.0 # seconds
         
         self.state_context["post_roll_depth"] = 0.75
         
@@ -95,8 +95,8 @@ class StateMachineNode(Node):
         self.state_context["path_marker_align_heading_time"] = 4.0 # seconds
         
         self.state_context["barrel_roll_stable_time"] = 1.0
-        self.state_context["barrel_roll_power"] = 0.8
-        self.state_context["barrel_roll_stable_threshold"] = 10.0 # degrees
+        self.state_context["barrel_roll_power"] = 0.2
+        self.state_context["barrel_roll_stable_threshold"] = 6.0 # degrees
     
         # context defaults:
         self.state_context["survey_and_repair_gate_image_left_gate"] = VisionMessage()
