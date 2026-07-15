@@ -1,9 +1,44 @@
-FROM ros:humble-ros-base
+# L4T JetPack 6.0 (Orin Nano) base — ships CUDA/cuDNN/TensorRT for the Jetson's
+# GPU. Must match the JetPack version flashed on the device (r36.3.0 = JetPack 6.0).
+FROM nvcr.io/nvidia/l4t-jetpack:r36.3.0
 
 # Set Docker's default shell to bash instead of sh.
 SHELL ["/bin/bash", "-c"]
 
-# 1. Install System Dependencies, Build Tools, and YASMIN Web Requirements
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_DISTRO=humble
+
+ARG TORCH_WHEEL
+RUN if [ -z "${TORCH_WHEEL}" ]; then \
+      echo "ERROR: TORCH_WHEEL build arg is required." >&2; \
+      echo "Build with: docker build --build-arg TORCH_WHEEL=<url-or-path-to-torch-wheel> ." >&2; \
+      exit 1; \
+    fi
+
+# 0. Install ROS 2 Humble — the l4t-jetpack base doesn't ship it like ros:humble-ros-base did.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    locales \
+    curl \
+    gnupg2 \
+    lsb-release \
+    software-properties-common \
+    && locale-gen en_US en_US.UTF-8 \
+    && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
+    && add-apt-repository universe \
+    && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+       -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo ${UBUNTU_CODENAME}) main" \
+       > /etc/apt/sources.list.d/ros2.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+       ros-humble-ros-base \
+       python3-rosdep \
+       python3-colcon-common-extensions \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN rosdep init || true
+
+# 1. Install System Dependencies, Build Tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
@@ -59,14 +94,47 @@ RUN apt-get update && apt-get install -y \
   rm -rf /var/lib/apt/lists/* && \
   apt-get clean
 
-RUN python3 -m pip install \
-    --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio \
-    && python3 -m pip install --no-deps ultralytics
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        wget \
+        ca-certificates \
+        xz-utils && \
+    wget -q https://raw.githubusercontent.com/pytorch/pytorch/5c6af2b583709f6176898c017424dc9981023c28/.ci/docker/common/install_cusparselt.sh && \
+    export CUDA_VERSION=12.2 && \
+    bash ./install_cusparselt.sh && \
+    rm install_cusparselt.sh && \
+    rm -rf /var/lib/apt/lists/*
 
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install "numpy<2" && \
+    python3 -m pip install --no-cache-dir "${TORCH_WHEEL}" && \
+    python3 -m pip install --no-deps ultralytics
+
+RUN apt-get update && \
+    apt-get install -y libopenblas-dev libopenblas0 && \
+    ldconfig
+
+RUN ls -l /usr/lib/aarch64-linux-gnu/libopenblas*
+
+RUN python3 - <<'EOF'
+import torch
+print("Torch:", torch.__version__)
+print("CUDA available:", torch.cuda.is_available())
+print("CUDA version:", torch.version.cuda)
+if torch.cuda.is_available():
+    print("Device:", torch.cuda.get_device_name(0))
+EOF
 
 # Install packages not availble through system
-RUN python3 -m pip install gpiozero adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 flask "numpy<2" smbus2 opencv-python Jetson.GPIO && \
-  python3 -m pip uninstall -y RPi.GPIO
+RUN python3 -m pip install --no-cache-dir \
+    --break-system-packages \
+    gpiozero \
+    # flask \
+    smbus2 \
+    Jetson.GPIO && \
+    python3 -m pip uninstall -y RPi.GPIO
+# RUN python3 -m pip install gpiozero adafruit-circuitpython-bno055 adafruit-circuitpython-pca9685==3.4.19 adafruit-blinka==8.66.0 adafruit-python-shell==1.10.0 rpi-lgpio==0.6 flask "numpy<2" smbus2 Jetson.GPIO && \
+#   python3 -m pip uninstall -y RPi.GPIO
 
 
   
@@ -105,7 +173,6 @@ RUN --mount=type=bind,source=./src/cameras/package.xml,target=/home/ros2_ws/deps
     --mount=type=bind,source=./src/remote_controller/package.xml,target=/home/ros2_ws/deps/remote_controller/package.xml \
     --mount=type=bind,source=./src/state_estimator/package.xml,target=/home/ros2_ws/deps/state_estimator/package.xml \
     --mount=type=bind,source=./src/state_machine/package.xml,target=/home/ros2_ws/deps/state_machine/package.xml \
-
     apt-get update && \
     rosdep update && \
     rosdep install -i --from-path ./deps --rosdistro $ROS_DISTRO -y

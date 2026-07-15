@@ -1,26 +1,28 @@
-from state_machine.state_machine.state import State
+from state_machine.state import State
 from messages.msg import PIDInput
 import time
 
 class GoThroughGateState(State):
     def __init__(self):
-        super().__init__('go_through_slalom')
+        super().__init__('go_through_gate')
         
         self.start_yaw : float | None = None
         self.start_time : float | None = None
 
         self.desired_depth : float | None = None
+        self.x_power = None
+        self.total_time = None
         
     def start(self, context : dict):
         self.start_yaw = 0.0 # context['odom']['yaw']
         self.start_time = time.time()
-        self.desired_depth = context['gate_state_depth']
+        self.desired_depth = context['post_roll_depth']
         self.x_power = context['gate_forward_power']
         self.total_time = context['gate_forward_time']
         
     def execute(self, context : dict):
         if time.time() - self.start_time >= self.total_time:
-            return 'slalom_shift'
+            return 'go_up'
         
         msg = PIDInput()
         msg.z_mode = True

@@ -1,10 +1,16 @@
-from state_machine.state_machine.state import State
+from state_machine.state import State
 from messages.msg import PIDInput
 import time
 
 class SlalomShiftState(State):
     def __init__(self):
         super().__init__('slalom_shift')
+        self.shift_time = None
+        self.shift_power = None
+        self.shift_direction = None
+        self.do_shift = None
+        
+        self.start_time = None
         
     def start(self, context : dict):
         self.shift_time = context["slalom_shift_time"] 

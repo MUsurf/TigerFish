@@ -1,4 +1,4 @@
-from state_machine.state_machine.state import State
+from state_machine.state import State
 from messages.msg import PIDInput
 import time
 

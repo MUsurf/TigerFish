@@ -1,74 +1,82 @@
-# Begin imports
+
 import rclpy
-
-# End imports
 from rclpy.node import Node
-from std_msgs.msg import Float32, Bool
-# from gpiozero import PWMOutputDevice  # not for Jetson
+from std_msgs.msg import String
 
-import Jetson.GPIO as GPIO  # for Jetson
+import board
+import busio
+from adafruit_pca9685 import PCA9685
 
-from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 
-kill_qos = QoSProfile(
-    reliability=ReliabilityPolicy.RELIABLE,
-    durability=DurabilityPolicy.TRANSIENT_LOCAL,
-    history=HistoryPolicy.KEEP_LAST,
-    depth=1,
-)
+FREQ = 200.0
 
-servo_qos = QoSProfile(
-    reliability=ReliabilityPolicy.RELIABLE,
-    durability=DurabilityPolicy.TRANSIENT_LOCAL,
-    history=HistoryPolicy.KEEP_LAST,
-    depth=10,
-)
+PCA9685_ADDRESS = 0x41
+SERVO_CHANNEL = 0
+
+MAX_ANGLE = 25.0
+
 
 class ServoControllerNode(Node):
     def __init__(self):
         super().__init__("servo_controller")
 
-        # Load parameters
-        self.servo_pin = 32 #! this might be a lie
-        self.pwm_frequency = 50 # Hz
+        self.i2c = busio.I2C(board.SCL, board.SDA)
 
-        # Jetson GPIO setup (BOARD numbering)
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(self.servo_pin, GPIO.OUT)
+        self.pca9685 = PCA9685(
+            self.i2c,
+            address=PCA9685_ADDRESS,
+        )
+        self.pca9685.frequency = int(FREQ)
 
-        # PWM device (duty cycle is 0–100) 
-        self.pwm = GPIO.PWM(self.servo_pin, self.pwm_frequency) 
-        self.pwm.start(50)
+        self.servo_channel = self.pca9685.channels[SERVO_CHANNEL]
 
-        # Subscriber
-        self.subscribedTopic = "servo_angle_input" 
+        self.set_servo_angle(0.0)
 
-        self.subscription = self.create_subscription(
-            Float32, self.subscribedTopic, self.angle_callbackFunction, servo_qos
+        self.mode_subscriber = self.create_subscription(
+            String,
+            "servo_mode",
+            self.servo_mode_cb,
+            10,
         )
 
-        self.kill_subscriber = self.create_subscription(
-            Bool, "kill", self.kill_cb, kill_qos
+    def get_duty_cycle(self, angle: float) -> int:
+        angle += 90.0
+
+        pulse_width_us = (
+            ((180.0 - angle) / 180.0) * 2000.0
+            + 500.0
         )
 
-    def angle_to_duty_cycle(self, angle):
-        return max(0, min(angle / 1.8, 40))
+        period_us = 1_000_000.0 / FREQ
+        duty_fraction = pulse_width_us / period_us
 
-    def angle_callbackFunction(self, msg_angle):
-        angle = msg_angle.data
+        return int(duty_fraction * 0xFFFF)
 
-        duty = self.angle_to_duty_cycle(angle)
-        self.pwm.ChangeDutyCycle(duty)
+    def set_servo_angle(self, angle: float):
+        self.servo_channel.duty_cycle = self.get_duty_cycle(angle)
 
-    def destroy_node(self):
-        self.pwm.stop()
-        GPIO.cleanup()
-        super().destroy_node()
+    def servo_mode_cb(self, message: String):
+        match message.data:
+            case "neutral":
+                angle = 0.0
+            case "left":
+                angle = MAX_ANGLE
+            case "right":
+                angle = -MAX_ANGLE
+            case _:
+                return
 
-    def kill_cb(self, msg):
-        if msg.data:
-            self.get_logger().warn("Servo kill received — shutting down.")
-            rclpy.shutdown()
+        self.set_servo_angle(angle)
+        
+        self.get_logger().info(f'Angle: {angle}')
+
+    def shutdown(self):
+        # Disable the PWM output on channel 0.
+        self.servo_channel.duty_cycle = 0
+
+        self.pca9685.deinit()
+        self.i2c.deinit()
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -79,20 +87,13 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        servo_controller.shutdown()
         servo_controller.destroy_node()
-        rclpy.shutdown()
-        
-    #! This looks fine
+
+        if rclpy.ok():
+            rclpy.shutdown()
+
 
 if __name__ == "__main__":
     main()
 
-    """Test (open close open) in terminal
-# Open (max angle)
-ros2 topic pub --once /servo_angle_input std_msgs/msg/Float32 "data: 55"
-
-# Close (min angle)
-ros2 topic pub --once /servo_angle_input std_msgs/msg/Float32 "data: 0.0"
-
-ros2 topic pub --once /servo_angle_input std_msgs/msg/Float32 "data: 60"
-    """

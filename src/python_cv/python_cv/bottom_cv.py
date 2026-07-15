@@ -82,14 +82,18 @@ class BottomImageDetectionNode(Node):
         self.octagon_image_1_right = self.create_publisher(VisionMessage, "octagon_image_1_right", 10)
         self.octagon_image_2_left = self.create_publisher(VisionMessage, "octagon_image_2_left", 10)
         self.octagon_image_2_right = self.create_publisher(VisionMessage, "octagon_image_2_right", 10)
+        self.path_marker_left_publisher = self.create_publisher(VisionMessage, "path_marker_left", 10)
+        self.path_marker_right_publisher = self.create_publisher(VisionMessage, "path_marker_right", 10)
         
         self.left_camera_subscriber = self.create_subscription(RosImage, FRONT_LEFT_CAMERA_TOPIC, self.left_camera_cb, 20)
         self.right_camera_subscriber = self.create_subscription(RosImage, FRONT_RIGHT_CAMERA_TOPIC, self.right_camera_cb, 20)
         self.bin_task_active_subscriber = self.create_subscription(Bool, 'bin_task_active', self.bin_task_active_subscriber_cb, 10)
         self.octagon_task_active_subscriber = self.create_subscription(Bool, 'octagon_task_active', self.octagon_task_active_subscriber_cb, 10)
+        self.path_marker_task_active_subscriber = self.create_subscription(Bool, 'path_marker_task_active', self.path_marker_task_active_subscriber_cb, 10)
 
         self.bin_task_active = True
         self.octagon_task_active = True
+        self.path_marker_task_active = True
         self.last_image_left : RosImage | None = None
         self.last_image_right : RosImage | None = None
         
@@ -101,6 +105,7 @@ class BottomImageDetectionNode(Node):
         
         self.model = YOLO(DEFAULT_MODEL).to(DEVICE)
         self.octagon_model = YOLO(OCTAGON_MODEL).to(DEVICE)
+        self.path_marker_model = YOLO(PATH_MARKER_MODEL).to(DEVICE)
         self.cv_bridge = cv_bridge.CvBridge()
 
         
@@ -115,8 +120,10 @@ class BottomImageDetectionNode(Node):
         octagon_image_1_right_msg = VisionMessage()
         octagon_image_2_left_msg = VisionMessage()
         octagon_image_2_right_msg = VisionMessage()
+        path_marker_left_msg = VisionMessage()
+        path_marker_right_msg = VisionMessage()
         
-        if self.last_image_left is not None and (self.bin_task_active or self.octagon_task_active):
+        if self.last_image_left is not None and (self.bin_task_active or self.octagon_task_active or self.path_marker_task_active):
             if self.last_image_left_np is None : self.last_image_left_np = ros2_image_to_np_array(self.last_image_left, self.cv_bridge)
             
             # Do bin state stuff
@@ -153,7 +160,15 @@ class BottomImageDetectionNode(Node):
                     octagon_image_2_left_msg.is_detected = True
                 self.octagon_image_2_left.publish(octagon_image_2_left_msg)
 
-        if self.last_image_right is not None and (self.bin_task_active or self.octagon_task_active):
+            if self.path_marker_task_active:
+                path_marker, _ = run_inference(self.path_marker_model, self.last_image_left_np)
+                if path_marker is not None:
+                    path_marker_left_msg.x_position = path_marker[0]
+                    path_marker_left_msg.y_position = path_marker[1]
+                    path_marker_left_msg.is_detected = True
+                self.path_marker_left_publisher.publish(path_marker_left_msg)
+
+        if self.last_image_right is not None and (self.bin_task_active or self.octagon_task_active or self.path_marker_task_active):
             if self.last_image_right_np is None : self.last_image_right_np = ros2_image_to_np_array(self.last_image_right, self.cv_bridge)
             
             if self.bin_task_active:
@@ -188,6 +203,14 @@ class BottomImageDetectionNode(Node):
                     octagon_image_2_right_msg.y_position = octagon_image_2[1]
                     octagon_image_2_right_msg.is_detected = True
                 self.octagon_image_2_right.publish(octagon_image_2_right_msg)
+
+            if self.path_marker_task_active:
+                path_marker, _ = run_inference(self.path_marker_model, self.last_image_right_np)
+                if path_marker is not None:
+                    path_marker_right_msg.x_position = path_marker[0]
+                    path_marker_right_msg.y_position = path_marker[1]
+                    path_marker_right_msg.is_detected = True
+                self.path_marker_right_publisher.publish(path_marker_right_msg)
             
             
 
@@ -196,6 +219,9 @@ class BottomImageDetectionNode(Node):
         
     def octagon_task_active_subscriber_cb(self, msg: Bool):
         self.octagon_task_active = bool(msg.data)
+
+    def path_marker_task_active_subscriber_cb(self, msg: Bool):
+        self.path_marker_task_active = bool(msg.data)
 
     def left_camera_cb(self, msg : RosImage):
         self.last_image_left = msg

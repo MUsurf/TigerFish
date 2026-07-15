@@ -8,7 +8,9 @@ import time
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 import numpy as np
 import time
-import cv2
+import math
+import torch
+
 
 qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
@@ -112,7 +114,9 @@ def rpy_from_quat(q):
 class MainNode(Node):
     def __init__(self):
         super().__init__("main_node")
-
+        
+        self.get_logger().info(f"{torch.cuda.is_available()}")
+        
         self.orientation_subscriber = self.create_subscription(
             Odometry, "state_estimation", self._odom_cb, 10
         )
@@ -142,7 +146,7 @@ class MainNode(Node):
         )
 
         self.servo_publisher = self.create_publisher(
-            Float32, "topic_servo_angle", servo_qos
+            String, "servo_mode", 10
         )
         
         self.kill_publisher = self.create_publisher(
@@ -188,9 +192,17 @@ class MainNode(Node):
         self.x_held : bool = False
         self.y_held : bool = False
         
+        self.accumulated_roll : float = 0.0
+        
+        self.last_a : bool = False
+        
         self.state_timer_start_time = 0.0
         
         self.is_seen = False
+        
+        self.last_roll = None
+        
+        self.temp_time = None
 
 
     def depth_sensor_cb(self, msg: Float32):
@@ -199,34 +211,42 @@ class MainNode(Node):
     def _timer_cb(self):
         msg = PIDInput()
         mode = 'A' if self.a_held else 'B' if self.b_held else 'X' if self.x_held else 'Y' if self.y_held else 'None'
-        
+        if mode != 'A' : self.temp_time = None
         match mode:
             case 'A':
-                msg.roll_mode = False
-                msg.pitch_mode = True
+                
+                msg.pitch_mode = False
                 msg.yaw_mode = True
-                
-                msg.roll_power = 0.5
-            case 'B':
-                msg.x_mode = False
-                msg.y_mode = False
-                msg.z_mode = True
-                msg.roll_mode = True
-                msg.pitch_mode = True
-                msg.yaw_mode = True
-                
-                msg.z_is_absolute = True
-                
-                msg.x_power = self.x_pow
-                msg.y_power = self.y_pow                
-                msg.z_power = self.z_pow
-
-                msg.roll_setpoint = 180
-                msg.roll_measurement = self.roll * 180 / np.pi
-                msg.pitch_setpoint = 0.0
-                msg.pitch_setpoint = self.pitch * 180 / np.pi
                 msg.yaw_setpoint = self.yaw_setpoint
-                msg.yaw_measurement = self.yaw * 180 / np.pi
+                msg.yaw_measurement = self.yaw * 180.0 / np.pi
+                msg.z_power = self.z_pow
+                msg.z_is_absolute = True
+                self.get_logger().info(f"ROLL: {self.accumulated_roll}")
+                if self.last_roll is None:
+                    self.last_roll = self.roll
+                else:
+                    self.accumulated_roll += abs(abs(self.last_roll) - abs(self.roll)) * 180.0 / math.pi
+                    self.last_roll = self.roll
+                if self.accumulated_roll < (240):
+                    msg.roll_mode = False
+                    msg.roll_power = 0.8
+                else:
+                    msg.roll_mode = True
+                    msg.roll_setpoint = 0.0
+                    msg.roll_measurement = self.roll * 180.0 / np.pi
+                    if self.temp_time is None:
+                        self.temp_time = time.time()
+                    else:
+                        if time.time() - self.temp_time > 2.5:
+                            msg.z_mode = True
+                            msg.z_setpoint = 0.5
+                            msg.z_measurement = self.depth
+                
+                
+            case 'B':
+                m = String()
+                m.data = 'left'
+                self.servo_publisher.publish(m)
             case 'X':
                 msg.roll_mode = False
                 msg.pitch_mode = True
@@ -246,7 +266,7 @@ class MainNode(Node):
                 msg.x_power = self.x_pow
                 msg.y_power = self.y_pow
                 
-                msg.z_setpoint = 1.0
+                msg.z_setpoint = 0.5
                 msg.z_measurement = self.depth
 
                 msg.roll_setpoint = 0.0
@@ -258,7 +278,7 @@ class MainNode(Node):
             case _:
                 msg.x_mode = False
                 msg.y_mode = False
-                msg.z_mode = False
+                msg.z_mode = True
                 msg.roll_mode = True
                 msg.pitch_mode = True
                 msg.yaw_mode = True
@@ -266,13 +286,20 @@ class MainNode(Node):
                 msg.x_power = self.x_pow
                 msg.y_power = self.y_pow                
                 msg.z_power = self.z_pow
-
+                msg.z_setpoint = 0.25
+                msg.z_measurement = self.depth
                 msg.roll_setpoint = 0.0
                 msg.roll_measurement = self.roll * 180 / np.pi
                 msg.pitch_setpoint = 0.0
                 msg.pitch_setpoint = self.pitch * 180 / np.pi
                 msg.yaw_setpoint = self.yaw_setpoint
                 msg.yaw_measurement = self.yaw * 180 / np.pi
+                
+                m = String()
+                m.data = "neutral"
+                self.servo_publisher.publish(m)
+                
+                
 
         self.pid_publisher.publish(msg)
                 
@@ -339,11 +366,14 @@ class MainNode(Node):
         self.z_pow = msg.y_right_stick
 
         # self.get_logger().info(f'{self.recent_controller_input.x_left_stick}')
-        
+        self.last_a = self.a_held
         self.a_held = msg.a_button
         self.b_held = msg.b_button
         self.x_held = msg.x_button
         self.y_held = msg.y_button
+        
+        if self.a_held and not self.last_a:
+            self.accumulated_roll = 0.0
 
     def _odom_cb(self, msg: Odometry):
         r, p, y = rpy_from_quat(msg.pose.pose.orientation)

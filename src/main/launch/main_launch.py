@@ -83,6 +83,16 @@ def generate_launch_description():
             executable='main_node',
             name='main'
         ),
+        Node(
+            package='grabber_servo',
+            executable='grabber_servo_node',
+            name='grabber_servo_node'
+        ),
+        # Node(
+        #     package='state_machine',
+        #     executable='state_machine',
+        #     name='state_machine'
+        # ),
         # Node(
         #     package='python_cv',
         #     executable='gate_yolo',
