@@ -1,18 +1,16 @@
-from abc import ABC, abstractmethod
 import math
+from state_machine.state import State
 from messages.msg import PIDInput, VisionMessage
 
-class OctagonTurn(ABC):
+class OctagonTurn(State):
     def __init__(self, name):
         self.name = name
         self.start_yaw = 0
         
-    @abstractmethod
     def start(self, context : dict) -> None:
         self.start_yaw = context["odom"]["yaw"]
         return None
         
-    @abstractmethod
     def execute(self, context : dict) -> str | None:
 
         msg = PIDInput()
@@ -20,7 +18,7 @@ class OctagonTurn(ABC):
         msg.x_mode = True
         msg.y_mode = True
         msg.z_mode = True
-        msg.z_setpoint = 1
+        msg.z_setpoint = 1.0
         msg.z_measurement = context['depth']
         msg.roll_mode = True
         msg.pitch_mode = True
@@ -34,19 +32,17 @@ class OctagonTurn(ABC):
         self.context.pid_publisher.publish(msg)
 
         if math.abs(odom["yaw"] - (self.start_yaw - 90)) < 5:
-            return OctagonGoTo
+            return "octagon_go_to"
         
-class OctagonGoTo(ABC):
+class OctagonGoTo(State):
     def __init__(self, name):
         self.name = name
         self.start_yaw = 0
         
-    @abstractmethod
     def start(self, context : dict) -> None:
         self.start_yaw = context["odom"]["yaw"]
         return None
         
-    @abstractmethod
     def execute(self, context : dict) -> str | None:
 
         msg = PIDInput()
@@ -55,7 +51,7 @@ class OctagonGoTo(ABC):
         msg.x_power = 0.2
         msg.y_mode = True
         msg.z_mode = True
-        msg.z_setpoint = 1
+        msg.z_setpoint = 1.0
         msg.z_measurement = context['depth']
         msg.roll_mode = True
         msg.pitch_mode = True
@@ -69,19 +65,17 @@ class OctagonGoTo(ABC):
         self.context.pid_publisher.publish(msg)
 
         if see_table:
-            return OctagonSendIt  #TODO - note, we are at 1m, and we send it as soon as we see the table, will this be too soon?
+            return "octagon_send_it"  #TODO - note, we are at 1m, and we send it as soon as we see the table, will this be too soon?
 
-class OctagonSendIt(ABC):
+class OctagonSendIt(State):
     def __init__(self, name):
         self.name = name
         self.start_yaw = 0
         
-    @abstractmethod
     def start(self, context : dict) -> None:
         self.start_yaw = context["odom"]["yaw"]
         return None
         
-    @abstractmethod
     def execute(self, context : dict) -> str | None:
 
         msg = PIDInput()
