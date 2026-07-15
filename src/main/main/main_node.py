@@ -9,6 +9,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPo
 import numpy as np
 import time
 import math
+import torch
 
 qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
@@ -113,6 +114,8 @@ def rpy_from_quat(q):
 class MainNode(Node):
     def __init__(self):
         super().__init__("main_node")
+        
+        self.get_logger().info(f"{torch.cuda.is_available()}")
 
         self.orientation_subscriber = self.create_subscription(
             Odometry, "state_estimation", self._odom_cb, 10
@@ -198,6 +201,8 @@ class MainNode(Node):
         self.is_seen = False
         
         self.last_roll = None
+        
+        self.temp_time = None
 
 
     def depth_sensor_cb(self, msg: Float32):
@@ -206,14 +211,12 @@ class MainNode(Node):
     def _timer_cb(self):
         msg = PIDInput()
         mode = 'A' if self.a_held else 'B' if self.b_held else 'X' if self.x_held else 'Y' if self.y_held else 'None'
-        
+        if mode != 'A' : self.temp_time = None
         match mode:
             case 'A':
                 
                 msg.pitch_mode = False
                 msg.yaw_mode = True
-                msg.pitch_setpoint = 0.0
-                msg.pitch_setpoint = self.pitch * 180.0 / np.pi
                 msg.yaw_setpoint = self.yaw_setpoint
                 msg.yaw_measurement = self.yaw * 180.0 / np.pi
                 msg.z_power = self.z_pow
@@ -224,13 +227,20 @@ class MainNode(Node):
                 else:
                     self.accumulated_roll += abs(abs(self.last_roll) - abs(self.roll)) * 180.0 / math.pi
                     self.last_roll = self.roll
-                if self.accumulated_roll < (600):
+                if self.accumulated_roll < (240):
                     msg.roll_mode = False
                     msg.roll_power = 0.8
                 else:
                     msg.roll_mode = True
                     msg.roll_setpoint = 0.0
                     msg.roll_measurement = self.roll * 180.0 / np.pi
+                    if self.temp_time is None:
+                        self.temp_time = time.time()
+                    else:
+                        if time.time() - self.temp_time() > 1:
+                            msg.z_setpoint = 1.0
+                            msg.z_measurement = self.depth
+                
                 
             case 'B':
                 m = String()
@@ -255,7 +265,7 @@ class MainNode(Node):
                 msg.x_power = self.x_pow
                 msg.y_power = self.y_pow
                 
-                msg.z_setpoint = 0.5
+                msg.z_setpoint = 1.0
                 msg.z_measurement = self.depth
 
                 msg.roll_setpoint = 0.0

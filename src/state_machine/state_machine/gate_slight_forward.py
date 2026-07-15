@@ -2,54 +2,43 @@ from state_machine.state import State
 from messages.msg import PIDInput
 import time
 
-class GateGoToDepthState(State):
+class GateSlightForwardState(State):
     def __init__(self):
-        super().__init__('gate_go_to_depth')
+        super().__init__('gate_slight_forward')
         
         self.start_yaw : float | None = None
         self.start_time : float | None = None
 
         self.desired_depth : float | None = None
-        self.tolerance : float | None = None
-        self.time_in_depth_requirement : float | None = None
-        
-        self.times_ran = 0
+        self.x_power = None
+        self.total_time = None
         
     def start(self, context : dict):
         self.start_yaw = 0.0 # context['odom']['yaw']
-        self.start_time = None
-        
+        self.start_time = time.time()
         self.desired_depth = context['gate_state_depth']
-        self.tolerance = context['depth_error_tolerance']
-        self.time_in_depth_requirement = context['time_in_depth_requirement']
+        self.x_power = context['gate_forward_power']
+        self.total_time = context['slight_forward_time']
         
-        self.times_ran += 1
-        
-        if self.times_ran == 2:
-            self.desired_depth = context['post_roll_depth']
+        self.phase_two_time = None
+        self.phase_two = False
         
     def execute(self, context : dict):
-        if self.start_time is not None and time.time() - self.start_time >= self.time_in_depth_requirement:
-            return 'gate_slight_forward' if self.times_ran == 1 else 'go_through_gate'
-        
-        if abs(context['depth'] - self.desired_depth) <= self.tolerance:
-            if self.start_time is None:
-                self.start_time = time.time()
-        else:
-            self.start_time = None
-        
+        if time.time() - self.start_time >= self.total_time:
+            return 'barrel_roll'
+   
         msg = PIDInput()
         msg.z_mode = True
         msg.roll_mode = True
         msg.pitch_mode = True
         msg.yaw_mode = True
         
+        msg.x_power = self.x_power
+        
         msg.z_setpoint = self.desired_depth
         msg.roll_setpoint = 0.0
         msg.pitch_setpoint = 0.0
-        msg.yaw_setpoint = 0.0
-        
-        msg.y_power = 0.03
+        msg.yaw_setpoint = self.start_yaw
         
         msg.z_measurement = context['depth']
         msg.roll_measurement = context['odom']['roll']

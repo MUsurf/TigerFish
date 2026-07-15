@@ -11,11 +11,14 @@ from state_machine.state import State
 
 from state_machine.start_state import StartState
 from state_machine.gate_go_to_depth import GateGoToDepthState
-from state_machine.gate_set_role import GateSetRoleState
+# from state_machine.gate_set_role import GateSetRoleState
 from state_machine.go_through_gate import GoThroughGateState
+from state_machine.barrel_roll import BarrelRollState
+from state_machine.gate_slight_forward import GateSlightForwardState
+from state_machine.go_up import GoUpState
 
-from state_machine.slalom_shift import SlalomShiftState
-from state_machine.go_through_slalom import GoThroughSlalomState
+# from state_machine.slalom_shift import SlalomShiftState
+# from state_machine.go_through_slalom import GoThroughSlalomState
 
 from state_machine.end_state import EndState
 
@@ -65,12 +68,15 @@ class StateMachineNode(Node):
         # configs
         self.state_context["start_wait_time"] = 2.0 # seconds
         self.state_context["start_depth_threshold"] = 0.03 # meters
-        self.state_context["start_time"] = 2 # seconds
+        self.state_context["start_time"] = 5 # seconds
         self.state_context["gate_state_depth"] = 1.0 # meters
         self.state_context["depth_error_tolerance"] = 0.075 # meters
         self.state_context["time_in_depth_requirement"] = 5.0 # seconds
-        self.state_context["gate_forward_time"] = 30.0 # seconds
-        self.state_context["gate_forward_power"] = 0.5 # power
+        self.state_context["gate_forward_time"] = 13.0 # seconds
+        self.state_context["gate_forward_power"] = 0.7 # power
+        self.state_context["slight_forward_time"] = 3.0 # seconds
+        
+        self.state_context["post_roll_depth"] = 0.75
         
         self.state_context["slalom_shift_time"] = 6.0 # seconds
         self.state_context["slalom_shift_power"] = 0.5 # power
@@ -79,6 +85,18 @@ class StateMachineNode(Node):
         
         self.state_context["slalom_forward_time"] = 15.0 # seconds
         self.state_context["slalom_forward_power"] = 0.5
+        
+        self.state_context["go_up_time"] = 5.0
+        
+        self.state_context["path_marker_align_distance_threshold"] = 5.0 # degrees rn
+        self.state_context["path_marker_align_distance_time"] = 4 # seconds
+        self.state_context["path_marker_heading"] = -35.0 # degrees
+        self.state_context["path_marker_heading_threshold"] = 3.0 # degrees
+        self.state_context["path_marker_align_heading_time"] = 4.0 # seconds
+        
+        self.state_context["barrel_roll_stable_time"] = 1.0
+        self.state_context["barrel_roll_power"] = 0.8
+        self.state_context["barrel_roll_stable_threshold"] = 10.0 # degrees
     
         # context defaults:
         self.state_context["survey_and_repair_gate_image_left_gate"] = VisionMessage()
@@ -95,6 +113,8 @@ class StateMachineNode(Node):
         self.state_context["octagon_image_2_right"] = VisionMessage()
         self.state_context["table_left"] = VisionMessage()
         self.state_context["table_right"] = VisionMessage()
+        self.state_context["path_marker_left"] = VisionMessage()
+        self.state_context["path_marker_right"] = VisionMessage()
 
 
         self.state_context["odom"] = {"roll" : 0.0, "pitch" : 0.0, "yaw" : 0.0}
@@ -134,6 +154,10 @@ class StateMachineNode(Node):
             VisionMessage, "table_left", self.table_left_cb, 10)
         self.table_right_subscriber = self.create_subscription(
             VisionMessage, "table_right", self.table_right_cb, 10)
+        self.path_marker_left_subscriber = self.create_subscription(
+            VisionMessage, "path_marker_left", self.path_marker_left_cb, 10)
+        self.path_marker_right_subscriber = self.create_subscription(
+            VisionMessage, "path_marker_right", self.path_marker_right_cb, 10)
 
         # Publishers
         self.pid_publisher = self.create_publisher(
@@ -144,12 +168,11 @@ class StateMachineNode(Node):
         self.states = {
             'start' : StartState(),
             'gate_go_to_depth' : GateGoToDepthState(),
-            'gate_set_role': GateSetRoleState(),
+            'gate_slight_forward' : GateSlightForwardState(),
+            'barrel_roll' : BarrelRollState(),
+            # 'gate_set_role': GateSetRoleState(),
             'go_through_gate' : GoThroughGateState(),
-            
-            'slalom_shift' : SlalomShiftState(),
-            'go_through_slalom' : GoThroughSlalomState(),
-            
+            'go_up' : GoUpState(),
             'end' : EndState(),
         }
         
@@ -212,6 +235,10 @@ class StateMachineNode(Node):
         self.state_context["table_left"] = msg
     def table_right_cb(self, msg):
         self.state_context["table_right"] = msg 
+    def path_marker_left_cb(self, msg):
+        self.state_context["path_marker_left"] = msg
+    def path_marker_right_cb(self, msg):
+        self.state_context["path_marker_right"] = msg 
     
         
         

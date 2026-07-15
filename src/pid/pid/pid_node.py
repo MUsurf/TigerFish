@@ -84,9 +84,9 @@ class PIDNode(Node):
              x_gains=(0.1, 0.0, 0.0),
              y_gains=(0.1, 0.0, 0.0),
              z_gains=(0.9, 0.0000, 6.0),
-             roll_gains=(0.001, 0.0005, 0.0075),
-             pitch_gains=(0.011, 0.02, 0.05),
-             yaw_gains=(0.0016, 0.0001, 0.01)):
+             roll_gains=(0.002, 0.0005, 0.0075),
+             pitch_gains=(0.011, 0.02, 0.03),
+             yaw_gains=(0.01, 0.0001, 0.02)):
         super().__init__('pid_node')
         self.x_kP, self.x_kI, self.x_kD = x_gains
         self.y_kP, self.y_kI, self.y_kD = y_gains
